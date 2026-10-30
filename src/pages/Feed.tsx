@@ -41,7 +41,13 @@ export const Feed: React.FC = () => {
 
   const handlePostCreated = async (data: CreatePostData) => {
     const newPost = await postsApi.create(data);
-    setPosts((prev) => [newPost, ...prev]);
+    // Insere no início da lista para aparecer imediatamente
+    setPosts((prev) => [newPost, ...prev.filter((p) => p.id !== newPost.id)]);
+    // Garante que o usuário veja a nova publicação no topo sem filtros ativos
+    setActiveTab('foryou');
+    if (queryParam) {
+      setSearchParams({});
+    }
   };
 
   const handleVote = async (postId: number, voteType: 'up' | 'down') => {

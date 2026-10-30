@@ -5,10 +5,34 @@ export interface Env {
   JWT_SECRET: string;
 }
 
+// Garante que a tabela posts e todas as suas colunas existam (self-healing no D1)
+async function ensurePostsTable(db: D1Database) {
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id INTEGER NOT NULL REFERENCES users(id),
+        community_id INTEGER REFERENCES communities(id),
+        content TEXT NOT NULL,
+        title TEXT,
+        media_url TEXT,
+        media_type TEXT,
+        post_type TEXT DEFAULT 'scrap',
+        upvotes INTEGER DEFAULT 0,
+        downvotes INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch {
+    // ignore
+  }
+}
+
 // GET: lista os posts com filtros opcionais (community_id, community_slug, post_type)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
+    await ensurePostsTable(env.DB);
     const url = new URL(request.url);
     const communityId = url.searchParams.get("community_id");
     const communitySlug = url.searchParams.get("community_slug");
@@ -71,6 +95,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
+    await ensurePostsTable(env.DB);
     const secret = env.JWT_SECRET || "troque-este-segredo";
 
     // Validação do JWT
@@ -178,8 +203,35 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const newId = insertResult.meta.last_row_id;
 
+    // Busca o post salvo no D1 com os dados completos do autor e comunidade
+    const createdPost = await env.DB.prepare(
+      `SELECT 
+        p.id,
+        p.title,
+        p.content,
+        p.media_url,
+        p.media_type,
+        p.upvotes,
+        p.downvotes,
+        p.post_type,
+        p.created_at,
+        p.author_id,
+        u.username AS author_name,
+        u.avatar_url AS author_avatar,
+        p.community_id,
+        c.name AS community_name,
+        c.slug AS community_slug,
+        0 AS comments_count
+      FROM posts p
+      JOIN users u ON p.author_id = u.id
+      LEFT JOIN communities c ON p.community_id = c.id
+      WHERE p.id = ?`
+    )
+      .bind(newId)
+      .first();
+
     return jsonResponse(
-      {
+      createdPost || {
         id: newId,
         author_id: user.id,
         author_name: user.username,

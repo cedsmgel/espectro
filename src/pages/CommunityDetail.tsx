@@ -149,10 +149,16 @@ export const CommunityDetail: React.FC = () => {
       ...data,
       community_id: community.id,
     });
-    // Adiciona ao feed da comunidade se o ID coincidir
-    if (newPost.community_id === community.id) {
-      setPosts((prev) => [newPost, ...prev]);
-    }
+    // Garante propriedades completas e atualiza a lista imediatamente
+    const postWithComm: Post = {
+      ...newPost,
+      community_id: community.id,
+      community_name: newPost.community_name || community.name,
+      community_slug: newPost.community_slug || community.slug,
+    };
+    setPosts((prev) => [postWithComm, ...prev.filter((p) => p.id !== postWithComm.id)]);
+    setActiveTab('discussions');
+    showToast('Post publicado com sucesso e salvo no D1!');
   };
 
   // Garante que apenas posts daquela comunidade (ID estrito) sejam exibidos

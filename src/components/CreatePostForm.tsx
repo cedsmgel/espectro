@@ -22,10 +22,12 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [showCommunitySelect, setShowCommunitySelect] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(false);
 
     if (!user) {
       setError('Você precisa estar logado para publicar.');
@@ -58,6 +60,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setContent('');
       setMediaUrl('');
       setShowMediaInput(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       setError(err.message || 'Erro ao criar publicação.');
     } finally {
@@ -103,6 +107,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         {error && (
           <div className="p-3 rounded-xl bg-error-container text-error text-xs font-medium">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-2 border border-emerald-300 animate-in fade-in">
+            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+            <span>Publicado com sucesso! Salvo no banco D1.</span>
           </div>
         )}
 
