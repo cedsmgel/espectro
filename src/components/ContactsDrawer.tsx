@@ -11,6 +11,7 @@ interface ContactsDrawerProps {
 export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const user = authStorage.getUser();
+  const userId = user?.id;
 
   const [activeTab, setActiveTab] = useState<'friends' | 'search'>('friends');
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -36,7 +37,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
   // Carrega lista de amigos reais do D1
   const loadFriends = async () => {
-    if (!user) return;
+    if (!userId) return;
     setLoadingFriends(true);
     try {
       const data = await friendsApi.list();
@@ -49,18 +50,19 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
   };
 
   useEffect(() => {
-    if (isOpen && user) {
+    if (isOpen && userId) {
       loadFriends();
     }
-  }, [isOpen, user]);
+  }, [isOpen, userId]);
 
   // Carrega histórico de mensagens privadas ao selecionar um amigo
+  const selectedFriendId = selectedFriend?.friend_id;
   useEffect(() => {
-    if (selectedFriend && user) {
+    if (selectedFriendId && userId) {
       const loadChat = async () => {
         setLoadingMessages(true);
         try {
-          const history = await directMessagesApi.list(selectedFriend.friend_id);
+          const history = await directMessagesApi.list(selectedFriendId);
           setMessages(history);
         } catch (err) {
           console.error('Erro ao carregar mensagens privadas:', err);
@@ -70,7 +72,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
       };
       loadChat();
     }
-  }, [selectedFriend, user]);
+  }, [selectedFriendId, userId]);
 
   // Auto-scroll para última mensagem
   useEffect(() => {

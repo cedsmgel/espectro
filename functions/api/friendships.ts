@@ -82,7 +82,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     `;
 
     const { results } = await env.DB.prepare(friendsQuery)
-      .bind(user.id, user.id, user.id, user.id)
+      .bind(user.id, user.id, user.id, user.id, user.id)
       .all();
 
     return jsonResponse(results || []);

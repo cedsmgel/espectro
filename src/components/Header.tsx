@@ -14,6 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { toggleSidebar } = useSidebar();
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
+  const userId = user?.id;
   const [searchQuery, setSearchQuery] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
@@ -21,13 +22,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [unreadDms, setUnreadDms] = useState(0);
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       directMessagesApi
         .getUnreadCount()
         .then((res) => setUnreadDms(res.unread_count || 0))
         .catch(() => setUnreadDms(0));
     }
-  }, [user]);
+  }, [userId]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -10,6 +10,7 @@ export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
+  const userId = user?.id;
 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [activeFriend, setActiveFriend] = useState<Friend | null>(null);
@@ -27,7 +28,7 @@ export const DirectMessages: React.FC = () => {
 
   // Carrega amigos reais do D1
   const loadFriends = async () => {
-    if (!user) {
+    if (!userId) {
       setLoadingFriends(false);
       return;
     }
@@ -51,14 +52,15 @@ export const DirectMessages: React.FC = () => {
 
   useEffect(() => {
     loadFriends();
-  }, [user]);
+  }, [userId]);
 
   // Carrega histórico de mensagens do amigo ativo
+  const activeFriendId = activeFriend?.friend_id;
   useEffect(() => {
-    if (activeFriend && user) {
+    if (activeFriendId && userId) {
       setLoadingChat(true);
       directMessagesApi
-        .list(activeFriend.friend_id)
+        .list(activeFriendId)
         .then((data) => {
           setMessages(data || []);
         })
@@ -68,7 +70,7 @@ export const DirectMessages: React.FC = () => {
         })
         .finally(() => setLoadingChat(false));
     }
-  }, [activeFriend, user]);
+  }, [activeFriendId, userId]);
 
   // Envio de mensagem
   const handleSendMessage = async (e: React.FormEvent) => {
