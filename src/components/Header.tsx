@@ -73,91 +73,83 @@ export const Header: React.FC = () => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#4cd7f6]" />
           </button>
 
-          {/* Quick Create Button */}
+          {/* User Logged In Actions */}
           {user ? (
-            <button
-              type="button"
-              onClick={() => {
-                const composer = document.getElementById('composer-title-input');
-                if (composer) {
-                  composer.focus();
-                } else {
-                  navigate('/');
-                }
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold border border-white/20 shadow-[0_0_16px_rgba(59,130,246,0.35)] hover:shadow-[0_0_24px_rgba(59,130,246,0.55)] active:scale-95 transition-all"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span>Criar</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold border border-white/20 shadow-[0_0_16px_rgba(59,130,246,0.35)] hover:shadow-[0_0_24px_rgba(59,130,246,0.55)] active:scale-95 transition-all"
-            >
-              <span>Entrar</span>
-            </button>
-          )}
-
-          <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
-
-          {/* User Profile Pill / Menu */}
-          {user ? (
-            <div className="relative">
+            <>
               <button
                 type="button"
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 p-1 pl-2 rounded-xl hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+                onClick={() => {
+                  const composer = document.getElementById('composer-title-input');
+                  if (composer) {
+                    composer.focus();
+                  } else {
+                    navigate('/');
+                  }
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-semibold border border-white/20 shadow-[0_0_16px_rgba(59,130,246,0.35)] hover:shadow-[0_0_24px_rgba(59,130,246,0.55)] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="relative w-8 h-8 rounded-full p-[1.5px] bg-gradient-to-tr from-cyan-400 to-blue-600 shadow-[0_0_10px_rgba(76,215,246,0.3)]">
-                  <div className="w-full h-full bg-[#111318] rounded-full flex items-center justify-center text-white text-xs font-bold font-display uppercase">
-                    {user.username.charAt(0)}
-                  </div>
-                </div>
-                <span className="hidden lg:inline text-xs font-bold text-white font-display">
-                  @{user.username}
-                </span>
-                <span className="material-symbols-outlined text-neutral-400 text-[18px]">
-                  expand_more
-                </span>
+                <span className="material-symbols-outlined text-[18px]">add</span>
+                <span>Criar</span>
               </button>
 
-              {/* Glass Dropdown Menu */}
-              {showDropdown && (
-                <div className="absolute right-0 mt-2 w-48 glass-elevated rounded-2xl p-2 shadow-2xl border border-white/10 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-2 border-b border-white/10 mb-1">
-                    <p className="text-xs font-bold text-white font-display">@{user.username}</p>
-                    <p className="text-[10px] text-cyan-400">Karma ▲ 4.892</p>
+              <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 p-1 pl-2 rounded-xl hover:bg-white/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <div className="relative w-8 h-8 rounded-full p-[1.5px] bg-gradient-to-tr from-cyan-400 to-blue-600 shadow-[0_0_10px_rgba(76,215,246,0.3)]">
+                    <div className="w-full h-full bg-[#111318] rounded-full flex items-center justify-center text-white text-xs font-bold font-display uppercase">
+                      {user.username.charAt(0)}
+                    </div>
                   </div>
-                  <Link
-                    to="/?type=scrap"
-                    onClick={() => setShowDropdown(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">mark_chat_unread</span>
-                    <span>Meus Scraps</span>
-                  </Link>
-                  <Link
-                    to="/comunidades"
-                    onClick={() => setShowDropdown(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">forum</span>
-                    <span>Comunidades</span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors mt-1 border-t border-white/5 cursor-pointer text-left"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">logout</span>
-                    <span>Sair</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                  <span className="hidden lg:inline text-xs font-bold text-white font-display">
+                    @{user.username}
+                  </span>
+                  <span className="material-symbols-outlined text-neutral-400 text-[18px]">
+                    expand_more
+                  </span>
+                </button>
+
+                {/* Glass Dropdown Menu */}
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 glass-elevated rounded-2xl p-2 shadow-2xl border border-white/10 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-2 border-b border-white/10 mb-1">
+                      <p className="text-xs font-bold text-white font-display">@{user.username}</p>
+                      <p className="text-[10px] text-cyan-400">Karma ▲ 4.892</p>
+                    </div>
+                    <Link
+                      to="/?type=scrap"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">mark_chat_unread</span>
+                      <span>Meus Scraps</span>
+                    </Link>
+                    <Link
+                      to="/comunidades"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">forum</span>
+                      <span>Comunidades</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors mt-1 border-t border-white/5 cursor-pointer text-left"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">logout</span>
+                      <span>Sair</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
+            /* Visitor / Logged Out: Exactly one Entrar and one Cadastrar button */
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -169,7 +161,7 @@ export const Header: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login?tab=cadastro')}
-                className="btn-primary-blue text-xs font-semibold px-3.5 py-1.5 rounded-xl cursor-pointer"
+                className="btn-primary-blue text-xs font-semibold px-3.5 py-1.5 rounded-xl cursor-pointer shadow-[0_0_14px_rgba(59,130,246,0.35)]"
               >
                 Cadastrar
               </button>
