@@ -25,21 +25,56 @@ export interface Community {
 const TOKEN_KEY = 'espectro_token';
 const USER_KEY = 'espectro_user';
 
+function decodeJwtPayload(token: string): User | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(json);
+    if (payload.id && payload.username) {
+      return { id: payload.id, username: payload.username };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export const authStorage = {
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   },
   setToken(token: string) {
     localStorage.setItem(TOKEN_KEY, token);
+    const decoded = decodeJwtPayload(token);
+    if (decoded) {
+      this.setUser(decoded);
+    }
   },
   getUser(): User | null {
     const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
+    if (raw) {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        // fallback
+      }
     }
+    const token = this.getToken();
+    if (token) {
+      const decoded = decodeJwtPayload(token);
+      if (decoded) {
+        this.setUser(decoded);
+        return decoded;
+      }
+    }
+    return null;
   },
   setUser(user: User) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -49,7 +84,7 @@ export const authStorage = {
     localStorage.removeItem(USER_KEY);
   },
   isAuthenticated(): boolean {
-    return !!localStorage.getItem(TOKEN_KEY);
+    return !!this.getToken();
   }
 };
 
@@ -65,11 +100,24 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(url, { ...options, headers });
-  const data = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (err) {
+    throw new Error('Falha de conexão com o servidor. Verifique sua internet.');
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  let data: any = null;
+
+  if (contentType.includes('application/json')) {
+    data = await response.json();
+  } else {
+    data = { error: await response.text() };
+  }
 
   if (!response.ok) {
-    throw new Error((data as { error?: string }).error || 'Erro na requisição');
+    throw new Error(data?.error || `Erro ${response.status}: falha na operação`);
   }
 
   return data as T;

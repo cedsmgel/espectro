@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { api, authStorage, Community } from '../lib/api';
 
 export const Communities: React.FC = () => {
+  const navigate = useNavigate();
   const user = authStorage.getUser();
+
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -15,6 +17,7 @@ export const Communities: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const fetchCommunities = async () => {
     try {
@@ -37,7 +40,7 @@ export const Communities: React.FC = () => {
     if (!newName.trim()) return;
 
     if (!user) {
-      setCreateError('Faça login para criar uma comunidade!');
+      setCreateError('Você precisa estar logado para criar uma comunidade!');
       return;
     }
 
@@ -51,7 +54,9 @@ export const Communities: React.FC = () => {
       setNewName('');
       setNewDescription('');
       setShowModal(false);
+      setSuccessToast('Comunidade criada com sucesso!');
       await fetchCommunities();
+      setTimeout(() => setSuccessToast(null), 4000);
     } catch (err: unknown) {
       setCreateError(err instanceof Error ? err.message : 'Erro ao criar comunidade');
     } finally {
@@ -70,6 +75,22 @@ export const Communities: React.FC = () => {
 
       {/* Main Portal Container */}
       <main className="w-full max-w-[1180px] mx-auto px-space-md py-space-md flex-grow">
+        {/* Feedback Toast */}
+        {successToast && (
+          <div className="mb-space-md p-space-sm bg-[#e7f7ed] text-[#1e6f3b] retro-border rounded flex items-center justify-between border-[#a3dfb4]">
+            <span className="flex items-center gap-1 font-bold">
+              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              {successToast}
+            </span>
+            <button
+              onClick={() => setSuccessToast(null)}
+              className="text-secondary hover:text-primary font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Masthead Search & Breadcrumb */}
         <div className="bg-surface-container-lowest retro-border rounded mb-space-md p-space-sm flex flex-col md:flex-row justify-between items-center gap-space-md">
           <div className="flex items-center gap-space-xs text-body-sm font-body-sm text-secondary">
@@ -126,12 +147,12 @@ export const Communities: React.FC = () => {
                   type="button"
                   onClick={() => {
                     if (!user) {
-                      alert('Você precisa estar logado para criar uma comunidade!');
+                      navigate('/login');
                       return;
                     }
                     setShowModal(true);
                   }}
-                  className="retro-btn-primary text-white font-label-md text-label-md px-space-lg py-1.5 rounded flex items-center gap-1 active:translate-y-px whitespace-nowrap shadow-sm"
+                  className="retro-btn-primary text-white font-label-md text-label-md px-space-lg py-1.5 rounded flex items-center gap-1 active:translate-y-px whitespace-nowrap shadow-sm cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">add_circle</span>
                   + Criar Nova Comunidade
@@ -149,14 +170,20 @@ export const Communities: React.FC = () => {
             {/* Communities List */}
             <div className="flex flex-col gap-space-sm">
               {loading && (
-                <div className="bg-white retro-border rounded p-space-lg text-center text-secondary">
-                  Carregando comunidades...
+                <div className="bg-white retro-border rounded p-space-lg text-center text-secondary flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined animate-spin text-primary">sync</span>
+                  Carregando comunidades do banco D1...
                 </div>
               )}
 
               {!loading && filteredCommunities.length === 0 && (
                 <div className="bg-white retro-border rounded p-space-lg text-center text-secondary">
-                  Nenhuma comunidade encontrada. Que tal criar a primeira?
+                  <p className="font-semibold text-primary mb-1">Nenhuma comunidade cadastrada ainda.</p>
+                  <p className="text-body-sm">
+                    {user
+                      ? 'Clique no botão acima para fundar a primeira comunidade!'
+                      : 'Faça login para criar a primeira comunidade do Espectro!'}
+                  </p>
                 </div>
               )}
 
@@ -173,21 +200,19 @@ export const Communities: React.FC = () => {
 
                   <div className="p-space-md flex flex-col sm:flex-row gap-space-md items-start">
                     {/* Thumbnail */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-[#d7e2ff] border border-[#9bb7e4] rounded p-1 flex items-center justify-center shadow-inner">
-                      <span className="material-symbols-outlined text-primary text-[32px]">
-                        forum
-                      </span>
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-primary-container text-white border border-[#9bb7e4] rounded p-1 flex items-center justify-center shadow-inner font-bold text-2xl uppercase">
+                      {community.name.charAt(0)}
                     </div>
 
                     {/* Meta & Description */}
                     <div className="flex-grow flex flex-col justify-between">
                       <p className="text-body-md font-body-md text-on-surface">
-                        {community.description || 'Comunidade oficial sem descrição adicionada.'}
+                        {community.description || 'Comunidade sem descrição adicional.'}
                       </p>
                       <div className="mt-space-sm flex flex-wrap items-center gap-x-space-md gap-y-1 text-body-sm font-body-sm text-secondary">
-                        <span><strong>Categoria:</strong> Fórum Geral</span>
+                        <span><strong>Categoria:</strong> Fórum Nostálgico</span>
                         <span><strong>Tipo:</strong> Pública</span>
-                        <span><strong>Criada em:</strong> {new Date(community.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span><strong>Fundada em:</strong> {new Date(community.created_at).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
 
@@ -195,8 +220,14 @@ export const Communities: React.FC = () => {
                     <div className="flex sm:flex-col gap-space-xs shrink-0 w-full sm:w-36 mt-2 sm:mt-0">
                       <button
                         type="button"
-                        onClick={() => alert(`Você agora faz parte de "${community.name}"!`)}
-                        className="retro-btn-primary text-white font-label-md text-label-md py-1 px-space-sm rounded w-full flex items-center justify-center gap-1 active:translate-y-px"
+                        onClick={() => {
+                          if (!user) {
+                            navigate('/login');
+                            return;
+                          }
+                          alert(`Você agora faz parte da comunidade "${community.name}"!`);
+                        }}
+                        className="retro-btn-primary text-white font-label-md text-label-md py-1 px-space-sm rounded w-full flex items-center justify-center gap-1 active:translate-y-px cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[14px]">group_add</span>
                         Participar
@@ -210,62 +241,26 @@ export const Communities: React.FC = () => {
 
           {/* ================= RIGHT RAIL ================= */}
           <aside className="lg:col-span-4 flex flex-col gap-space-md">
-            {/* Top 10 Box */}
+            {/* Top Comunidades Ranking */}
             <div className="bg-white retro-border rounded overflow-hidden">
               <div className="header-bar-gradient px-space-md py-1 flex justify-between items-center">
-                <span className="text-label-md font-label-md text-primary font-bold">top comunidades</span>
-                <span className="text-body-sm font-body-sm text-secondary">ranking</span>
+                <span className="text-label-md font-label-md text-primary font-bold">top comunidades do banco</span>
+                <span className="text-body-sm font-body-sm text-secondary">membros</span>
               </div>
               <div className="p-space-md flex flex-col divide-y divide-surface-container">
-                <div className="py-1.5 flex justify-between items-center text-body-sm">
-                  <span className="text-primary font-medium">#1 Eu odeio acordar cedo</span>
-                  <span className="text-secondary text-label-sm">384k</span>
-                </div>
-                <div className="py-1.5 flex justify-between items-center text-body-sm">
-                  <span className="text-primary font-medium">#2 Discada só depois da 00h</span>
-                  <span className="text-secondary text-label-sm">265k</span>
-                </div>
-                <div className="py-1.5 flex justify-between items-center text-body-sm">
-                  <span className="text-primary font-medium">#3 Tocava campainha e corria</span>
-                  <span className="text-secondary text-label-sm">192k</span>
-                </div>
-                <div className="py-1.5 flex justify-between items-center text-body-sm">
-                  <span className="text-primary font-medium">#4 Eu tenho medo do Chuck</span>
-                  <span className="text-secondary text-label-sm">142k</span>
-                </div>
-                <div className="py-1.5 flex justify-between items-center text-body-sm">
-                  <span className="text-primary font-medium">#5 CPM 22 &amp; Rock Anos 2000</span>
-                  <span className="text-secondary text-label-sm">98k</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Categorias Box */}
-            <div className="bg-white retro-border rounded overflow-hidden">
-              <div className="header-bar-gradient px-space-md py-1 flex justify-between items-center">
-                <span className="text-label-md font-label-md text-primary font-bold">navegar por categorias</span>
-              </div>
-              <div className="p-space-md">
-                <ul className="flex flex-col gap-1 text-body-sm">
-                  <li className="flex justify-between items-center hover:bg-surface-container px-1 py-0.5 rounded cursor-pointer">
-                    <span className="text-primary flex items-center gap-1">
-                      <span className="material-symbols-outlined text-secondary text-[14px]">mood</span> Humor &amp; Cotidiano
+                {communities.slice(0, 5).map((c, i) => (
+                  <div key={c.id} className="py-1.5 flex justify-between items-center text-body-sm">
+                    <span className="text-primary font-medium truncate pr-2">
+                      #{i + 1} {c.name}
                     </span>
-                    <span className="text-secondary text-label-sm">(512)</span>
-                  </li>
-                  <li className="flex justify-between items-center hover:bg-surface-container px-1 py-0.5 rounded cursor-pointer">
-                    <span className="text-primary flex items-center gap-1">
-                      <span className="material-symbols-outlined text-secondary text-[14px]">music_note</span> Música &amp; Bandas
+                    <span className="text-secondary text-label-sm shrink-0">
+                      {c.member_count} {c.member_count === 1 ? 'membro' : 'membros'}
                     </span>
-                    <span className="text-secondary text-label-sm">(340)</span>
-                  </li>
-                  <li className="flex justify-between items-center hover:bg-surface-container px-1 py-0.5 rounded cursor-pointer">
-                    <span className="text-primary flex items-center gap-1">
-                      <span className="material-symbols-outlined text-secondary text-[14px]">computer</span> Tecnologia &amp; Jogos
-                    </span>
-                    <span className="text-secondary text-label-sm">(289)</span>
-                  </li>
-                </ul>
+                  </div>
+                ))}
+                {communities.length === 0 && (
+                  <p className="py-2 text-secondary text-body-sm text-center">Nenhuma comunidade no ranking.</p>
+                )}
               </div>
             </div>
 
@@ -276,7 +271,7 @@ export const Communities: React.FC = () => {
                 Dica de Convivência
               </div>
               <p className="text-body-sm font-body-sm text-secondary leading-tight">
-                Respeite os participantes nos fóruns e tópicos. Mantenha o espírito da internet nostálgica dos anos 2000!
+                Respeite os participantes nos fóruns e tópicos. Mantenha o espírito caloroso e amigável da internet dos anos 2000!
               </p>
             </div>
           </aside>
@@ -295,7 +290,7 @@ export const Communities: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-secondary hover:text-error text-lg font-bold"
+                className="text-secondary hover:text-error text-lg font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -303,7 +298,7 @@ export const Communities: React.FC = () => {
 
             <form onSubmit={handleCreateCommunity} className="p-space-lg space-y-space-md">
               {createError && (
-                <div className="p-2 rounded bg-error-container text-on-error-container text-body-sm">
+                <div className="p-2 rounded bg-error-container text-on-error-container text-body-sm border border-error">
                   {createError}
                 </div>
               )}
@@ -318,7 +313,7 @@ export const Communities: React.FC = () => {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ex: Eu amo café com leite"
+                  placeholder="Ex: Eu odeio acordar cedo"
                   className="w-full text-body-md font-body-md px-space-sm py-1.5 rounded border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-inner"
                 />
               </div>
@@ -332,7 +327,7 @@ export const Communities: React.FC = () => {
                   rows={4}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Descreva sobre o que é esta comunidade, regras de convivência e nostalgias..."
+                  placeholder="Descreva sobre o que é esta comunidade, regras de convivência e memórias..."
                   className="w-full text-body-md font-body-md px-space-sm py-1.5 rounded border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-inner resize-y"
                 />
               </div>
@@ -341,16 +336,16 @@ export const Communities: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="retro-btn text-secondary px-space-md py-1.5 rounded text-label-md font-label-md"
+                  className="retro-btn text-secondary px-space-md py-1.5 rounded text-label-md font-label-md cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={creating || !newName.trim()}
-                  className="retro-btn-primary text-white px-space-lg py-1.5 rounded text-label-md font-label-md font-bold disabled:opacity-50 active:translate-y-px"
+                  className="retro-btn-primary text-white px-space-lg py-1.5 rounded text-label-md font-label-md font-bold disabled:opacity-50 active:translate-y-px cursor-pointer"
                 >
-                  {creating ? 'Criando...' : 'Criar Comunidade'}
+                  {creating ? 'Criando comunidade...' : 'Criar Comunidade'}
                 </button>
               </div>
             </form>

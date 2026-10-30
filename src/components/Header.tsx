@@ -61,17 +61,17 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-space-md flex-shrink-0">
           {user ? (
             <div className="flex items-center gap-space-sm bg-surface-container-lowest border border-outline-variant px-space-sm py-1 rounded shadow-sm">
-              <div className="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-label-sm font-bold uppercase">
+              <div className="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-label-sm font-bold uppercase shadow-inner">
                 {user.username.charAt(0)}
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="text-body-sm text-secondary">Olá,</span>
-                <span className="text-label-md font-bold text-primary">{user.username}</span>
+                <span className="text-label-md font-bold text-primary">@{user.username}</span>
               </div>
               <span className="text-secondary text-[11px]">•</span>
               <button
                 onClick={handleLogout}
-                className="text-label-sm text-error hover:underline flex items-center gap-0.5"
+                className="text-label-sm text-error hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
                 title="Sair da sua conta"
               >
                 <span className="material-symbols-outlined text-[13px]">logout</span>
@@ -80,18 +80,20 @@ export const Header: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center gap-space-xs">
-              <Link
-                to="/login"
-                className="retro-btn text-primary font-label-md text-label-md px-space-md py-1 rounded hover:bg-surface-container-highest transition-colors active:translate-y-px"
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="retro-btn text-primary font-label-md text-label-md px-space-md py-1 rounded hover:bg-surface-container-highest transition-colors active:translate-y-px cursor-pointer"
               >
                 Entrar
-              </Link>
-              <Link
-                to="/login?tab=cadastro"
-                className="retro-btn-primary text-white font-label-md text-label-md px-space-md py-1 rounded transition-colors active:translate-y-px shadow-sm"
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/login?tab=cadastro')}
+                className="retro-btn-primary text-white font-label-md text-label-md px-space-md py-1 rounded transition-colors active:translate-y-px shadow-sm cursor-pointer"
               >
                 Criar Conta
-              </Link>
+              </button>
             </div>
           )}
         </div>
