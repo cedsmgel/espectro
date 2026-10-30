@@ -12,4 +12,4 @@ database_id = "6c7ef540-41b9-46c5-916c-3755b743d4de"
 
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"
-bucket_name = "espectro-media"
+bucket_name = "espectro-midia"
