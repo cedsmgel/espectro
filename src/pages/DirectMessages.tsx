@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
-import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
+import { authStorage, friendsApi, Friend } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
+import { useChat } from '../hooks/useChat';
 
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
@@ -16,15 +17,35 @@ export const DirectMessages: React.FC = () => {
   const [activeFriend, setActiveFriend] = useState<Friend | null>(null);
   const [searchConv, setSearchConv] = useState('');
   const [inputText, setInputText] = useState('');
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
-  const [loadingChat, setLoadingChat] = useState(false);
   const [loadingFriends, setLoadingFriends] = useState(true);
+
+  // Hook customizado de WebSocket para Chat em tempo real via Durable Objects
+  const {
+    messages,
+    sendMessage,
+    sendTyping,
+    isOtherUserTyping,
+    connectionStatus,
+    loadingHistory,
+    reconnect,
+  } = useChat({
+    activeFriendId: activeFriend?.friend_id,
+    activeFriendUsername: activeFriend?.username,
+  });
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<number | null>(null);
 
   // Modal para iniciar nova conversa / buscar pessoas
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: number; username: string; friendship_status: string | null }>>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+
+  // Auto-scroll para a mensagem mais recente
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isOtherUserTyping]);
 
   // Carrega amigos reais do D1
   const loadFriends = async () => {
@@ -54,41 +75,33 @@ export const DirectMessages: React.FC = () => {
     loadFriends();
   }, [userId]);
 
-  // Carrega histórico de mensagens do amigo ativo
-  const activeFriendId = activeFriend?.friend_id;
-  useEffect(() => {
-    if (activeFriendId && userId) {
-      setLoadingChat(true);
-      directMessagesApi
-        .list(activeFriendId)
-        .then((data) => {
-          setMessages(data || []);
-        })
-        .catch((err) => {
-          console.error('Erro ao carregar mensagens:', err);
-          setMessages([]);
-        })
-        .finally(() => setLoadingChat(false));
-    }
-  }, [activeFriendId, userId]);
+  // Digitação do usuário com debounce para avisar que parou de digitar
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputText(e.target.value);
+    sendTyping(true);
 
-  // Envio de mensagem
-  const handleSendMessage = async (e: React.FormEvent) => {
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      sendTyping(false);
+    }, 2000);
+  };
+
+  // Envio de mensagem pelo WebSocket
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !activeFriend || !user) return;
 
     const content = inputText.trim();
     setInputText('');
 
-    try {
-      const created = await directMessagesApi.send({
-        receiver_id: activeFriend.friend_id,
-        content,
-      });
-      setMessages((prev) => [...prev, created]);
-    } catch (err: any) {
-      console.error('Erro ao enviar mensagem:', err);
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
     }
+    sendTyping(false);
+
+    sendMessage(content);
   };
 
   // Busca de usuários no modal de nova conversa
@@ -114,12 +127,10 @@ export const DirectMessages: React.FC = () => {
   }, [userSearchQuery]);
 
   const handleStartChatWithUser = async (targetUser: { id: number; username: string }) => {
-    // Adiciona como amigo caso ainda não seja
     try {
       await friendsApi.add(targetUser.id, targetUser.username);
-    } catch {
-      // Já pode ser amigo
-    }
+    } catch {}
+
     const newFriend: Friend = {
       friend_id: targetUser.id,
       username: targetUser.username,
@@ -290,13 +301,22 @@ export const DirectMessages: React.FC = () => {
                   </div>
                 ) : (
                   <>
+                    {/* Header da Conversa Ativa */}
                     <div className="h-16 px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative flex-shrink-0">
                           <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm uppercase">
                             {activeFriend.username.charAt(0)}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+                          <span
+                            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-surface-container-lowest ${
+                              connectionStatus === 'connected'
+                                ? 'bg-emerald-500'
+                                : connectionStatus === 'reconnecting'
+                                ? 'bg-amber-500 animate-pulse'
+                                : 'bg-gray-400'
+                            }`}
+                          />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -304,14 +324,47 @@ export const DirectMessages: React.FC = () => {
                               @{activeFriend.username}
                             </h2>
                           </div>
-                          <p className="text-[11px] text-emerald-600 font-medium">
-                            {activeFriend.mood || 'Online no Espectro'}
-                          </p>
+                          <div className="flex items-center gap-2 text-[11px]">
+                            {connectionStatus === 'connected' ? (
+                              <span className="text-emerald-600 font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Em tempo real
+                              </span>
+                            ) : connectionStatus === 'reconnecting' ? (
+                              <span className="text-amber-500 font-medium flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
+                                Reconectando...
+                              </span>
+                            ) : (
+                              <span className="text-on-surface-variant font-medium">
+                                Conectando...
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Histórico */}
+                    {/* Aviso de Desconexão / Reconexão automática a cada 3 segundos */}
+                    {connectionStatus === 'reconnecting' && (
+                      <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center justify-between text-xs text-amber-500 z-10 flex-shrink-0 animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px] animate-spin">
+                            sync
+                          </span>
+                          <span>Reconectando... tentando restabelecer o WebSocket a cada 3s</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={reconnect}
+                          className="underline hover:text-amber-400 font-semibold cursor-pointer text-[11px]"
+                        >
+                          Tentar agora
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Histórico de Mensagens */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       <div className="flex items-center justify-center">
                         <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full uppercase tracking-wider font-medium">
@@ -319,34 +372,34 @@ export const DirectMessages: React.FC = () => {
                         </span>
                       </div>
 
-                      {loadingChat ? (
+                      {loadingHistory ? (
                         <div className="text-center py-8 text-xs text-on-surface-variant">
                           <span className="material-symbols-outlined text-[24px] text-primary animate-spin">
                             progress_activity
                           </span>
-                          <p className="mt-1">Carregando mensagens...</p>
+                          <p className="mt-1">Carregando histórico do chat...</p>
                         </div>
                       ) : messages.length === 0 ? (
                         <div className="py-8">
                           <EmptyState
                             icon="waving_hand"
-                            title={`Diga olá para @${activeFriend.username}!`}
-                            description="Nenhuma mensagem foi trocada ainda. Quebre o gelo enviando a primeira mensagem."
+                            title="Nenhuma mensagem ainda. Diga um oi!"
+                            description={`Inicie a conversa em tempo real com @${activeFriend.username}. Envie uma mensagem para quebrar o gelo.`}
                             className="max-w-md mx-auto"
                           />
                         </div>
                       ) : (
-                        messages.map((m) => {
+                        messages.map((m, idx) => {
                           const isMe = m.sender_id === user.id;
                           return (
                             <div
-                              key={m.id}
+                              key={m.id || `${m.created_at}-${idx}`}
                               className={`flex items-end gap-2 max-w-xl ${
                                 isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
                               }`}
                             >
                               {!isMe && (
-                                <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1">
+                                <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase">
                                   {activeFriend.username.charAt(0)}
                                 </div>
                               )}
@@ -375,9 +428,23 @@ export const DirectMessages: React.FC = () => {
                           );
                         })
                       )}
+
+                      {/* Estado: Usuário Digitando... */}
+                      {isOtherUserTyping && (
+                        <div className="flex items-center gap-2 text-xs text-on-surface-variant italic pl-2 py-1 animate-pulse">
+                          <div className="flex gap-1 items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+                          </div>
+                          <span>@{activeFriend.username} está digitando...</span>
+                        </div>
+                      )}
+
+                      <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
+                    {/* Input do Chat */}
                     <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0">
                       <form
                         onSubmit={handleSendMessage}
@@ -386,7 +453,7 @@ export const DirectMessages: React.FC = () => {
                         <input
                           type="text"
                           value={inputText}
-                          onChange={(e) => setInputText(e.target.value)}
+                          onChange={handleInputChange}
                           placeholder={`Mensagem para @${activeFriend.username}...`}
                           className="flex-1 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
                         />
@@ -394,6 +461,7 @@ export const DirectMessages: React.FC = () => {
                           type="submit"
                           disabled={!inputText.trim()}
                           className="w-8 h-8 rounded-full flex items-center justify-center text-primary disabled:opacity-40 hover:bg-surface-container transition-all cursor-pointer"
+                          title="Enviar mensagem"
                         >
                           <span className="material-symbols-outlined text-[20px]">send</span>
                         </button>

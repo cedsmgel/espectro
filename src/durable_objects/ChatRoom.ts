@@ -99,9 +99,16 @@ export class ChatRoom implements DurableObject {
       })
     );
 
+    const wsProtocol = request.headers.get("Sec-WebSocket-Protocol");
+    const headers: Record<string, string> = {};
+    if (wsProtocol) {
+      headers["Sec-WebSocket-Protocol"] = wsProtocol;
+    }
+
     return new Response(null, {
       status: 101,
       webSocket: client,
+      headers,
     });
   }
 
@@ -112,11 +119,12 @@ export class ChatRoom implements DurableObject {
       const data = JSON.parse(raw);
 
       // Tratamento de novas mensagens de chat
-      if (data.type === "message" || data.content) {
+      if (data.type === "message" || data.content || data.text) {
+        const content = String(data.content || data.text || "").trim();
         const newMsg: ChatMessage = {
           sender_id: Number(data.sender_id || 0),
           sender_username: String(data.sender_username || "Usuário"),
-          content: String(data.content || "").trim(),
+          content,
           created_at: data.created_at || new Date().toISOString(),
         };
 
@@ -137,6 +145,21 @@ export class ChatRoom implements DurableObject {
             } catch (sendErr) {
               console.error("Erro ao enviar mensagem para socket conectado:", sendErr);
             }
+          }
+        }
+      } else if (data.type === "typing") {
+        // Broadcast de status de digitação para os outros participantes da sala
+        const payload = JSON.stringify({
+          type: "typing",
+          sender_id: Number(data.sender_id || 0),
+          is_typing: !!data.is_typing,
+        });
+        const connectedSockets = this.ctx.getWebSockets();
+        for (const client of connectedSockets) {
+          if (client !== ws) {
+            try {
+              client.send(payload);
+            } catch {}
           }
         }
       } else if (data.type === "ping") {

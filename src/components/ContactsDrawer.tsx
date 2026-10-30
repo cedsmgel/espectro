@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
+import { authStorage, friendsApi, Friend } from '../lib/api';
 import { EmptyState } from './EmptyState';
+import { useChat } from '../hooks/useChat';
 
 interface ContactsDrawerProps {
   isOpen: boolean;
@@ -22,13 +23,25 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
   // Conversa ativa dentro da gaveta lateral
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Hook de chat em tempo real via WebSocket & Cloudflare Durable Objects
+  const {
+    messages,
+    sendMessage,
+    sendTyping,
+    isOtherUserTyping,
+    connectionStatus,
+    loadingHistory: loadingMessages,
+    reconnect,
+  } = useChat({
+    activeFriendId: selectedFriend?.friend_id,
+    activeFriendUsername: selectedFriend?.username,
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimerRef = useRef<number | null>(null);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -55,29 +68,10 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
     }
   }, [isOpen, userId]);
 
-  // Carrega histórico de mensagens privadas ao selecionar um amigo
-  const selectedFriendId = selectedFriend?.friend_id;
-  useEffect(() => {
-    if (selectedFriendId && userId) {
-      const loadChat = async () => {
-        setLoadingMessages(true);
-        try {
-          const history = await directMessagesApi.list(selectedFriendId);
-          setMessages(history);
-        } catch (err) {
-          console.error('Erro ao carregar mensagens privadas:', err);
-        } finally {
-          setLoadingMessages(false);
-        }
-      };
-      loadChat();
-    }
-  }, [selectedFriendId, userId]);
-
   // Auto-scroll para última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isOtherUserTyping]);
 
   // Pesquisa de novos usuários para adicionar
   useEffect(() => {
@@ -101,26 +95,35 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
     return () => clearTimeout(delay);
   }, [searchQuery, activeTab]);
 
-  // Enviar mensagem direta privada
-  const handleSendMessage = async (e: React.FormEvent) => {
+  // Enviar mensagem direta privada via WebSocket
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedFriend || !user) return;
 
     const content = newMessage.trim();
     setNewMessage('');
-    setSending(true);
 
-    try {
-      const created = await directMessagesApi.send({
-        receiver_id: selectedFriend.friend_id,
-        content,
-      });
-      setMessages((prev) => [...prev, created]);
-    } catch (err: any) {
-      showToast(err.message || 'Erro ao enviar mensagem.');
-    } finally {
-      setSending(false);
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
     }
+    sendTyping(false);
+
+    const sent = sendMessage(content);
+    if (!sent && connectionStatus !== 'connected') {
+      showToast('Reconectando ao chat... aguarde um instante.');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    sendTyping(true);
+
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      sendTyping(false);
+    }, 2000);
   };
 
   // Adicionar amigo
@@ -260,12 +263,32 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
           /* 2. CHAT PRIVADO ATIVO COM AMIGO SELECIONADO                                */
           /* ========================================================================= */
           <div className="flex-1 flex flex-col min-h-0 bg-surface">
+            {/* Aviso de Reconexão */}
+            {connectionStatus === 'reconnecting' && (
+              <div className="bg-amber-500/10 border-b border-amber-500/20 px-3 py-1.5 flex items-center justify-between text-[11px] text-amber-500 z-10 flex-shrink-0 animate-in fade-in">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>
+                  <span>Reconectando ao chat (tentando a cada 3s)...</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={reconnect}
+                  className="underline hover:text-amber-400 font-semibold cursor-pointer text-[10px]"
+                >
+                  Tentar agora
+                </button>
+              </div>
+            )}
+
             {/* Histórico de Mensagens */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              <div className="text-center py-2">
+              <div className="text-center py-2 flex items-center justify-center gap-2">
                 <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-2.5 py-1 rounded-full uppercase tracking-wider font-medium">
                   Conversa privada com @{selectedFriend.username}
                 </span>
+                {connectionStatus === 'connected' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" title="Conectado em tempo real" />
+                )}
               </div>
 
               {loadingMessages ? (
@@ -276,19 +299,20 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                   <p className="mt-1">Carregando histórico do Direct...</p>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="text-center py-8 text-xs text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[36px] text-on-surface-variant/40 mb-1">
-                    waving_hand
-                  </span>
-                  <p className="font-semibold text-on-surface">Diga olá para @{selectedFriend.username}!</p>
-                  <p className="text-[11px] mt-0.5">Envie a primeira mensagem privada.</p>
+                <div className="py-6">
+                  <EmptyState
+                    icon="waving_hand"
+                    title="Nenhuma mensagem ainda. Diga um oi!"
+                    description={`Diga olá para @${selectedFriend.username}! Envie a primeira mensagem privada.`}
+                    className="p-4"
+                  />
                 </div>
               ) : (
-                messages.map((m) => {
+                messages.map((m, idx) => {
                   const isMe = m.sender_id === user.id;
                   return (
                     <div
-                      key={m.id}
+                      key={m.id || `${m.created_at}-${idx}`}
                       className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                     >
                       <div
@@ -310,6 +334,19 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                   );
                 })
               )}
+
+              {/* Indicador de Digitação */}
+              {isOtherUserTyping && (
+                <div className="flex items-center gap-2 text-[11px] text-on-surface-variant italic pl-2 py-1 animate-pulse">
+                  <div className="flex gap-1 items-center">
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce" />
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                  <span>@{selectedFriend.username} está digitando...</span>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -319,13 +356,13 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                 <input
                   type="text"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleInputChange}
                   placeholder={`Mensagem para @${selectedFriend.username}...`}
                   className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container focus:ring-1 focus:ring-primary-container transition-all"
                 />
                 <button
                   type="submit"
-                  disabled={sending || !newMessage.trim()}
+                  disabled={!newMessage.trim()}
                   className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary shadow-xs transition-all cursor-pointer flex-shrink-0"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
