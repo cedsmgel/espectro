@@ -9,27 +9,57 @@ import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const user = authStorage.getUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'trending'>('foryou');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const queryParam = searchParams.get('q');
   const typeParam = searchParams.get('type');
   const filterParam = searchParams.get('filter');
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      const user = authStorage.getUser();
-      const [fetchedPosts, fetchedCommunities] = await Promise.all([
-        postsApi.list({ feed: user ? 'home' : undefined }),
-        communitiesApi.list(),
-      ]);
-      setPosts(fetchedPosts);
-      setCommunities(fetchedCommunities);
-    } catch (err) {
-      console.error('Erro ao carregar dados do feed:', err);
+      const token = authStorage.getToken();
+      const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+      // 1. Busca posts reais via fetch('/api/posts')
+      const postsPromise = fetch(`/api/posts${user ? '?feed=home' : ''}`, {
+        headers: authHeaders,
+      }).then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Erro ao buscar posts [status: ${res.status}]`);
+        }
+        return res.json() as Promise<Post[]>;
+      });
+
+      // 2. Busca catálogo de comunidades reais do D1 via fetch('/api/communities')
+      const commsPromise = fetch('/api/communities', {
+        headers: authHeaders,
+      }).then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Erro ao buscar comunidades [status: ${res.status}]`);
+        }
+        return res.json() as Promise<Community[]>;
+      });
+
+      const [fetchedPosts, fetchedCommunities] = await Promise.all([postsPromise, commsPromise]);
+      setPosts(fetchedPosts || []);
+      setCommunities(fetchedCommunities || []);
+    } catch (err: any) {
+      console.error('Erro ao conectar com API do D1 no feed:', err);
+      showToast('Erro ao sincronizar com o banco de dados. Tente recarregar.');
+      setPosts([]);
+      setCommunities([]);
     } finally {
       setLoading(false);
     }
@@ -85,6 +115,14 @@ export const Feed: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-surface px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <span className="material-symbols-outlined text-amber-400 text-[18px]">warning</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 1. Header Global */}
       <Header />
 
@@ -98,53 +136,59 @@ export const Feed: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* FEED CENTRAL (Colunas 1 a 8) */}
               <section className="lg:col-span-8 flex flex-col gap-6 min-w-0">
-                {/* Momentos do Espectro (Stories) */}
+                {/* Momentos do Espectro (Stories / Canais Vivos) */}
                 <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 overflow-hidden">
                   <div className="flex items-center justify-between pb-3">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-secondary-container animate-pulse" />
                       <h2 className="font-semibold text-sm text-on-surface">
-                        Momentos do Espectro
+                        Momentos & Canais
                       </h2>
                     </div>
-                    <span className="text-on-surface-variant text-xs cursor-pointer hover:text-primary">
-                      Ver todos
-                    </span>
+                    <Link to="/comunidades" className="text-on-surface-variant text-xs hover:text-primary">
+                      Ver catálogo
+                    </Link>
                   </div>
                   <div className="flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none">
-                    {/* Criar Story */}
+                    {/* Criar Story / Seu Momento */}
                     <div className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group">
-                      <div className="relative w-14 h-14 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <div className="relative w-14 h-14 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-105 transition-transform border border-outline-variant/20">
                         <span className="material-symbols-outlined text-[24px] text-primary">account_circle</span>
-                        <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs shadow-md">
+                        <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs shadow-md font-bold">
                           +
                         </span>
                       </div>
                       <span className="text-[11px] font-medium text-on-surface text-center max-w-[64px] truncate">
-                        Criar Story
+                        {user ? `@${user.username}` : 'Seu Momento'}
                       </span>
                     </div>
 
-                    {/* Stories Mockados Inspirados em Stitch */}
-                    {[
-                      { user: '@marina_art', color: 'from-secondary via-primary-container to-tertiary-fixed-dim' },
-                      { user: '@tech_radar', color: 'from-primary via-tertiary to-secondary-container' },
-                      { user: '@cinefilos', color: 'from-secondary via-secondary-container to-primary' },
-                      { user: '@dev_daily', color: 'from-tertiary-container via-primary-container to-secondary' },
-                      { user: '@urban_vibes', color: 'from-primary to-secondary-container' },
-                    ].map((story, idx) => (
-                      <div key={idx} className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group">
-                        <div className={`p-0.5 rounded-full bg-gradient-to-tr ${story.color} group-hover:scale-105 transition-transform`}>
+                    {/* Comunidades Reais do D1 como Canais */}
+                    {communities.slice(0, 8).map((c) => (
+                      <Link
+                        key={c.id}
+                        to={`/c/${c.slug || c.id}`}
+                        className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+                      >
+                        <div
+                          className="p-0.5 rounded-full group-hover:scale-105 transition-transform"
+                          style={{
+                            background: `linear-gradient(135deg, ${c.icon_color || '#712ae2'}, #4f46e5)`,
+                          }}
+                        >
                           <div className="w-13 h-13 rounded-full bg-surface-container-lowest p-0.5 flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center font-bold text-xs text-primary">
-                              {story.user.charAt(1).toUpperCase()}
+                            <div
+                              className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-xs"
+                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                            >
+                              {c.name.charAt(0).toUpperCase()}
                             </div>
                           </div>
                         </div>
                         <span className="text-[11px] text-on-surface-variant text-center max-w-[68px] truncate">
-                          {story.user}
+                          c/{c.name}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -230,14 +274,14 @@ export const Feed: React.FC = () => {
                   </div>
                 ) : filteredPosts.length === 0 ? (
                   <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant shadow-sm border border-outline-variant/30">
-                    <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
-                      dynamic_feed
-                    </span>
-                    <h3 className="font-semibold text-base text-on-surface">
-                      Nenhuma publicação encontrada
+                    <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-3 text-primary">
+                      <span className="material-symbols-outlined text-[36px]">forum</span>
+                    </div>
+                    <h3 className="font-bold text-base text-on-surface">
+                      Nenhum post por aqui ainda. Seja o primeiro a postar!
                     </h3>
-                    <p className="text-xs text-on-surface-variant mt-1">
-                      Seja o primeiro a compartilhar uma ideia ou recado!
+                    <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm mx-auto">
+                      Compartilhe fotos, vídeos, novidades ou recados usando o formulário acima.
                     </p>
                   </div>
                 ) : (
@@ -256,42 +300,7 @@ export const Feed: React.FC = () => {
 
               {/* COLUNA LATERAL DIREITA (Colunas 9 a 12) */}
               <aside className="lg:col-span-4 flex flex-col gap-6 sticky top-20 hidden lg:flex">
-                {/* Card: Em Alta no Brasil */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">trending_up</span>
-                      <h2 className="font-bold text-sm text-on-surface">Em Alta no Brasil</h2>
-                    </div>
-                    <button type="button" className="text-on-surface-variant hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">settings</span>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-3.5">
-                    {[
-                      { category: 'Design & UI · Em Alta', tag: '#DesignTokens', count: '24,5 mil publicações' },
-                      { category: 'Inteligência Artificial · Tendência', tag: 'IA Generativa', count: '148,2 mil publicações' },
-                      { category: 'Ciência & Espaço', tag: 'Lançamento Espacial', count: '18,9 mil publicações' },
-                      { category: 'Esports · Ao Vivo', tag: 'Copa do Mundo de Esports', count: '72,4 mil publicações' },
-                    ].map((topic, idx) => (
-                      <div key={idx} className="flex items-start justify-between cursor-pointer group">
-                        <div className="flex flex-col">
-                          <span className="text-[11px] text-on-surface-variant">{topic.category}</span>
-                          <span className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors">
-                            {topic.tag}
-                          </span>
-                          <span className="text-[11px] text-on-surface-variant">{topic.count}</span>
-                        </div>
-                        <button type="button" aria-label="Opções" className="p-1 text-on-surface-variant hover:text-on-surface">
-                          <span className="material-symbols-outlined text-[16px]">more_horiz</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Card: Comunidades em Alta (D1) */}
+                {/* Card 1: Comunidades em Alta (D1) */}
                 <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -308,40 +317,57 @@ export const Feed: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-3">
-                    {communities.slice(0, 5).map((c, idx) => (
-                      <div key={c.id} className="flex items-center justify-between gap-2 group">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-[11px] font-bold text-on-surface-variant w-4 text-center">
-                            #{idx + 1}
-                          </span>
-                          <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-                            style={{ backgroundColor: c.icon_color || '#712ae2' }}
-                          >
-                            {c.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <Link
-                              to={`/c/${c.slug || c.id}`}
-                              className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
-                            >
-                              c/{c.name}
-                            </Link>
-                            <span className="text-[11px] text-on-surface-variant truncate">
-                              {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
+                  {communities.length === 0 ? (
+                    <div className="p-4 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
+                      <span className="material-symbols-outlined text-[24px] text-on-surface-variant/40 mb-1">
+                        group_off
+                      </span>
+                      <p className="font-medium text-on-surface">Nenhuma comunidade ainda</p>
+                      <p className="mt-1 text-[11px]">Seja o primeiro a fundar uma comunidade no Espectro!</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowCommunityModal(true)}
+                        className="mt-2.5 px-3 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[11px] hover:bg-primary cursor-pointer shadow-xs"
+                      >
+                        + Criar Comunidade
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {communities.slice(0, 5).map((c, idx) => (
+                        <div key={c.id} className="flex items-center justify-between gap-2 group">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-[11px] font-bold text-on-surface-variant w-4 text-center">
+                              #{idx + 1}
                             </span>
+                            <div
+                              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                            >
+                              {c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <Link
+                                to={`/c/${c.slug || c.id}`}
+                                className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
+                              >
+                                c/{c.name}
+                              </Link>
+                              <span className="text-[11px] text-on-surface-variant truncate">
+                                {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
+                              </span>
+                            </div>
                           </div>
+                          <Link
+                            to={`/c/${c.slug || c.id}`}
+                            className="px-3 py-1 rounded-full bg-surface-container text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
+                          >
+                            Ver
+                          </Link>
                         </div>
-                        <Link
-                          to={`/c/${c.slug || c.id}`}
-                          className="px-3 py-1 rounded-full bg-surface-container text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
-                        >
-                          Ver
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
                   <Link
                     to="/comunidades"
@@ -351,38 +377,66 @@ export const Feed: React.FC = () => {
                   </Link>
                 </div>
 
-                {/* Card: Quem Seguir */}
+                {/* Card 2: Comunidades Ativas (D1) */}
                 <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-bold text-sm text-on-surface">Sugestões de Perfis</h2>
-                    <button type="button" aria-label="Atualizar" className="text-on-surface-variant hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">refresh</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
+                      <h2 className="font-bold text-sm text-on-surface">Comunidades Ativas</h2>
+                    </div>
+                    <span className="text-[11px] font-medium text-on-surface-variant">
+                      {communities.length} {communities.length === 1 ? 'comunidade' : 'comunidades'}
+                    </span>
                   </div>
 
-                  <div className="flex flex-col gap-3">
-                    {[
-                      { name: 'Beatriz Rocha', user: '@biarocha' },
-                      { name: 'Thiago Silveira', user: '@thiago_dev' },
-                    ].map((prof, idx) => (
-                      <div key={idx} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold text-xs flex items-center justify-center flex-shrink-0">
-                            {prof.name.charAt(0)}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-semibold text-on-surface truncate">{prof.name}</span>
-                            <span className="text-[11px] text-on-surface-variant truncate">{prof.user}</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="px-3.5 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-colors flex-shrink-0 cursor-pointer"
+                  {communities.length <= 5 ? (
+                    <div className="text-xs text-on-surface-variant bg-surface-container-low p-3.5 rounded-xl text-center space-y-1">
+                      <p className="font-medium text-on-surface">Conecte-se com interesses mútuos</p>
+                      <p className="text-[11px]">Entre nas comunidades acima ou crie uma nova para seu grupo.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      {communities.slice(5, 10).map((c) => (
+                        <Link
+                          key={c.id}
+                          to={`/c/${c.slug || c.id}`}
+                          className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container transition-colors group"
                         >
-                          Seguir
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-[10px] flex-shrink-0"
+                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                            >
+                              {c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
+                              c/{c.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-on-surface-variant flex-shrink-0">
+                            {c.members_count} mem.
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Card 3: Visão Geral da Rede (Métricas Reais D1) */}
+                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">hub</span>
+                    <h2 className="font-bold text-sm text-on-surface">Rede Espectro</h2>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="bg-surface-container-low p-3 rounded-xl flex flex-col">
+                      <span className="text-lg font-bold text-on-surface">{posts.length}</span>
+                      <span className="text-[11px] text-on-surface-variant">Posts Carregados</span>
+                    </div>
+                    <div className="bg-surface-container-low p-3 rounded-xl flex flex-col">
+                      <span className="text-lg font-bold text-on-surface">{communities.length}</span>
+                      <span className="text-[11px] text-on-surface-variant">Comunidades</span>
+                    </div>
                   </div>
                 </div>
 

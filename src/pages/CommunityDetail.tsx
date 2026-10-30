@@ -35,37 +35,77 @@ export const CommunityDetail: React.FC = () => {
   };
 
   const fetchData = async () => {
+    if (!slug) return;
     setLoading(true);
+    const token = authStorage.getToken();
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     try {
-      const allComms = await communitiesApi.list();
-      setAllCommunities(allComms);
-
-      // Encontra comunidade por slug ou por id
-      let current = allComms.find((c) => c.slug === slug || String(c.id) === slug);
-
-      if (!current && slug) {
-        try {
-          current = await communitiesApi.getBySlug(slug);
-        } catch {
-          current = undefined;
+      // 1. Carrega dados da comunidade via endpoint real /api/communities/:slug
+      let current: Community | null = null;
+      try {
+        const res = await fetch(`/api/communities/${encodeURIComponent(slug)}`, {
+          headers: authHeaders,
+        });
+        if (res.ok) {
+          current = await res.json();
+        } else if (res.status === 404) {
+          // Fallback query param se a rota com slug falhar
+          const fallbackRes = await fetch(`/api/communities?slug=${encodeURIComponent(slug)}`, {
+            headers: authHeaders,
+          });
+          if (fallbackRes.ok) {
+            current = await fallbackRes.json();
+          }
+        } else {
+          console.error(`Erro da API D1 [${res.status}]:`, await res.text());
+          showToast('Falha ao comunicar com o servidor D1.');
         }
+      } catch (networkErr) {
+        console.error('Erro de conexão ao buscar comunidade:', networkErr);
+        showToast('Erro de conexão. Verifique sua rede.');
+      }
+
+      // 2. Carrega catálogo geral para dropdown do composer
+      try {
+        const allComms = await communitiesApi.list();
+        setAllCommunities(allComms);
+        if (!current && allComms.length > 0) {
+          current = allComms.find((c) => c.slug === slug || String(c.id) === slug) || null;
+        }
+      } catch (listErr) {
+        console.error('Erro ao listar catálogo de comunidades:', listErr);
       }
 
       if (current) {
         setCommunity(current);
         setIsMember(Boolean(current.is_member));
 
-        // FILTRA OS POSTS APENAS DAQUELE ID DE COMUNIDADE
-        const commPosts = await postsApi.list({ community_id: current.id });
-        // Garante a filtragem estrita no cliente pelo ID da comunidade
-        const strictCommunityPosts = commPosts.filter((p) => p.community_id === current.id);
-        setPosts(strictCommunityPosts);
+        // 3. Puxa posts reais da comunidade via /api/posts?community_id=...
+        try {
+          const postsRes = await fetch(`/api/posts?community_id=${current.id}`, {
+            headers: authHeaders,
+          });
+          if (postsRes.ok) {
+            const commPosts: Post[] = await postsRes.json();
+            // Filtragem estrita pelo ID da comunidade
+            setPosts(commPosts.filter((p) => p.community_id === current!.id));
+          } else {
+            console.error(`Erro ao buscar posts da comunidade [${postsRes.status}]`);
+            setPosts([]);
+          }
+        } catch (postsErr) {
+          console.error('Erro ao buscar posts:', postsErr);
+          setPosts([]);
+          showToast('Não foi possível carregar os posts desta comunidade.');
+        }
       } else {
         setCommunity(null);
         setPosts([]);
       }
     } catch (err) {
-      console.error('Erro ao carregar detalhes da comunidade:', err);
+      console.error('Erro geral ao carregar detalhes da comunidade:', err);
+      showToast('Ocorreu um erro ao carregar a comunidade.');
     } finally {
       setLoading(false);
     }
@@ -333,14 +373,14 @@ export const CommunityDetail: React.FC = () => {
                     {/* Posts exclusivos da comunidade (filtrados por community_id) */}
                     {communityFilteredPosts.length === 0 ? (
                       <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                        <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
-                          forum
-                        </span>
-                        <h3 className="font-semibold text-sm text-on-surface">
-                          Nenhum tópico criado nesta comunidade ainda
+                        <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-3 text-primary">
+                          <span className="material-symbols-outlined text-[32px]">forum</span>
+                        </div>
+                        <h3 className="font-bold text-base text-on-surface">
+                          Nenhum post por aqui ainda. Seja o primeiro a postar!
                         </h3>
-                        <p className="text-xs text-on-surface-variant mt-1">
-                          Inicie uma discussão preenchendo o formulário acima!
+                        <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm mx-auto">
+                          Inicie uma conversa ou compartilhe algo interessante com os membros de c/{community.name}.
                         </p>
                       </div>
                     ) : (

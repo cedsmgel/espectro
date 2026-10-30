@@ -133,32 +133,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
     }
   };
 
-  // Amigos mockados de sugestão caso ainda não tenha nenhum no D1
-  const suggestedFriends: Friend[] = [
-    {
-      friend_id: 101,
-      username: 'clarice_lis',
-      status: 'accepted',
-      online: true,
-      mood: '🎵 Ouvindo rock 2000s',
-    },
-    {
-      friend_id: 102,
-      username: 'thiago_dev',
-      status: 'accepted',
-      online: true,
-      mood: '💻 Compilando kernel Rust',
-    },
-    {
-      friend_id: 103,
-      username: 'biarocha',
-      status: 'accepted',
-      online: true,
-      mood: '✨ No flow do Figma',
-    },
-  ];
-
-  const displayFriends = friends.length > 0 ? friends : suggestedFriends;
+  const displayFriends = friends;
 
   const filteredFriends = displayFriends.filter((f) =>
     f.username.toLowerCase().includes(searchQuery.toLowerCase())

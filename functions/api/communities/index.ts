@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -126,6 +126,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       description?: string;
       community_id?: number;
       community_slug?: string;
+      icon_color?: string;
     };
     try {
       body = await request.json();
@@ -207,8 +208,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     // Ação: Criar nova comunidade
-    const { name, description } = body;
-    const icon_color = (body as any).icon_color;
+    const { name, description, icon_color } = body;
     if (!name || typeof name !== "string" || name.trim().length < 2) {
       return errorResponse("Nome da comunidade deve ter ao menos 2 caracteres.", 400);
     }
