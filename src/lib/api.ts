@@ -371,8 +371,30 @@ export interface UserProfile {
   name?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  is_private?: boolean;
+  allow_scraps?: boolean;
+  is_friend?: boolean;
+  is_self?: boolean;
   created_at?: string;
 }
+
+export interface AccountSettings {
+  is_private: boolean;
+  allow_scraps: boolean;
+}
+
+export const accountApi = {
+  getSettings: async (): Promise<AccountSettings> => {
+    const res = await apiRequest<{ settings: AccountSettings }>('/api/users/settings', { method: 'GET' });
+    return res.settings;
+  },
+  updateSettings: async (settings: Partial<AccountSettings>): Promise<{ success: boolean; message: string; settings: AccountSettings }> => {
+    return apiRequest<{ success: boolean; message: string; settings: AccountSettings }>('/api/users/settings', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  },
+};
 
 export const profileApi = {
   get: async (username?: string): Promise<UserProfile> => {

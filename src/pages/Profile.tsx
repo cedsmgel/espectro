@@ -118,6 +118,7 @@ export const Profile: React.FC = () => {
   const fullName = userProfile?.name || null;
   const initialLetter = (fullName || usernameHandle).charAt(0).toUpperCase();
   const totalUpvotes = posts.reduce((acc, p) => acc + (p.upvotes || 0), 0);
+  const isLockedPrivate = Boolean(userProfile?.is_private && !isSelf && !userProfile?.is_friend);
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
@@ -169,6 +170,13 @@ export const Profile: React.FC = () => {
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
                       Membro do Espectro
                     </span>
+
+                    {userProfile?.is_private && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-semibold flex items-center gap-1 border border-amber-500/20">
+                        <span className="material-symbols-outlined text-[13px]">lock</span>
+                        <span>Perfil Privado</span>
+                      </span>
+                    )}
                   </div>
 
                   {/* Biografia Real */}
@@ -190,15 +198,17 @@ export const Profile: React.FC = () => {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 mt-3 text-xs text-on-surface-variant">
-                    <div>
-                      <strong className="text-on-surface font-bold">{posts.length}</strong>{' '}
-                      {posts.length === 1 ? 'publicação' : 'publicações'}
+                  {!isLockedPrivate && (
+                    <div className="flex items-center gap-4 mt-3 text-xs text-on-surface-variant">
+                      <div>
+                        <strong className="text-on-surface font-bold">{posts.length}</strong>{' '}
+                        {posts.length === 1 ? 'publicação' : 'publicações'}
+                      </div>
+                      <div>
+                        <strong className="text-primary font-bold">▲ {totalUpvotes}</strong> upvotes recebidos
+                      </div>
                     </div>
-                    <div>
-                      <strong className="text-primary font-bold">▲ {totalUpvotes}</strong> upvotes recebidos
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -211,6 +221,14 @@ export const Profile: React.FC = () => {
                   >
                     <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                     <span>Editar Perfil</span>
+                  </Link>
+
+                  <Link
+                    to="/settings/account"
+                    className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center cursor-pointer"
+                    title="Configurações de Privacidade da Conta"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">shield</span>
                   </Link>
 
                   <Link
@@ -243,53 +261,77 @@ export const Profile: React.FC = () => {
               )}
             </div>
 
-            {/* 2. Mural de Publicações do Usuário */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
-                  <h2 className="font-bold text-base text-on-surface">Mural de Publicações</h2>
+            {/* 2. Mural de Publicações / Bloqueio de Perfil Privado */}
+            {isLockedPrivate ? (
+              <div className="bg-surface-container-lowest rounded-3xl p-8 sm:p-12 border border-outline-variant/30 shadow-xs flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center text-primary border border-outline-variant/30">
+                  <span className="material-symbols-outlined text-[36px]">lock</span>
                 </div>
-                <span className="text-xs text-on-surface-variant">
-                  {posts.length} {posts.length === 1 ? 'post' : 'posts'}
-                </span>
+                <div className="max-w-md">
+                  <h2 className="text-lg font-bold text-on-surface">Este perfil é privado</h2>
+                  <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
+                    As publicações, fotos e scraps de @{usernameHandle} são visíveis apenas para amigos confirmados.
+                    Envie uma mensagem direta para adicionar como amigo e desbloquear o mural.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 mt-2">
+                  <Link
+                    to="/mensagens"
+                    className="px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                    <span>Enviar Mensagem Direta</span>
+                  </Link>
+                </div>
               </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
+                    <h2 className="font-bold text-base text-on-surface">Mural de Publicações</h2>
+                  </div>
+                  <span className="text-xs text-on-surface-variant">
+                    {posts.length} {posts.length === 1 ? 'post' : 'posts'}
+                  </span>
+                </div>
 
-              {loading ? (
-                <div className="flex flex-col gap-4">
-                  <PostSkeleton />
-                  <PostSkeleton />
-                </div>
-              ) : hasError ? (
-                <ErrorState
-                  title="Erro ao sincronizar com o banco D1"
-                  message="Não foi possível recuperar as postagens deste usuário neste momento."
-                  onRetry={loadUserPosts}
-                />
-              ) : posts.length === 0 ? (
-                /* EMPTY STATE EXCLUSIVO */
-                <EmptyState
-                  icon="auto_stories"
-                  title="Mural vazio."
-                  description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
-                  actionLabel={isSelf ? "Criar primeiro post" : "Explorar o Feed"}
-                  onAction={() => navigate('/')}
-                  className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-8"
-                />
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {posts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onVote={handleVote}
-                      onDelete={handleDeletePost}
-                      onUpdate={handleUpdatePost}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+                {loading ? (
+                  <div className="flex flex-col gap-4">
+                    <PostSkeleton />
+                    <PostSkeleton />
+                  </div>
+                ) : hasError ? (
+                  <ErrorState
+                    title="Erro ao sincronizar com o banco D1"
+                    message="Não foi possível recuperar as postagens deste usuário neste momento."
+                    onRetry={loadUserPosts}
+                  />
+                ) : posts.length === 0 ? (
+                  /* EMPTY STATE EXCLUSIVO */
+                  <EmptyState
+                    icon="auto_stories"
+                    title="Mural vazio."
+                    description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
+                    actionLabel={isSelf ? "Criar primeiro post" : "Explorar o Feed"}
+                    onAction={() => navigate('/')}
+                    className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-8"
+                  />
+                ) : (
+                  <div className="flex flex-col gap-5">
+                    {posts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onVote={handleVote}
+                        onDelete={handleDeletePost}
+                        onUpdate={handleUpdatePost}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>

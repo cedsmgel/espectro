@@ -72,12 +72,39 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const params: unknown[] = [];
 
-    if (authorId) {
-      query += ` AND p.author_id = ?`;
-      params.push(Number(authorId));
-    } else if (authorName) {
-      query += ` AND LOWER(u.username) = ?`;
-      params.push(authorName.toLowerCase());
+    if (authorId || authorName) {
+      // 1. Verifica se o autor possui perfil privado (is_private)
+      const authorQuery = authorId
+        ? "SELECT id, is_private FROM users WHERE id = ?"
+        : "SELECT id, is_private FROM users WHERE LOWER(username) = ?";
+      const authorParam = authorId ? Number(authorId) : authorName!.toLowerCase();
+      const authorRow = await env.DB.prepare(authorQuery).bind(authorParam).first<any>();
+
+      if (authorRow && authorRow.is_private) {
+        const isSelf = authUser && authUser.id === authorRow.id;
+        let isFriend = false;
+        if (authUser && !isSelf) {
+          const friendship = await env.DB.prepare(
+            "SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = 'accepted'"
+          )
+            .bind(authUser.id, authorRow.id, authorRow.id, authUser.id)
+            .first();
+          isFriend = Boolean(friendship);
+        }
+
+        // Se o perfil for privado e o visitante não for amigo nem o próprio autor, oculta os posts
+        if (!isSelf && !isFriend) {
+          return jsonResponse([]);
+        }
+      }
+
+      if (authorId) {
+        query += ` AND p.author_id = ?`;
+        params.push(Number(authorId));
+      } else if (authorName) {
+        query += ` AND LOWER(u.username) = ?`;
+        params.push(authorName.toLowerCase());
+      }
     }
 
     if (communityId) {

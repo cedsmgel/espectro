@@ -16,16 +16,37 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 1. Busca perfil público por nome de usuário (?username=...)
     if (targetUsername) {
       const user = await env.DB.prepare(
-        "SELECT id, username, name, bio, avatar_url, created_at FROM users WHERE username = ? COLLATE NOCASE"
+        "SELECT id, username, name, bio, avatar_url, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
       )
         .bind(targetUsername.trim())
-        .first();
+        .first<any>();
 
       if (!user) {
         return errorResponse("Usuário não encontrado.", 404);
       }
 
-      return jsonResponse({ user });
+      const auth = await getAuthUser(request, secret);
+      const isSelf = auth && auth.id === user.id;
+
+      let isFriend = false;
+      if (auth && !isSelf) {
+        const friendship = await env.DB.prepare(
+          "SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = 'accepted'"
+        )
+          .bind(auth.id, user.id, user.id, auth.id)
+          .first();
+        isFriend = Boolean(friendship);
+      }
+
+      return jsonResponse({
+        user: {
+          ...user,
+          is_private: Boolean(user.is_private),
+          allow_scraps: Boolean(user.allow_scraps ?? 1),
+          is_friend: isFriend,
+          is_self: Boolean(isSelf),
+        },
+      });
     }
 
     // 2. Busca perfil privado do usuário logado (via token JWT)
@@ -35,16 +56,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const user = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, is_private, allow_scraps, created_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
-      .first();
+      .first<any>();
 
     if (!user) {
       return errorResponse("Conta de usuário não encontrada no banco de dados.", 404);
     }
 
-    return jsonResponse({ user });
+    return jsonResponse({
+      user: {
+        ...user,
+        is_private: Boolean(user.is_private),
+        allow_scraps: Boolean(user.allow_scraps ?? 1),
+        is_friend: true,
+        is_self: true,
+      },
+    });
   } catch (err: any) {
     return errorResponse(`Erro ao recuperar perfil: ${err.message || String(err)}`, 500);
   }

@@ -10,6 +10,7 @@ import { Videos } from './pages/Videos';
 import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
 import { ProfileSettings } from './pages/ProfileSettings';
+import { AccountSettings } from './pages/AccountSettings';
 
 export const App: React.FC = () => {
   return (
@@ -22,6 +23,8 @@ export const App: React.FC = () => {
           <Route path="/u/:username" element={<Profile />} />
           <Route path="/settings/profile" element={<ProfileSettings />} />
           <Route path="/configuracoes/perfil" element={<ProfileSettings />} />
+          <Route path="/settings/account" element={<AccountSettings />} />
+          <Route path="/configuracoes/conta" element={<AccountSettings />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
           <Route path="/c/:slug" element={<CommunityDetail />} />
           <Route path="/comunidade/:slug" element={<CommunityDetail />} />
