@@ -81,12 +81,12 @@ export const CommunityDetail: React.FC = () => {
       <Header />
 
       <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-6 relative z-10 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_320px] gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
           {/* Left Navigation Rail */}
           <SidebarNav communities={allCommunities} />
 
-          {/* Center Column: Community Banner & Feed */}
-          <section className="flex flex-col gap-6 w-full min-w-0">
+          {/* Center Column: Community Banner & Feed (max-w-4xl mx-auto) */}
+          <section className="flex flex-col gap-6 w-full max-w-4xl mx-auto min-w-0">
             {loading ? (
               <div className="glass-surface rounded-2xl p-8 text-center text-neutral-400 text-sm animate-pulse">
                 Carregando comunidade...
@@ -105,7 +105,7 @@ export const CommunityDetail: React.FC = () => {
               </div>
             ) : (
               <>
-                {/* Top Community Hero Banner (Stitch Specification) */}
+                {/* Top Community Hero Banner */}
                 <div className="glass-surface rounded-2xl overflow-hidden relative shadow-[0_12px_32px_-4px_rgba(0,0,0,0.6)]">
                   {/* Cover Background with Glass Blur & Gradient */}
                   <div className="h-44 w-full bg-gradient-to-r from-blue-900/60 via-cyan-900/40 to-indigo-950/80 relative">
@@ -173,7 +173,7 @@ export const CommunityDetail: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Tab Navigation from Stitch */}
+                  {/* Tab Navigation */}
                   <div className="px-6 border-t border-white/10 flex items-center gap-2 overflow-x-auto scrollbar-none">
                     <button
                       type="button"
@@ -246,83 +246,6 @@ export const CommunityDetail: React.FC = () => {
               </>
             )}
           </section>
-
-          {/* Right Sidebar: Contexto da Comunidade (Stitch Specification) */}
-          <aside className="hidden xl:flex flex-col gap-6 sticky top-20">
-            {/* Sobre a Comunidade */}
-            <section className="glass-surface rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                <h3 className="text-sm font-display font-bold text-white">Regras da Casa</h3>
-                <span className="material-symbols-outlined text-neutral-400 text-[18px]">gavel</span>
-              </div>
-              <ul className="text-xs text-neutral-300 space-y-2 font-sans">
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">1.</span>
-                  <span>Seja gentil e respeite as memórias alheias.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">2.</span>
-                  <span>Sem correntes ou mensagens falsas de spam.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">3.</span>
-                  <span>Scraps nostálgicos são sempre bem-vindos!</span>
-                </li>
-              </ul>
-            </section>
-
-            {/* Moderadores */}
-            <section className="glass-surface rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                <h3 className="text-sm font-display font-bold text-white">Moderadores</h3>
-                <span className="text-[10px] text-cyan-300 font-semibold bg-cyan-400/10 px-2 py-0.5 rounded-full">
-                  Equipe
-                </span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold uppercase">
-                    {community?.owner_name ? community.owner_name.charAt(0) : 'M'}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-white">
-                      @{community?.owner_name || 'criador'}
-                    </p>
-                    <p className="text-[10px] text-neutral-400">Criador da comunidade</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Outras Comunidades */}
-            <section className="glass-surface rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                <h3 className="text-sm font-display font-bold text-white">Descobrir Mais</h3>
-                <Link to="/comunidades" className="text-xs text-cyan-300 hover:underline">
-                  Ver todas
-                </Link>
-              </div>
-              <div className="flex flex-col gap-2">
-                {allCommunities
-                  .filter((c) => c.slug !== slug && String(c.id) !== slug)
-                  .slice(0, 3)
-                  .map((c) => (
-                    <Link
-                      key={c.id}
-                      to={`/e/${c.slug || c.id}`}
-                      className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors group"
-                    >
-                      <span className="text-xs font-semibold text-neutral-300 group-hover:text-cyan-300 truncate">
-                        e/{c.name}
-                      </span>
-                      <span className="text-[10px] text-neutral-500">
-                        {c.members_count} membros
-                      </span>
-                    </Link>
-                  ))}
-              </div>
-            </section>
-          </aside>
         </div>
       </main>
     </div>

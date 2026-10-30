@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { communitiesApi, Community, authStorage } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
-import { ContactsWidget } from '../components/ContactsWidget';
 
 export const Communities: React.FC = () => {
   const navigate = useNavigate();
@@ -80,12 +79,12 @@ export const Communities: React.FC = () => {
       <Header />
 
       <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-6 relative z-10 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_320px] gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
           {/* Left Navigation */}
           <SidebarNav communities={communities} />
 
-          {/* Center Column: Communities Catalog */}
-          <section className="flex flex-col gap-6 w-full min-w-0">
+          {/* Center Column: Communities Catalog (max-w-4xl mx-auto) */}
+          <section className="flex flex-col gap-6 w-full max-w-4xl mx-auto min-w-0">
             {/* Header Banner */}
             <div className="glass-surface rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.4)]">
               <div>
@@ -193,9 +192,6 @@ export const Communities: React.FC = () => {
               </div>
             )}
           </section>
-
-          {/* Right Utility Contacts */}
-          <ContactsWidget communities={communities} />
         </div>
       </main>
 

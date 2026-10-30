@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { postsApi, communitiesApi, Post, Community, CreatePostData } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
-import { ContactsWidget } from '../components/ContactsWidget';
 import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
 
@@ -73,18 +72,18 @@ export const Feed: React.FC = () => {
       <div className="orb-glow-1" />
       <div className="orb-glow-2" />
 
-      {/* Main Header */}
+      {/* Main Header with Messages Direct Drawer button */}
       <Header />
 
-      {/* 3-Column Social Feed Canvas (max-w-[1440px] px-6 py-6) */}
+      {/* Main Layout: Left Sidebar + Centered Expanded Feed */}
       <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-6 relative z-10 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] xl:grid-cols-[260px_1fr_320px] gap-6 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
           {/* Column 1: Left Navigation Rail */}
           <SidebarNav communities={communities} />
 
-          {/* Column 2: Center Social Feed */}
-          <section className="flex flex-col gap-6 w-full min-w-0">
-            {/* Feed Header Filter Pills Bar from Stitch */}
+          {/* Column 2: Center Social Feed (Expanded max-w-4xl mx-auto) */}
+          <section className="flex flex-col gap-6 w-full max-w-4xl mx-auto min-w-0">
+            {/* Feed Header Filter Pills Bar */}
             <div className="glass-surface rounded-2xl p-2 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
               <div className="flex items-center gap-1.5">
                 <button
@@ -190,9 +189,6 @@ export const Feed: React.FC = () => {
               </div>
             )}
           </section>
-
-          {/* Column 3: Right Utility Panel */}
-          <ContactsWidget communities={communities} />
         </div>
       </main>
     </div>
