@@ -73,171 +73,145 @@ export const CommunityDetail: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f14] text-neutral-100 flex flex-col relative overflow-x-hidden">
-      {/* Ambient Spectral Glow Orbs from Stitch */}
-      <div className="orb-glow-1" />
-      <div className="orb-glow-2" />
-
+    <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
+      <SidebarNav />
 
-      <main className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-6 relative z-10 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
-          {/* Left Navigation Rail */}
-          <SidebarNav communities={allCommunities} />
-
-          {/* Center Column: Community Banner & Feed (max-w-4xl mx-auto) */}
-          <section className="flex flex-col gap-6 w-full max-w-4xl mx-auto min-w-0">
+      <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
+        <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
+          <section className="flex flex-col gap-6 max-w-4xl mx-auto min-w-0">
             {loading ? (
-              <div className="glass-surface rounded-2xl p-8 text-center text-neutral-400 text-sm animate-pulse">
-                Carregando comunidade...
+              <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
+                <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
+                  progress_activity
+                </span>
+                <p className="mt-2 text-xs">Carregando detalhes de e/{slug}...</p>
               </div>
             ) : !community ? (
-              <div className="glass-surface rounded-2xl p-10 text-center space-y-3">
-                <h2 className="text-xl font-display font-bold text-white">
+              <div className="bg-surface-container-lowest rounded-2xl p-10 text-center space-y-3 border border-outline-variant/30 shadow-sm">
+                <h2 className="text-xl font-bold text-on-surface">
                   Comunidade não encontrada
                 </h2>
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-on-surface-variant">
                   Esta comunidade não existe ou o endereço digitado está incorreto.
                 </p>
-                <Link to="/comunidades" className="inline-block btn-primary-blue text-xs font-semibold px-4 py-2 rounded-xl mt-2">
-                  Explorar Comunidades
+                <Link
+                  to="/comunidades"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-primary shadow-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                  <span>Ver todas as comunidades</span>
                 </Link>
               </div>
             ) : (
               <>
-                {/* Top Community Hero Banner */}
-                <div className="glass-surface rounded-2xl overflow-hidden relative shadow-[0_12px_32px_-4px_rgba(0,0,0,0.6)]">
-                  {/* Cover Background with Glass Blur & Gradient */}
-                  <div className="h-44 w-full bg-gradient-to-r from-blue-900/60 via-cyan-900/40 to-indigo-950/80 relative">
-                    <div className="absolute inset-0 bg-radial-gradient from-transparent to-[#0d0f14]/80 pointer-events-none" />
+                {/* Community Header Banner */}
+                <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30">
+                  {/* Subtle Gradient Cover */}
+                  <div className="h-36 sm:h-44 w-full bg-gradient-to-r from-primary via-secondary to-primary-container relative p-4 flex items-end justify-between">
+                    <span className="text-[11px] font-semibold text-white/80 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full">
+                      Espaço Oficial e/{community.slug || community.id}
+                    </span>
                   </div>
 
-                  {/* Community Header Content */}
-                  <div className="p-6 relative -mt-16 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                    <div className="flex items-end gap-4">
-                      {/* Avatar */}
-                      <div className="w-20 h-20 rounded-2xl bg-[#111318] p-1 border border-white/20 shadow-[0_0_20px_rgba(76,215,246,0.3)]">
-                        <div className="w-full h-full rounded-xl bg-gradient-to-tr from-cyan-400 via-blue-600 to-indigo-600 flex items-center justify-center text-white font-display font-bold text-3xl">
-                          {community.name.charAt(0).toUpperCase()}
+                  {/* Profile & Info Bar */}
+                  <div className="px-6 pb-6 pt-0 relative flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12">
+                      <div className="flex items-end gap-4">
+                        <div className="w-24 h-24 rounded-2xl p-1 bg-surface-container-lowest shadow-md">
+                          <div className="w-full h-full rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-3xl text-white">
+                            {community.name.charAt(0).toUpperCase()}
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h1 className="text-xl sm:text-2xl font-display font-bold text-white truncate">
-                            e/{community.name}
+                        <div className="flex flex-col pb-1">
+                          <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
+                            <span>e/{community.name}</span>
+                            <span className="material-symbols-outlined text-primary text-[20px]">
+                              verified
+                            </span>
                           </h1>
-                          <span className="material-symbols-outlined text-[20px] text-cyan-300" title="Comunidade Verificada">
-                            verified
+                          <span className="text-xs text-on-surface-variant">
+                            {community.members_count || 1} membros ativos no Espectro
                           </span>
                         </div>
-                        <p className="text-xs text-neutral-400 font-mono mt-0.5">
-                          {community.members_count || 1} membros • 1.2k tópicos ativos • 42 online
-                        </p>
+                      </div>
+
+                      {/* Join / Participar Button */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleJoin}
+                          disabled={joining}
+                          className={`px-5 py-2 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer ${
+                            isMember
+                              ? 'bg-surface-container-high text-on-surface'
+                              : 'bg-primary-container text-on-primary hover:bg-primary'
+                          }`}
+                        >
+                          {joining ? 'Processando...' : isMember ? 'Membro Ativo' : '+ Entrar na Comunidade'}
+                        </button>
                       </div>
                     </div>
 
-                    {/* Join / Action Buttons */}
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Community Description */}
+                    {community.description && (
+                      <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed max-w-3xl pt-2">
+                        {community.description}
+                      </p>
+                    )}
+
+                    {/* Sub-tabs inside community */}
+                    <div className="flex items-center gap-4 pt-4 border-t border-outline-variant/20 text-xs font-semibold">
                       <button
                         type="button"
-                        onClick={handleJoin}
-                        disabled={joining || isMember}
-                        className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer shadow-[0_0_16px_rgba(59,130,246,0.35)] ${
-                          isMember
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
-                            : 'btn-primary-blue'
+                        onClick={() => setActiveTab('discussions')}
+                        className={`pb-2 relative cursor-pointer ${
+                          activeTab === 'discussions' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        {isMember ? '✓ Membro' : joining ? 'Entrando...' : 'Entrar na Comunidade'}
+                        Discussões ({posts.length})
+                        {activeTab === 'discussions' && (
+                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                        )}
                       </button>
-
                       <button
                         type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(window.location.href);
-                          alert('Link da comunidade copiado!');
-                        }}
-                        className="btn-glass p-2.5 rounded-xl text-neutral-300 hover:text-white"
-                        title="Compartilhar Comunidade"
+                        onClick={() => setActiveTab('members')}
+                        className={`pb-2 relative cursor-pointer ${
+                          activeTab === 'members' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">share</span>
+                        Membros
+                        {activeTab === 'members' && (
+                          <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                        )}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Description Box */}
-                  <div className="px-6 pb-4">
-                    <p className="text-xs sm:text-sm text-neutral-300 font-sans leading-relaxed">
-                      {community.description || 'Comunidade do Espectro. Conecte-se e compartilhe suas ideias com outros membros.'}
-                    </p>
-                  </div>
-
-                  {/* Tab Navigation */}
-                  <div className="px-6 border-t border-white/10 flex items-center gap-2 overflow-x-auto scrollbar-none">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('discussions')}
-                      className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                        activeTab === 'discussions'
-                          ? 'border-cyan-400 text-cyan-300'
-                          : 'border-transparent text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      Discussões
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('pinned')}
-                      className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                        activeTab === 'pinned'
-                          ? 'border-cyan-400 text-cyan-300'
-                          : 'border-transparent text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      Tópicos Fixados 📌
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('media')}
-                      className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                        activeTab === 'media'
-                          ? 'border-cyan-400 text-cyan-300'
-                          : 'border-transparent text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      Fotos &amp; Mídia
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('members')}
-                      className={`px-4 py-3 text-xs font-semibold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                        activeTab === 'members'
-                          ? 'border-cyan-400 text-cyan-300'
-                          : 'border-transparent text-neutral-400 hover:text-white'
-                      }`}
-                    >
-                      Membros ({community.members_count || 1})
-                    </button>
                   </div>
                 </div>
 
-                {/* Scoped Composer for this Community */}
+                {/* Composer for this specific community */}
                 <CreatePostForm
                   onPostCreated={handlePostCreated}
                   defaultCommunityId={community.id}
+                  communities={allCommunities}
                 />
 
-                {/* Scoped Posts Feed */}
+                {/* Community Posts */}
                 {posts.length === 0 ? (
-                  <div className="glass-surface rounded-2xl p-10 text-center space-y-2 border border-white/10">
-                    <h3 className="text-sm font-semibold text-white">Nenhum tópico ainda</h3>
-                    <p className="text-xs text-neutral-400">
-                      Inicie a primeira discussão em e/{community.name}!
+                  <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
+                    <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
+                      forum
+                    </span>
+                    <h3 className="font-semibold text-sm text-on-surface">
+                      Nenhum tópico criado nesta comunidade ainda
+                    </h3>
+                    <p className="text-xs text-on-surface-variant mt-1">
+                      Inicie uma discussão preenchendo o formulário acima!
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="flex flex-col gap-4">
                     {posts.map((post) => (
                       <PostCard key={post.id} post={post} />
                     ))}
@@ -246,8 +220,8 @@ export const CommunityDetail: React.FC = () => {
               </>
             )}
           </section>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

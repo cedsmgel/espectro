@@ -4,6 +4,8 @@ import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
 import { Communities } from './pages/Communities';
 import { CommunityDetail } from './pages/CommunityDetail';
+import { DirectMessages } from './pages/DirectMessages';
+import { Videos } from './pages/Videos';
 
 export const App: React.FC = () => {
   return (
@@ -12,6 +14,8 @@ export const App: React.FC = () => {
         <Route path="/" element={<Feed />} />
         <Route path="/e/:slug" element={<CommunityDetail />} />
         <Route path="/comunidades" element={<Communities />} />
+        <Route path="/mensagens" element={<DirectMessages />} />
+        <Route path="/videos" element={<Videos />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

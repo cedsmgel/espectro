@@ -87,279 +87,226 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
   const score = upvotes - downvotes;
 
   return (
-    <article className="glass-surface rounded-2xl p-5 flex gap-4 transition-all duration-200 hover:border-white/20 hover:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.6)]">
-      {/* Left Upvote Column from Stitch */}
-      <div className="flex flex-col items-center justify-start gap-1 pt-1 shrink-0">
+    <article className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 transition-all hover:shadow-md">
+      {/* 1. Cabeçalho do Post */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shadow-xs">
+            {post.author_name.charAt(0)}
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-sm text-on-surface">
+                {post.author_name}
+              </span>
+              {post.community_name ? (
+                <Link
+                  to={`/e/${post.community_slug || post.community_id}`}
+                  className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-medium flex items-center gap-1 hover:bg-secondary-fixed-dim transition-colors"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
+                  e/{post.community_name}
+                </Link>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface text-xs font-medium">
+                  e/geral
+                </span>
+              )}
+              <span className="text-on-surface-variant text-xs">
+                · {new Date(post.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+            <span className="text-xs text-on-surface-variant">@{post.author_name.toLowerCase().replace(/\s+/g, '_')}</span>
+          </div>
+        </div>
         <button
           type="button"
-          onClick={() => handleVoteClick('up')}
-          className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-            userVote === 'up'
-              ? 'text-cyan-300 bg-cyan-400/20 shadow-[0_0_12px_rgba(76,215,246,0.3)]'
-              : 'text-neutral-400 hover:text-cyan-300 hover:bg-white/5'
-          }`}
-          title="Upvote"
+          aria-label="Ações do post"
+          className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[22px]">keyboard_arrow_up</span>
-        </button>
-
-        <span
-          className={`text-xs font-bold font-mono tracking-tight ${
-            score > 0
-              ? 'text-cyan-300'
-              : score < 0
-              ? 'text-rose-400'
-              : 'text-neutral-400'
-          }`}
-        >
-          {score > 0 ? `+${score}` : score}
-        </span>
-
-        <button
-          type="button"
-          onClick={() => handleVoteClick('down')}
-          className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-            userVote === 'down'
-              ? 'text-rose-400 bg-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
-              : 'text-neutral-400 hover:text-white hover:bg-white/5'
-          }`}
-          title="Downvote"
-        >
-          <span className="material-symbols-outlined text-[22px]">keyboard_arrow_down</span>
+          <span className="material-symbols-outlined text-[20px]">more_horiz</span>
         </button>
       </div>
 
-      {/* Main Post Content */}
-      <div className="flex flex-col gap-3 flex-1 min-w-0">
-        {/* Meta Header from Stitch */}
-        <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            {post.community_name ? (
-              <Link
-                to={`/e/${post.community_slug || post.community_id}`}
-                className="px-2.5 py-0.5 rounded-full bg-blue-500/15 text-cyan-300 border border-blue-400/30 font-semibold hover:bg-blue-500/25 transition-colors"
-              >
-                e/{post.community_name}
-              </Link>
-            ) : (
-              <span className="px-2.5 py-0.5 rounded-full bg-white/5 text-neutral-300 border border-white/10 font-medium">
-                e/geral
-              </span>
-            )}
-            <span className="text-neutral-500">•</span>
-            <div className="flex items-center gap-1.5 text-neutral-400">
-              <span className="text-white font-medium hover:underline cursor-pointer">
-                @{post.author_name}
-              </span>
-              <span className="text-neutral-500">
-                há{' '}
-                {new Date(post.created_at).toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </span>
-            </div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              Original
-            </span>
-          </div>
-
-          <button type="button" className="text-neutral-400 hover:text-white p-1 rounded-lg">
-            <span className="material-symbols-outlined text-[18px]">more_horiz</span>
-          </button>
-        </div>
-
-        {/* Title if discussion */}
+      {/* 2. Conteúdo do Post */}
+      <div className="flex flex-col gap-2.5">
         {post.title && (
-          <h3 className="text-base sm:text-lg font-display font-semibold text-white leading-snug hover:text-cyan-300 transition-colors cursor-pointer">
+          <h3 className="text-base sm:text-lg font-bold text-on-surface leading-snug">
             {post.title}
           </h3>
         )}
 
-        {/* Scrap Nostalgic Highlight Box from Stitch */}
         {post.post_type === 'scrap' ? (
-          <div className="relative p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-purple-500/10 border border-amber-400/30 shadow-[0_0_20px_rgba(245,158,11,0.1)] backdrop-blur-md">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-300 text-[18px]">
-                  history_edu
-                </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                  Scrap Nostálgico
-                </span>
-              </div>
-              <span className="text-[10px] text-neutral-400">Não apaga!</span>
-            </div>
-            <p className="text-sm italic text-amber-100/90 font-serif pl-3 border-l-2 border-amber-400/40">
-              “{post.content}”
+          <div className="relative p-4 rounded-xl bg-surface-container-low border-l-4 border-secondary flex flex-col gap-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1">
+              <span className="material-symbols-outlined text-[15px]">auto_stories</span>
+              Scrap Nostálgico
+            </span>
+            <p className="text-sm italic text-on-surface font-serif">
+              "{post.content}"
             </p>
-            <div className="mt-2.5 flex items-center justify-between text-xs">
-              <span className="text-neutral-400 font-medium">— @{post.author_name}</span>
-              <button
-                type="button"
-                onClick={loadComments}
-                className="text-amber-300 hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span>Responder Scrap</span>
-                <span className="material-symbols-outlined text-[14px]">reply</span>
-              </button>
-            </div>
           </div>
         ) : (
-          <p className="text-sm text-neutral-200 leading-relaxed font-sans whitespace-pre-line">
+          <p className="text-sm text-on-surface leading-relaxed whitespace-pre-line">
             {post.content}
           </p>
         )}
 
-        {/* Media Preview Container from Stitch */}
+        {/* Mídia Principal */}
         {post.media_url && (
-          <div className="relative rounded-xl overflow-hidden border border-white/10 glass-recessed group cursor-pointer my-1 w-full max-h-80 aspect-video">
+          <div className="relative w-full rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-96 mt-1">
             <img
               src={post.media_url}
               alt="Mídia da postagem"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-              style={{ objectFit: 'cover' }}
+              className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.01]"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e13]/90 via-transparent to-transparent flex items-end p-4">
-              <div className="flex items-center justify-between w-full">
-                <span className="text-[10px] font-semibold text-cyan-300 flex items-center gap-1 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/10">
-                  <span className="material-symbols-outlined text-[14px]">view_in_ar</span>
-                  espectro_media.fig
-                </span>
-                <span className="text-[10px] text-white/70">Clique para inspecionar</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Action Toolbar Footer from Stitch */}
-        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-neutral-400">
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              onClick={loadComments}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                showComments ? 'bg-white/10 text-white' : 'hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
-              <span>{commentsCount} Comentários</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Link da publicação copiado!');
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-white/5 hover:text-white transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">share</span>
-              <span>Compartilhar</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={loadComments}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-amber-400/10 hover:text-amber-300 transition-all text-amber-300/80 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">history_edu</span>
-              <span>Enviar Scrap</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="p-2 rounded-xl hover:bg-white/5 hover:text-white transition-all cursor-pointer"
-            title="Salvar Post"
-          >
-            <span className="material-symbols-outlined text-[18px]">bookmark_border</span>
-          </button>
-        </div>
-
-        {/* Threaded Comments Section */}
-        {showComments && (
-          <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
-            {/* New Comment Input */}
-            {user ? (
-              <form onSubmit={handleAddComment} className="flex gap-2">
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={
-                    replyToId ? 'Respondendo comentário...' : 'Deixe uma resposta nessa thread...'
-                  }
-                  className="flex-1 glass-recessed rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-cyan-400 transition-all"
-                />
-                <button
-                  type="submit"
-                  disabled={submittingComment || !newComment.trim()}
-                  className="btn-primary-blue text-xs font-semibold px-4 py-2 rounded-xl disabled:opacity-50 cursor-pointer"
-                >
-                  {submittingComment ? '...' : 'Enviar'}
-                </button>
-              </form>
-            ) : (
-              <p className="text-xs text-neutral-400 italic">
-                <Link to="/login" className="text-cyan-400 hover:underline">
-                  Faça login
-                </Link>{' '}
-                para comentar nesta conversa.
-              </p>
-            )}
-
-            {/* Comments List */}
-            {loadingComments ? (
-              <div className="text-xs text-neutral-400 animate-pulse py-2">
-                Carregando comentários...
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="text-xs text-neutral-400 italic py-2">
-                Nenhum comentário ainda. Seja o primeiro a responder!
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`p-3 rounded-xl glass-recessed text-xs space-y-1 ${
-                      c.parent_id ? 'ml-6 border-l-2 border-cyan-500/40' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-neutral-400">
-                      <span className="font-semibold text-white">@{c.author_name}</span>
-                      <span className="text-[10px]">
-                        {new Date(c.created_at).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-neutral-200">{c.content}</p>
-                    {user && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReplyToId(c.id);
-                          setNewComment(`@${c.author_name} `);
-                        }}
-                        className="text-[10px] text-cyan-400 hover:underline pt-1 cursor-pointer"
-                      >
-                        Responder
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* 3. BARRA DE AÇÕES: Votos reposicionados ao lado dos comentários (Stitch Design DNA) */}
+      <div className="flex items-center justify-between pt-2 border-t border-outline-variant/20">
+        <div className="flex items-center gap-3">
+          {/* Controle de Voto: Upvote + Número + Downvote separado */}
+          <div className="flex items-center bg-surface-container-low rounded-full px-1.5 py-0.5 border border-outline-variant/30">
+            <button
+              type="button"
+              onClick={() => handleVoteClick('up')}
+              aria-label="Upvote"
+              className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
+                userVote === 'up'
+                  ? 'text-primary bg-primary-fixed shadow-xs'
+                  : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[19px]">keyboard_arrow_up</span>
+            </button>
+            <span
+              className={`px-2 text-xs font-bold ${
+                score > 0 ? 'text-primary' : score < 0 ? 'text-error' : 'text-on-surface'
+              }`}
+            >
+              {score > 0 ? `+${score}` : score}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleVoteClick('down')}
+              aria-label="Downvote"
+              className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
+                userVote === 'down'
+                  ? 'text-error bg-error-container shadow-xs'
+                  : 'text-on-surface-variant hover:text-error hover:bg-surface-container'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[19px]">keyboard_arrow_down</span>
+            </button>
+          </div>
+
+          {/* Comentários imediatamente ao lado dos votos */}
+          <button
+            type="button"
+            onClick={loadComments}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-xs font-medium cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[19px]">chat_bubble_outline</span>
+            <span>{commentsCount} comentários</span>
+          </button>
+        </div>
+
+        {/* Lado Direito: Repostar, Salvar e Compartilhar */}
+        <div className="flex items-center gap-1 text-on-surface-variant">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-surface-container hover:text-on-surface transition-colors text-xs cursor-pointer"
+            title="Compartilhar"
+          >
+            <span className="material-symbols-outlined text-[19px]">repeat</span>
+            <span className="hidden sm:inline">12</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Salvar post"
+            className="p-1.5 rounded-full hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[19px]">bookmark_border</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Compartilhar post"
+            className="p-1.5 rounded-full hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[19px]">share</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Seção Expansível de Comentários */}
+      {showComments && (
+        <div className="pt-3 border-t border-outline-variant/20 flex flex-col gap-3">
+          {/* Formulário de Novo Comentário */}
+          {user ? (
+            <form onSubmit={handleAddComment} className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase flex-shrink-0">
+                {user.username.charAt(0)}
+              </div>
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder={replyToId ? 'Respondendo comentário...' : 'Adicionar um comentário...'}
+                className="flex-1 bg-surface-container-low rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
+              />
+              <button
+                type="submit"
+                disabled={submittingComment || !newComment.trim()}
+                className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-primary disabled:opacity-40 transition-all cursor-pointer"
+              >
+                {submittingComment ? '...' : 'Enviar'}
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs text-on-surface-variant">
+              Faça login para participar da conversa.
+            </p>
+          )}
+
+          {/* Lista de Comentários */}
+          {loadingComments ? (
+            <div className="flex items-center justify-center py-4 text-xs text-on-surface-variant">
+              Carregando comentários...
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="text-xs text-on-surface-variant text-center py-3">
+              Nenhum comentário ainda. Seja o primeiro a comentar!
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 pt-1">
+              {comments.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-1 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-on-surface">
+                      @{c.author_name}
+                    </span>
+                    <span className="text-on-surface-variant text-[11px]">
+                      {new Date(c.created_at).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-on-surface">{c.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </article>
   );
 };

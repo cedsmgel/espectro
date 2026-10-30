@@ -2,19 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Liquid Dark Glass Foundation (Stitch Design DNA) */
-body {
-  background-color: #0d0f14;
-  color: #e2e2e9;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
-  font-family: 'Inter', sans-serif;
-  selection-background-color: rgba(76, 215, 246, 0.3);
-  selection-color: #acedff;
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    background-color: #faf8ff;
+    color: #131b2e;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+  }
 }
 
-/* Material Symbols Outlined font */
+/* Material Symbols Outlined font configuration */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -28,76 +29,40 @@ body {
   word-wrap: normal;
   direction: ltr;
   vertical-align: middle;
-  -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
 
-/* Ambient Spectral Glow Orbs from Stitch */
-.orb-glow-1 {
-  position: fixed;
-  top: -10%;
-  left: 15%;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(13, 15, 20, 0) 70%);
-  pointer-events: none;
-  z-index: 0;
+/* Scrollbar styling */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.orb-glow-2 {
-  position: fixed;
-  bottom: 5%;
-  right: 10%;
-  width: 650px;
-  height: 650px;
-  background: radial-gradient(circle, rgba(76, 215, 246, 0.08) 0%, rgba(147, 51, 234, 0.06) 45%, rgba(13, 15, 20, 0) 70%);
-  pointer-events: none;
-  z-index: 0;
+/* Glass & Clean Surface Utilities */
+.surface-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(199, 196, 216, 0.4);
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
 }
 
-/* Stitch Liquid Glass Panels & Tokens */
-.glass-surface {
-  background: rgba(22, 26, 34, 0.72);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+.surface-hover:hover {
+  background-color: #f2f3ff;
 }
 
-.glass-elevated {
-  background: rgba(28, 34, 46, 0.78);
-  backdrop-filter: blur(28px) saturate(200%);
-  -webkit-backdrop-filter: blur(28px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.16);
-}
-
-.glass-recessed {
-  background: rgba(13, 15, 20, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.glass-header {
-  background: rgba(12, 14, 19, 0.85);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-}
-
-/* Primary Glass & Glow Buttons */
-.btn-primary-blue {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+/* Primary and Accent interactive buttons */
+.btn-primary {
+  background-color: #4f46e5;
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.25);
   transition: all 0.15s ease-in-out;
 }
-
-.btn-primary-blue:hover {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  box-shadow: 0 0 24px rgba(59, 130, 246, 0.55);
-  transform: scale(1.01);
+.btn-primary:hover {
+  background-color: #3525cd;
 }
 
 .btn-primary-blue:active {
