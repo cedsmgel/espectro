@@ -3,6 +3,8 @@ import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
+  MEDIA_BUCKET?: R2Bucket;
+  BUCKET?: R2Bucket;
 }
 
 // Garante que a tabela posts e todas as suas colunas existam (self-healing no D1)
@@ -252,4 +254,97 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const message = err instanceof Error ? err.message : "Erro ao processar post.";
     return errorResponse(message, 500);
   }
+};
+
+// DELETE: remove o post e primeiro deleta o arquivo físico no Cloudflare R2
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  try {
+    const { request, env } = context;
+    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const user = await getAuthUser(request, secret);
+
+    if (!user) {
+      return errorResponse("Não autorizado. Faça login para excluir.", 401);
+    }
+
+    const url = new URL(request.url);
+    const postId = url.searchParams.get("id");
+
+    if (!postId || isNaN(Number(postId))) {
+      return errorResponse("ID do post é obrigatório.", 400);
+    }
+
+    const numericPostId = Number(postId);
+
+    // 1. Busca o post para verificar a autoria e se possui mídia no R2
+    const post = await env.DB.prepare(
+      "SELECT id, author_id, media_url, media_type FROM posts WHERE id = ?"
+    )
+      .bind(numericPostId)
+      .first<{ id: number; author_id: number; media_url: string | null; media_type: string | null }>();
+
+    if (!post) {
+      return errorResponse("Publicação não encontrada.", 404);
+    }
+
+    // Apenas o autor do post tem permissão de exclusão
+    if (post.author_id !== user.id) {
+      return errorResponse("Você não tem permissão para excluir esta publicação.", 403);
+    }
+
+    // 2. Se tiver mídia associada, chama env.MEDIA_BUCKET.delete(key) PRIMEIRO
+    if (post.media_url) {
+      let r2Key: string | null = null;
+
+      // Extrai a chave do arquivo (ex: videos/... ou images/...)
+      if (post.media_url.includes("/api/media/")) {
+        const parts = post.media_url.split("/api/media/");
+        r2Key = parts[1] ? decodeURIComponent(parts[1].split("?")[0]) : null;
+      } else if (post.media_url.startsWith("videos/") || post.media_url.startsWith("images/")) {
+        r2Key = post.media_url.split("?")[0];
+      }
+
+      if (r2Key) {
+        const bucket = env.MEDIA_BUCKET || env.BUCKET;
+        if (bucket) {
+          try {
+            await bucket.delete(r2Key);
+          } catch (r2Err) {
+            console.error("Erro ao deletar arquivo do Cloudflare R2:", r2Err);
+            // Continua para não travar a deleção no banco caso já tenha sido removido
+          }
+        }
+      }
+    }
+
+    // 3. Remove comentários do post no D1 para manter integridade
+    try {
+      await env.DB.prepare("DELETE FROM comments WHERE post_id = ?").bind(numericPostId).run();
+    } catch {
+      // ignore
+    }
+
+    // 4. Remove o registro do post do banco D1
+    await env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(numericPostId).run();
+
+    return jsonResponse({
+      success: true,
+      message: "Publicação e arquivos de mídia associados foram excluídos com sucesso.",
+      deleted_id: numericPostId,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro ao deletar publicação.";
+    return errorResponse(message, 500);
+  }
+};
+
+export const onRequestOptions: PagesFunction = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
 };

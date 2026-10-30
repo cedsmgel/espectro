@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Post, Comment, commentsApi, authStorage } from '../lib/api';
+import { Post, Comment, commentsApi, postsApi, authStorage } from '../lib/api';
 import { VideoPlayer } from './VideoPlayer';
 
 interface PostCardProps {
   post: Post;
   onVote?: (postId: number, voteType: 'up' | 'down') => void;
+  onDelete?: (postId: number) => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete }) => {
   const user = authStorage.getUser();
   const [upvotes, setUpvotes] = useState(post.upvotes);
   const [downvotes, setDownvotes] = useState(post.downvotes);
@@ -20,6 +21,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [replyToId, setReplyToId] = useState<number | null>(null);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isAuthor =
+    user &&
+    (user.id === post.author_id ||
+      user.username.toLowerCase() === post.author_name.toLowerCase());
 
   const handleVoteClick = (type: 'up' | 'down') => {
     if (!user) {
@@ -85,10 +93,33 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!isAuthor) return;
+    const hasMedia = Boolean(post.media_url);
+    const confirmMessage = hasMedia
+      ? 'Tem certeza que deseja excluir esta publicação? O arquivo de vídeo/imagem associado será removido permanentemente do Cloudflare R2.'
+      : 'Tem certeza que deseja excluir esta publicação?';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    setIsDeleting(true);
+    try {
+      await postsApi.delete(post.id);
+      if (onDelete) {
+        onDelete(post.id);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao excluir publicação.');
+      setIsDeleting(false);
+    }
+  };
+
   const score = upvotes - downvotes;
 
   return (
-    <article className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 transition-all hover:shadow-md">
+    <article className={`bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 transition-all hover:shadow-md ${
+      isDeleting ? 'opacity-50 pointer-events-none' : ''
+    }`}>
       {/* 1. Cabeçalho do Post */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -120,13 +151,61 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
             <span className="text-xs text-on-surface-variant">@{post.author_name.toLowerCase().replace(/\s+/g, '_')}</span>
           </div>
         </div>
-        <button
-          type="button"
-          aria-label="Ações do post"
-          className="p-1 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-        </button>
+
+        {/* Menu de Ações (Copiar Link e Deletar Post com remoção no R2) */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowMenu((prev) => !prev)}
+            aria-label="Ações do post"
+            disabled={isDeleting}
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {isDeleting ? 'sync' : 'more_horiz'}
+            </span>
+          </button>
+
+          {showMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 top-8 z-40 w-52 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 py-1 flex flex-col animate-in fade-in duration-150">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      window.location.origin + `/e/${post.community_slug || post.community_id || 'geral'}#post-${post.id}`
+                    );
+                    setShowMenu(false);
+                    alert('Link copiado para a área de transferência!');
+                  }}
+                  className="px-3.5 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2 cursor-pointer transition-colors text-left"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">content_copy</span>
+                  <span>Copiar link</span>
+                </button>
+
+                {isAuthor && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      handleDelete();
+                    }}
+                    disabled={isDeleting}
+                    className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2 cursor-pointer transition-colors text-left border-t border-outline-variant/20 font-medium"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-error">delete</span>
+                    <span>Excluir publicação</span>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* 2. Conteúdo do Post */}

@@ -271,6 +271,10 @@ export const postsApi = {
     api.getPosts(filters),
   create: (data: CreatePostData) => api.createPost(data),
   vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
+  delete: (postId: number) =>
+    apiRequest<{ success: boolean; message: string; deleted_id: number }>(`/api/posts?id=${postId}`, {
+      method: 'DELETE',
+    }),
 };
 
 export const communitiesApi = {

@@ -161,6 +161,11 @@ export const CommunityDetail: React.FC = () => {
     showToast('Post publicado com sucesso e salvo no D1!');
   };
 
+  const handleDeletePost = (deletedId: number) => {
+    setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+    showToast('Publicação excluída com sucesso.');
+  };
+
   // Garante que apenas posts daquela comunidade (ID estrito) sejam exibidos
   const communityFilteredPosts = posts.filter((p) => p.community_id === community?.id);
 
@@ -331,7 +336,7 @@ export const CommunityDetail: React.FC = () => {
                     ) : (
                       <div className="flex flex-col gap-4">
                         {communityFilteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} />
+                          <PostCard key={post.id} post={post} onDelete={handleDeletePost} />
                         ))}
                       </div>
                     )}
