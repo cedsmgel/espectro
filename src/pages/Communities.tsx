@@ -4,6 +4,8 @@ import { communitiesApi, Community, authStorage } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 
 export const Communities: React.FC = () => {
   const navigate = useNavigate();
@@ -11,15 +13,20 @@ export const Communities: React.FC = () => {
 
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
 
   const loadCommunities = async () => {
+    setLoading(true);
+    setHasError(false);
     try {
       const data = await communitiesApi.list();
       setCommunities(data);
+      setHasError(false);
     } catch (err) {
       console.error('Erro ao carregar comunidades:', err);
+      setHasError(true);
     } finally {
       setLoading(false);
     }
@@ -93,24 +100,48 @@ export const Communities: React.FC = () => {
 
             {/* Lista de Comunidades */}
             {loading ? (
-              <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
-                  progress_activity
-                </span>
-                <p className="mt-2 text-xs">Carregando catálogo de comunidades...</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-surface-container-high" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-4 w-32 rounded bg-surface-container-high" />
+                        <div className="h-3 w-16 rounded bg-surface-container" />
+                      </div>
+                    </div>
+                    <div className="h-3 w-full rounded bg-surface-container mt-2" />
+                    <div className="h-3 w-2/3 rounded bg-surface-container" />
+                  </div>
+                ))}
               </div>
+            ) : hasError ? (
+              <ErrorState
+                title="Não foi possível carregar as comunidades"
+                message="Falha de conexão com o banco de dados D1. Tente carregar novamente."
+                onRetry={loadCommunities}
+              />
             ) : filtered.length === 0 ? (
-              <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
-                  group_off
-                </span>
-                <p className="font-semibold text-sm text-on-surface">
-                  Nenhuma comunidade encontrada
-                </p>
-                <p className="text-xs text-on-surface-variant mt-1">
-                  Crie a primeira comunidade sobre esse tema!
-                </p>
-              </div>
+              <EmptyState
+                icon="groups"
+                title="Nenhuma comunidade encontrada"
+                description={
+                  search
+                    ? `Nenhuma comunidade com o termo "${search}". Que tal criar uma agora mesmo?`
+                    : 'Nenhuma comunidade foi criada ainda. Dê o primeiro passo e crie um novo círculo!'
+                }
+                actionLabel="Criar Comunidade"
+                onAction={() => {
+                  if (!user) {
+                    navigate('/login');
+                  } else {
+                    setShowModal(true);
+                  }
+                }}
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((comm) => (

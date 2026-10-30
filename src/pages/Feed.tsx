@@ -5,6 +5,9 @@ import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
+import { PostSkeleton } from '../components/PostSkeleton';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Feed: React.FC = () => {
@@ -13,6 +16,7 @@ export const Feed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'trending'>('foryou');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -28,6 +32,7 @@ export const Feed: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
+    setHasError(false);
     try {
       const token = authStorage.getToken();
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
@@ -55,8 +60,10 @@ export const Feed: React.FC = () => {
       const [fetchedPosts, fetchedCommunities] = await Promise.all([postsPromise, commsPromise]);
       setPosts(fetchedPosts || []);
       setCommunities(fetchedCommunities || []);
+      setHasError(false);
     } catch (err: any) {
       console.error('Erro ao conectar com API do D1 no feed:', err);
+      setHasError(true);
       showToast('Erro ao sincronizar com o banco de dados. Tente recarregar.');
       setPosts([]);
       setCommunities([]);
@@ -264,26 +271,39 @@ export const Feed: React.FC = () => {
                   communities={communities}
                 />
 
-                {/* Feed de Publicações */}
+                {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}
                 {loading ? (
-                  <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant shadow-sm border border-outline-variant/30">
-                    <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
-                      progress_activity
-                    </span>
-                    <p className="mt-2 text-sm">Carregando feed do Espectro...</p>
+                  <div className="flex flex-col gap-5">
+                    <PostSkeleton />
+                    <PostSkeleton />
+                    <PostSkeleton />
                   </div>
+                ) : hasError ? (
+                  <ErrorState
+                    title="O Espectro perdeu o sinal com o banco de dados"
+                    message="Não conseguimos carregar as publicações do D1 neste momento. Verifique sua conexão e tente novamente."
+                    onRetry={loadData}
+                  />
                 ) : filteredPosts.length === 0 ? (
-                  <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant shadow-sm border border-outline-variant/30">
-                    <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-3 text-primary">
-                      <span className="material-symbols-outlined text-[36px]">forum</span>
-                    </div>
-                    <h3 className="font-bold text-base text-on-surface">
-                      Nenhum post por aqui ainda. Seja o primeiro a postar!
-                    </h3>
-                    <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm mx-auto">
-                      Compartilhe fotos, vídeos, novidades ou recados usando o formulário acima.
-                    </p>
-                  </div>
+                  typeParam === 'scrap' ? (
+                    <EmptyState
+                      icon="mail_lock"
+                      title="Mural vazio."
+                      description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
+                      actionLabel="Criar primeiro post"
+                      onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon="forum"
+                      title="O Espectro está silencioso..."
+                      description="Parece que ninguém postou nada ainda. Seja a primeira voz a ecoar por aqui ou explore as comunidades."
+                      actionLabel="Criar primeiro post"
+                      onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
+                      secondaryActionLabel="Explorar comunidades"
+                      secondaryActionLink="/comunidades"
+                    />
+                  )
                 ) : (
                   <div className="flex flex-col gap-5">
                     {filteredPosts.map((post) => (

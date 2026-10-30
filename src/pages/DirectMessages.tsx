@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
+import { EmptyState } from '../components/EmptyState';
 
 export const DirectMessages: React.FC = () => {
   const user = authStorage.getUser();
@@ -168,14 +169,13 @@ export const DirectMessages: React.FC = () => {
             {/* COLUNA 2: Conversa Ativa */}
             <section className="flex-1 flex flex-col bg-surface min-w-0 relative">
               {!activeFriend ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-on-surface-variant">
-                  <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center text-primary mb-3">
-                    <span className="material-symbols-outlined text-[36px]">chat</span>
-                  </div>
-                  <h3 className="font-bold text-base text-on-surface">Seu Direct do Espectro</h3>
-                  <p className="text-xs text-on-surface-variant max-w-sm mt-1">
-                    Envie mensagens privadas, fotos e compartilhe publicações com seus amigos em tempo real.
-                  </p>
+                <div className="flex-1 flex items-center justify-center p-8">
+                  <EmptyState
+                    icon="chat_bubble_outline"
+                    title="Nenhum sussurro por aqui."
+                    description="Suas conversas privadas aparecerão aqui. Vá até o perfil de um amigo e envie um recado."
+                    className="max-w-md w-full"
+                  />
                 </div>
               ) : (
                 <>
@@ -227,9 +227,13 @@ export const DirectMessages: React.FC = () => {
                     <p className="mt-1">Carregando mensagens...</p>
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-on-surface-variant">
-                    <p className="text-sm font-semibold text-on-surface">Nenhuma mensagem trocada ainda.</p>
-                    <p className="mt-1">Envie uma mensagem abaixo para iniciar o bate-papo.</p>
+                  <div className="py-8">
+                    <EmptyState
+                      icon="forum"
+                      title="Nenhum sussurro por aqui."
+                      description="Suas conversas privadas aparecerão aqui. Vá até o perfil de um amigo e envie um recado."
+                      className="max-w-md mx-auto"
+                    />
                   </div>
                 ) : (
                   messages.map((m) => {

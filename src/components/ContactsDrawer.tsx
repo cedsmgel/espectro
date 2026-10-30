@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
+import { EmptyState } from './EmptyState';
 
 interface ContactsDrawerProps {
   isOpen: boolean;
@@ -400,16 +401,14 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                     <p className="mt-1">Carregando lista de amigos...</p>
                   </div>
                 ) : filteredFriends.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-on-surface-variant">
-                    <p>Nenhum amigo encontrado.</p>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('search')}
-                      className="mt-2 text-primary font-semibold hover:underline"
-                    >
-                      Encontrar pessoas no Espectro
-                    </button>
-                  </div>
+                  <EmptyState
+                    icon="chat_bubble_outline"
+                    title="Nenhum sussurro por aqui."
+                    description="Suas conversas privadas aparecerão aqui. Vá até o perfil de um amigo e envie um recado."
+                    actionLabel="Buscar pessoas"
+                    onAction={() => setActiveTab('search')}
+                    className="p-6"
+                  />
                 ) : (
                   filteredFriends.map((friend) => (
                     <div

@@ -5,6 +5,9 @@ import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
+import { PostSkeleton } from '../components/PostSkeleton';
+import { EmptyState } from '../components/EmptyState';
+import { ErrorState } from '../components/ErrorState';
 
 interface CommunityMember {
   id: number;
@@ -23,6 +26,7 @@ export const CommunityDetail: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [members, setMembers] = useState<CommunityMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [activeTab, setActiveTab] = useState<'discussions' | 'members'>('discussions');
   const [isMember, setIsMember] = useState(false);
@@ -37,6 +41,7 @@ export const CommunityDetail: React.FC = () => {
   const fetchData = async () => {
     if (!slug) return;
     setLoading(true);
+    setHasError(false);
     const token = authStorage.getToken();
     const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -59,10 +64,12 @@ export const CommunityDetail: React.FC = () => {
           }
         } else {
           console.error(`Erro da API D1 [${res.status}]:`, await res.text());
+          setHasError(true);
           showToast('Falha ao comunicar com o servidor D1.');
         }
       } catch (networkErr) {
         console.error('Erro de conexão ao buscar comunidade:', networkErr);
+        setHasError(true);
         showToast('Erro de conexão. Verifique sua rede.');
       }
 
@@ -80,6 +87,7 @@ export const CommunityDetail: React.FC = () => {
       if (current) {
         setCommunity(current);
         setIsMember(Boolean(current.is_member));
+        setHasError(false);
 
         // 3. Puxa posts reais da comunidade via /api/posts?community_id=...
         try {
@@ -105,6 +113,7 @@ export const CommunityDetail: React.FC = () => {
       }
     } catch (err) {
       console.error('Erro geral ao carregar detalhes da comunidade:', err);
+      setHasError(true);
       showToast('Ocorreu um erro ao carregar a comunidade.');
     } finally {
       setLoading(false);
@@ -226,12 +235,28 @@ export const CommunityDetail: React.FC = () => {
         <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
           <section className="flex flex-col gap-6 max-w-4xl mx-auto min-w-0">
             {loading ? (
-              <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
-                  progress_activity
-                </span>
-                <p className="mt-2 text-xs">Carregando detalhes de e/{slug}...</p>
+              <div className="flex flex-col gap-6">
+                {/* Header Skeleton */}
+                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col gap-4 animate-pulse">
+                  <div className="h-36 sm:h-44 rounded-2xl bg-surface-container-high" />
+                  <div className="flex items-end gap-4 -mt-12 px-2">
+                    <div className="w-20 h-20 rounded-2xl bg-surface-container border-4 border-surface-container-lowest shadow-sm" />
+                    <div className="space-y-2 pb-1">
+                      <div className="h-6 w-44 rounded-md bg-surface-container-high" />
+                      <div className="h-3 w-24 rounded-md bg-surface-container" />
+                    </div>
+                  </div>
+                </div>
+                {/* Posts Skeletons */}
+                <PostSkeleton />
+                <PostSkeleton />
               </div>
+            ) : hasError ? (
+              <ErrorState
+                title="Erro ao sintonizar com a comunidade"
+                message="Não foi possível recuperar as informações desta comunidade no D1. Verifique sua conexão e tente novamente."
+                onRetry={fetchData}
+              />
             ) : !community ? (
               <div className="bg-surface-container-lowest rounded-2xl p-10 text-center space-y-3 border border-outline-variant/30 shadow-sm">
                 <h2 className="text-xl font-bold text-on-surface">
@@ -372,17 +397,19 @@ export const CommunityDetail: React.FC = () => {
 
                     {/* Posts exclusivos da comunidade (filtrados por community_id) */}
                     {communityFilteredPosts.length === 0 ? (
-                      <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                        <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-3 text-primary">
-                          <span className="material-symbols-outlined text-[32px]">forum</span>
-                        </div>
-                        <h3 className="font-bold text-base text-on-surface">
-                          Nenhum post por aqui ainda. Seja o primeiro a postar!
-                        </h3>
-                        <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm mx-auto">
-                          Inicie uma conversa ou compartilhe algo interessante com os membros de c/{community.name}.
-                        </p>
-                      </div>
+                      <EmptyState
+                        icon="eco"
+                        title="Só tem mato por aqui! 🌿"
+                        description="Esta comunidade está esperando pela primeira discussão. Que tal quebrar o gelo e começar?"
+                        actionLabel="Escrever discussão"
+                        onAction={() => {
+                          const composer = document.querySelector('textarea');
+                          if (composer) {
+                            composer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            composer.focus();
+                          }
+                        }}
+                      />
                     ) : (
                       <div className="flex flex-col gap-4">
                         {communityFilteredPosts.map((post) => (
