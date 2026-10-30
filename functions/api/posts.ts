@@ -46,8 +46,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     if (communitySlug) {
-      query += ` AND c.slug = ?`;
-      params.push(communitySlug);
+      query += ` AND (c.slug = ? OR CAST(c.id AS TEXT) = ?)`;
+      params.push(communitySlug, communitySlug);
     }
 
     if (postType) {

@@ -6,6 +6,14 @@ import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
 
+interface CommunityMember {
+  id: number;
+  user_id: number;
+  username: string;
+  avatar_url?: string | null;
+  joined_at: string;
+}
+
 export const CommunityDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const user = authStorage.getUser();
@@ -13,35 +21,83 @@ export const CommunityDetail: React.FC = () => {
   const [community, setCommunity] = useState<Community | null>(null);
   const [allCommunities, setAllCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [members, setMembers] = useState<CommunityMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'discussions' | 'pinned' | 'media' | 'members'>('discussions');
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [activeTab, setActiveTab] = useState<'discussions' | 'members'>('discussions');
   const [isMember, setIsMember] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const allComms = await communitiesApi.list();
+      setAllCommunities(allComms);
+
+      // Encontra comunidade por slug ou por id
+      let current = allComms.find((c) => c.slug === slug || String(c.id) === slug);
+
+      if (!current && slug) {
+        try {
+          current = await communitiesApi.getBySlug(slug);
+        } catch {
+          current = undefined;
+        }
+      }
+
+      if (current) {
+        setCommunity(current);
+        setIsMember(Boolean(current.is_member));
+
+        // FILTRA OS POSTS APENAS DAQUELE ID DE COMUNIDADE
+        const commPosts = await postsApi.list({ community_id: current.id });
+        // Garante a filtragem estrita no cliente pelo ID da comunidade
+        const strictCommunityPosts = commPosts.filter((p) => p.community_id === current.id);
+        setPosts(strictCommunityPosts);
+      } else {
+        setCommunity(null);
+        setPosts([]);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar detalhes da comunidade:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [allComms, commPosts] = await Promise.all([
-          communitiesApi.list(),
-          slug ? postsApi.list({ community_slug: slug }) : Promise.resolve([]),
-        ]);
-
-        setAllCommunities(allComms);
-        const current = allComms.find((c) => c.slug === slug || String(c.id) === slug);
-        setCommunity(current || null);
-        setPosts(commPosts);
-      } catch (err) {
-        console.error('Erro ao carregar detalhes da comunidade:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [slug]);
 
-  const handleJoin = async () => {
+  // Carrega membros quando a aba "Membros" é selecionada
+  useEffect(() => {
+    if (activeTab === 'members' && community) {
+      const loadMembers = async () => {
+        setLoadingMembers(true);
+        try {
+          const res = await fetch(`/api/community_members?community_id=${community.id}`);
+          if (res.ok) {
+            const data: any = await res.json();
+            setMembers(data.members || []);
+          }
+        } catch (err) {
+          console.error('Erro ao carregar membros:', err);
+        } finally {
+          setLoadingMembers(false);
+        }
+      };
+      loadMembers();
+    }
+  }, [activeTab, community]);
+
+  // Função: Entrar na Comunidade (Insere na tabela community_members do D1)
+  const handleToggleJoin = async () => {
     if (!user) {
       alert('Você precisa estar logado para entrar na comunidade.');
       return;
@@ -49,17 +105,41 @@ export const CommunityDetail: React.FC = () => {
 
     if (!community) return;
 
-    setJoining(true);
+    setActionLoading(true);
     try {
-      await communitiesApi.join(community.id);
-      setIsMember(true);
-      setCommunity((prev) =>
-        prev ? { ...prev, members_count: (prev.members_count || 0) + 1 } : null
-      );
+      if (isMember) {
+        // Sair da comunidade
+        const res = await communitiesApi.leave(community.id);
+        setIsMember(false);
+        setCommunity((prev) =>
+          prev
+            ? {
+                ...prev,
+                is_member: false,
+                members_count: Math.max(0, (res.members_count ?? (prev.members_count || 1) - 1)),
+              }
+            : null
+        );
+        showToast(`Você saiu da comunidade e/${community.name}.`);
+      } else {
+        // Entrar na comunidade (insere em community_members)
+        const res = await communitiesApi.join(community.id);
+        setIsMember(true);
+        setCommunity((prev) =>
+          prev
+            ? {
+                ...prev,
+                is_member: true,
+                members_count: res.members_count ?? ((prev.members_count || 0) + 1),
+              }
+            : null
+        );
+        showToast(`Bem-vindo à comunidade e/${community.name}!`);
+      }
     } catch (err: any) {
-      alert(err.message || 'Erro ao entrar na comunidade.');
+      alert(err.message || 'Erro ao processar filiação à comunidade.');
     } finally {
-      setJoining(false);
+      setActionLoading(false);
     }
   };
 
@@ -69,13 +149,27 @@ export const CommunityDetail: React.FC = () => {
       ...data,
       community_id: community.id,
     });
-    setPosts((prev) => [newPost, ...prev]);
+    // Adiciona ao feed da comunidade se o ID coincidir
+    if (newPost.community_id === community.id) {
+      setPosts((prev) => [newPost, ...prev]);
+    }
   };
+
+  // Garante que apenas posts daquela comunidade (ID estrito) sejam exibidos
+  const communityFilteredPosts = posts.filter((p) => p.community_id === community?.id);
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-surface px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <span className="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
         <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
@@ -109,8 +203,9 @@ export const CommunityDetail: React.FC = () => {
                 <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30">
                   {/* Subtle Gradient Cover */}
                   <div className="h-36 sm:h-44 w-full bg-gradient-to-r from-primary via-secondary to-primary-container relative p-4 flex items-end justify-between">
-                    <span className="text-[11px] font-semibold text-white/80 bg-black/30 backdrop-blur-md px-3 py-1 rounded-full">
-                      Espaço Oficial e/{community.slug || community.id}
+                    <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">tag</span>
+                      <span>Espaço Oficial e/{community.slug || community.id} (ID #{community.id})</span>
                     </span>
                   </div>
 
@@ -131,24 +226,36 @@ export const CommunityDetail: React.FC = () => {
                             </span>
                           </h1>
                           <span className="text-xs text-on-surface-variant">
-                            {community.members_count || 1} membros ativos no Espectro
+                            {community.members_count || 1} {community.members_count === 1 ? 'membro ativo' : 'membros ativos'} no Espectro
                           </span>
                         </div>
                       </div>
 
-                      {/* Join / Participar Button */}
+                      {/* Join / Entrar na Comunidade Button */}
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={handleJoin}
-                          disabled={joining}
-                          className={`px-5 py-2 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer ${
+                          onClick={handleToggleJoin}
+                          disabled={actionLoading}
+                          className={`px-5 py-2 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer flex items-center gap-1.5 ${
                             isMember
-                              ? 'bg-surface-container-high text-on-surface'
+                              ? 'bg-surface-container-high text-on-surface hover:bg-error-container hover:text-error'
                               : 'bg-primary-container text-on-primary hover:bg-primary'
                           }`}
                         >
-                          {joining ? 'Processando...' : isMember ? 'Membro Ativo' : '+ Entrar na Comunidade'}
+                          {actionLoading ? (
+                            <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                          ) : isMember ? (
+                            <>
+                              <span className="material-symbols-outlined text-[16px] text-emerald-500">check</span>
+                              <span>Membro Ativo (Sair)</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[16px]">group_add</span>
+                              <span>Entrar na Comunidade</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -165,11 +272,12 @@ export const CommunityDetail: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTab('discussions')}
-                        className={`pb-2 relative cursor-pointer ${
+                        className={`pb-2 relative cursor-pointer flex items-center gap-1.5 ${
                           activeTab === 'discussions' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        Discussões ({posts.length})
+                        <span className="material-symbols-outlined text-[16px]">forum</span>
+                        <span>Discussões ({communityFilteredPosts.length})</span>
                         {activeTab === 'discussions' && (
                           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
                         )}
@@ -177,11 +285,12 @@ export const CommunityDetail: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTab('members')}
-                        className={`pb-2 relative cursor-pointer ${
+                        className={`pb-2 relative cursor-pointer flex items-center gap-1.5 ${
                           activeTab === 'members' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        Membros
+                        <span className="material-symbols-outlined text-[16px]">group</span>
+                        <span>Membros ({community.members_count || 1})</span>
                         {activeTab === 'members' && (
                           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
                         )}
@@ -190,31 +299,89 @@ export const CommunityDetail: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Composer for this specific community */}
-                <CreatePostForm
-                  onPostCreated={handlePostCreated}
-                  defaultCommunityId={community.id}
-                  communities={allCommunities}
-                />
+                {/* ABA DE DISCUSSÕES: Composer & Posts filtrados estritamente por ID */}
+                {activeTab === 'discussions' && (
+                  <>
+                    {/* Composer com communityId pré-selecionado */}
+                    <CreatePostForm
+                      onPostCreated={handlePostCreated}
+                      defaultCommunityId={community.id}
+                      communities={allCommunities}
+                    />
 
-                {/* Community Posts */}
-                {posts.length === 0 ? (
-                  <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
-                    <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
-                      forum
-                    </span>
-                    <h3 className="font-semibold text-sm text-on-surface">
-                      Nenhum tópico criado nesta comunidade ainda
-                    </h3>
-                    <p className="text-xs text-on-surface-variant mt-1">
-                      Inicie uma discussão preenchendo o formulário acima!
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {posts.map((post) => (
-                      <PostCard key={post.id} post={post} />
-                    ))}
+                    {/* Posts exclusivos da comunidade (filtrados por community_id) */}
+                    {communityFilteredPosts.length === 0 ? (
+                      <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
+                        <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
+                          forum
+                        </span>
+                        <h3 className="font-semibold text-sm text-on-surface">
+                          Nenhum tópico criado nesta comunidade ainda
+                        </h3>
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          Inicie uma discussão preenchendo o formulário acima!
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {communityFilteredPosts.map((post) => (
+                          <PostCard key={post.id} post={post} />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* ABA DE MEMBROS: Lista da tabela community_members */}
+                {activeTab === 'members' && (
+                  <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-sm flex flex-col gap-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+                      <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[18px]">group</span>
+                        <span>Membros Inscritos na Comunidade</span>
+                      </h3>
+                      <span className="text-xs text-on-surface-variant font-medium">
+                        {community.members_count || 1} membros
+                      </span>
+                    </div>
+
+                    {loadingMembers ? (
+                      <div className="text-center py-8 text-xs text-on-surface-variant">
+                        <span className="material-symbols-outlined text-[24px] text-primary animate-spin">
+                          progress_activity
+                        </span>
+                        <p className="mt-1">Carregando lista de membros...</p>
+                      </div>
+                    ) : members.length === 0 ? (
+                      <div className="text-center py-6 text-xs text-on-surface-variant">
+                        {community.owner_name ? (
+                          <p>Fundador: <strong className="text-on-surface">@{community.owner_name}</strong></p>
+                        ) : (
+                          <p>Nenhum membro registrado além do fundador.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {members.map((member) => (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase">
+                              {member.username.charAt(0)}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-semibold text-on-surface truncate">
+                                @{member.username}
+                              </span>
+                              <span className="text-[10px] text-on-surface-variant">
+                                Ingressou em {new Date(member.joined_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </>

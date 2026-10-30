@@ -31,6 +31,7 @@ export interface Community {
   owner_name?: string;
   created_at: string;
   members_count: number;
+  is_member?: boolean;
 }
 
 export interface Comment {
@@ -219,13 +220,16 @@ export const api = {
     });
   },
 
-  async joinCommunity(params: { community_id?: number; community_slug?: string }): Promise<{ message: string }> {
-    return apiRequest<{ message: string }>('/api/communities', {
+  async joinCommunity(params: { community_id?: number; community_slug?: string }): Promise<{ message: string; members_count?: number; is_member?: boolean }> {
+    return apiRequest<{ message: string; members_count?: number; is_member?: boolean }>('/api/community_members', {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'join',
-        ...params,
-      }),
+      body: JSON.stringify(params),
+    });
+  },
+
+  async leaveCommunity(communityId: number): Promise<{ message: string; members_count?: number; is_member?: boolean }> {
+    return apiRequest<{ message: string; members_count?: number; is_member?: boolean }>(`/api/community_members?community_id=${communityId}`, {
+      method: 'DELETE',
     });
   },
 
@@ -256,6 +260,7 @@ export const communitiesApi = {
   create: (data: { name: string; slug?: string; description?: string }) =>
     api.createCommunity(data),
   join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
+  leave: (communityId: number) => api.leaveCommunity(communityId),
 };
 
 export const commentsApi = {

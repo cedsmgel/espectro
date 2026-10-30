@@ -13,6 +13,9 @@ export const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<Feed />} />
         <Route path="/e/:slug" element={<CommunityDetail />} />
+        <Route path="/c/:slug" element={<CommunityDetail />} />
+        <Route path="/comunidade/:slug" element={<CommunityDetail />} />
+        <Route path="/comunidades/:slug" element={<CommunityDetail />} />
         <Route path="/comunidades" element={<Communities />} />
         <Route path="/mensagens" element={<DirectMessages />} />
         <Route path="/videos" element={<Videos />} />
