@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 
@@ -9,8 +9,16 @@ interface SidebarNavProps {
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const user = authStorage.getUser();
   const { isExpanded } = useSidebar();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleLogout = () => {
+    authStorage.clear();
+    setShowUserMenu(false);
+    navigate('/login');
+  };
 
   const isActive = (path: string) => {
     if (path === '/trending') return location.pathname === '/' && location.search.includes('trending');
@@ -115,36 +123,113 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
         </nav>
       </div>
 
-      {/* Botão Inferior do Perfil / Conta */}
-      <div className="flex flex-col items-center gap-2 pt-3 border-t border-outline-variant/30 w-full">
+      {/* Botão Inferior do Perfil / Conta com Sub Menu */}
+      <div className="relative flex flex-col items-center gap-2 pt-3 border-t border-outline-variant/30 w-full">
         {user ? (
-          <Link
-            to="/perfil"
-            title={`@${user.username}`}
-            className={`flex items-center rounded-xl p-1.5 transition-all duration-200 group ${
-              isExpanded
-                ? 'w-full px-3 py-2 justify-start gap-3 hover:bg-surface-container'
-                : 'w-11 h-11 justify-center hover:ring-2 hover:ring-primary'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
-              {user.username.charAt(0)}
-            </div>
-            {isExpanded ? (
-              <div className="flex flex-col min-w-0 text-left animate-in fade-in duration-200">
-                <span className="text-xs font-bold text-on-surface truncate">
+          <>
+            <button
+              type="button"
+              onClick={() => setShowUserMenu((prev) => !prev)}
+              aria-label={`Menu de ${user.username}`}
+              title={`@${user.username}`}
+              className={`flex items-center rounded-xl p-1.5 transition-all duration-200 group cursor-pointer ${
+                isExpanded
+                  ? 'w-full px-3 py-2 justify-between hover:bg-surface-container'
+                  : 'w-11 h-11 justify-center hover:ring-2 hover:ring-primary'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
+                  {user.username.charAt(0)}
+                </div>
+                {isExpanded && (
+                  <div className="flex flex-col min-w-0 text-left animate-in fade-in duration-200">
+                    <span className="text-xs font-bold text-on-surface truncate">
+                      @{user.username}
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant truncate">
+                      Minha Conta
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {isExpanded ? (
+                <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+                  {showUserMenu ? 'expand_more' : 'unfold_more'}
+                </span>
+              ) : (
+                <span className="absolute left-full ml-3 px-2.5 py-1 bg-on-surface text-surface text-xs rounded-md shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   @{user.username}
                 </span>
-                <span className="text-[10px] text-on-surface-variant truncate">
-                  Meu Perfil
-                </span>
-              </div>
-            ) : (
-              <span className="absolute left-full ml-3 px-2.5 py-1 bg-on-surface text-surface text-xs rounded-md shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
-                @{user.username}
-              </span>
+              )}
+            </button>
+
+            {/* Sub Menu do Usuário */}
+            {showUserMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowUserMenu(false)}
+                />
+                <div
+                  className={`absolute bottom-16 z-50 w-56 bg-surface-container-lowest rounded-2xl p-2 shadow-2xl border border-outline-variant/30 flex flex-col animate-in fade-in slide-in-from-bottom-2 ${
+                    isExpanded ? 'left-2' : 'left-3'
+                  }`}
+                >
+                  <div className="px-3 py-2 border-b border-outline-variant/20 mb-1">
+                    <p className="text-xs font-bold text-on-surface">@{user.username}</p>
+                    <p className="text-[10px] text-on-surface-variant">Conectado ao Espectro</p>
+                  </div>
+
+                  <Link
+                    to="/perfil"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-primary">person</span>
+                    <span>Meu Perfil</span>
+                  </Link>
+
+                  <Link
+                    to="/mensagens"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-secondary">chat_bubble</span>
+                    <span>Direct Mensagens</span>
+                  </Link>
+
+                  <Link
+                    to="/videos"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-indigo-500">play_circle</span>
+                    <span>Espectro Play</span>
+                  </Link>
+
+                  <Link
+                    to="/comunidades"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-tertiary">groups</span>
+                    <span>Comunidades</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-error hover:bg-error-container/20 transition-colors mt-1 border-t border-outline-variant/20 cursor-pointer text-left"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">logout</span>
+                    <span>Sair</span>
+                  </button>
+                </div>
+              </>
             )}
-          </Link>
+          </>
         ) : (
           <Link
             to="/login"

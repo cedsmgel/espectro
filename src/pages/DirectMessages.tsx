@@ -172,33 +172,23 @@ export const DirectMessages: React.FC = () => {
             /* ================================================================= */
             /* BLANK PAGE PARA O CHAT (quando não há conversas existentes)        */
             /* ================================================================= */
-            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 max-w-2xl mx-auto w-full text-center">
-              <div className="w-20 h-20 rounded-3xl bg-surface-container-high border border-outline-variant/30 flex items-center justify-center text-primary mb-6 shadow-sm">
-                <span className="material-symbols-outlined text-[40px]">chat_bubble_outline</span>
-              </div>
-              <h1 className="text-2xl font-bold text-on-surface tracking-tight mb-2">
-                Nenhum sussurro por aqui.
-              </h1>
-              <p className="text-sm text-on-surface-variant leading-relaxed max-w-md mb-8">
-                Suas conversas privadas aparecerão aqui. Vá até o perfil de um amigo e envie um recado ou encontre novos amigos para conversar.
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-surface">
+              <div className="flex flex-col items-center gap-2.5 max-w-sm">
+                <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30 mb-1">
+                  chat_bubble_outline
+                </span>
+                <h1 className="text-xl font-bold text-on-surface">Não há conversas</h1>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Suas mensagens diretas aparecerão aqui quando você iniciar uma nova conversa.
+                </p>
                 <button
                   type="button"
                   onClick={() => setShowNewChatModal(true)}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="mt-3 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[18px]">person_add</span>
-                  <span>Buscar Amigos</span>
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  <span>Nova Conversa</span>
                 </button>
-                <Link
-                  to="/"
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-surface-container-high text-on-surface font-semibold text-xs hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-[18px]">feed</span>
-                  <span>Explorar o Feed</span>
-                </Link>
               </div>
             </div>
           ) : (

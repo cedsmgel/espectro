@@ -133,7 +133,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ex: Nostalgia Anos 2000, UI Design Brasil, Cinema Cult"
+              placeholder="ex: Tecnologia, UI Design, Cinema Cult"
               maxLength={60}
               className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
               required

@@ -15,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
@@ -29,12 +28,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         .catch(() => setUnreadDms(0));
     }
   }, [user]);
-
-  const handleLogout = () => {
-    authStorage.clear();
-    setShowDropdown(false);
-    navigate('/login');
-  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,78 +163,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 >
                   <span className="material-symbols-outlined text-[22px]">notifications</span>
                 </Link>
-
-                <div className="h-6 w-px bg-outline-variant/40 mx-0.5 hidden sm:block" />
-
-                {/* Avatar do Usuário com Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowDropdown(!showDropdown)}
-                    aria-label={`Perfil de ${user.username}`}
-                    className="flex items-center gap-2 p-1 rounded-full hover:bg-surface-container transition-colors cursor-pointer"
-                  >
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shadow-xs">
-                        {user.username.charAt(0)}
-                      </div>
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-lowest" />
-                    </div>
-                    <span className="hidden lg:inline-block text-sm font-semibold text-on-surface pr-1">
-                      {user.username}
-                    </span>
-                  </button>
-
-                  {/* Dropdown Menu */}
-                  {showDropdown && (
-                    <div className="absolute right-0 mt-2 w-52 bg-surface-container-lowest rounded-2xl p-2 shadow-lg border border-outline-variant/30 z-50 animate-in fade-in duration-150">
-                      <div className="px-3 py-2 border-b border-outline-variant/20 mb-1">
-                        <p className="text-xs font-bold text-on-surface">@{user.username}</p>
-                        <p className="text-[11px] text-on-surface-variant">Conectado ao Espectro</p>
-                      </div>
-                      <Link
-                        to="/perfil"
-                        onClick={() => setShowDropdown(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-primary">person</span>
-                        <span>Meu Perfil</span>
-                      </Link>
-                      <Link
-                        to="/mensagens"
-                        onClick={() => setShowDropdown(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-secondary">chat_bubble</span>
-                        <span>Direct Mensagens</span>
-                      </Link>
-                      <Link
-                        to="/videos"
-                        onClick={() => setShowDropdown(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-secondary">play_circle</span>
-                        <span>Espectro Play</span>
-                      </Link>
-                      <Link
-                        to="/comunidades"
-                        onClick={() => setShowDropdown(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[18px] text-tertiary">groups</span>
-                        <span>Comunidades</span>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-error hover:bg-error-container/20 transition-colors mt-1 border-t border-outline-variant/20 cursor-pointer text-left"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">logout</span>
-                        <span>Sair</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
               </>
             ) : (
               /* Deslogado: Botões de Ação Limpos */
