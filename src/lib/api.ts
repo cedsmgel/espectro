@@ -11,15 +11,15 @@ export interface Post {
   content: string;
   media_url?: string | null;
   media_type?: 'image' | 'video' | 'gif' | null;
-  upvotes?: number;
-  downvotes?: number;
-  post_type?: 'discussion' | 'scrap';
+  upvotes: number;
+  downvotes: number;
+  post_type: 'discussion' | 'scrap';
   created_at: string;
   author_name: string;
   author_avatar?: string | null;
   community_name: string | null;
   community_slug?: string | null;
-  comments_count?: number;
+  comments_count: number;
 }
 
 export interface Community {
@@ -42,6 +42,16 @@ export interface Comment {
   created_at: string;
   author_name: string;
   author_avatar?: string | null;
+}
+
+export interface CreatePostData {
+  title?: string;
+  content: string;
+  post_type?: 'discussion' | 'scrap';
+  community_id?: number | null;
+  community_slug?: string | null;
+  media_url?: string;
+  media_type?: 'image' | 'video' | 'gif' | null;
 }
 
 const TOKEN_KEY = 'espectro_token';
@@ -107,7 +117,7 @@ export const authStorage = {
   },
   isAuthenticated(): boolean {
     return !!this.getToken();
-  }
+  },
 };
 
 async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -176,15 +186,7 @@ export const api = {
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
   },
 
-  async createPost(params: {
-    content: string;
-    title?: string;
-    community_id?: number | null;
-    community_slug?: string | null;
-    media_url?: string;
-    media_type?: 'image' | 'video' | 'gif' | null;
-    post_type?: 'discussion' | 'scrap';
-  }): Promise<Post> {
+  async createPost(params: CreatePostData): Promise<Post> {
     return apiRequest<Post>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -236,5 +238,28 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(params),
     });
-  }
+  },
+};
+
+export const authApi = api;
+
+export const postsApi = {
+  list: (filters?: { community_id?: number; community_slug?: string; post_type?: string }) =>
+    api.getPosts(filters),
+  create: (data: CreatePostData) => api.createPost(data),
+  vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
+};
+
+export const communitiesApi = {
+  list: () => api.getCommunities(),
+  getBySlug: (slug: string) => api.getCommunityBySlug(slug),
+  create: (data: { name: string; slug?: string; description?: string }) =>
+    api.createCommunity(data),
+  join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
+};
+
+export const commentsApi = {
+  list: (postId: number) => api.getComments(postId),
+  create: (postId: number, content: string, parentId?: number | null) =>
+    api.createComment({ post_id: postId, content, parent_id: parentId }),
 };

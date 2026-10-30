@@ -1,296 +1,262 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { api, authStorage } from '../lib/api';
+import { authApi, authStorage } from '../lib/api';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'login' | 'cadastro'>('login');
 
-  // Login form state
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  // Register form state
-  const [regUsername, setRegUsername] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
-  const [regError, setRegError] = useState<string | null>(null);
-  const [regLoading, setRegLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (searchParams.get('tab') === 'cadastro') {
+      setActiveTab('register');
+    }
     if (authStorage.isAuthenticated()) {
       navigate('/');
     }
-    if (searchParams.get('tab') === 'cadastro') {
-      setActiveTab('cadastro');
-    }
-  }, [navigate, searchParams]);
+  }, [searchParams, navigate]);
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError(null);
-    setLoginLoading(true);
+    setError(null);
+    setLoading(true);
 
     try {
-      await api.login({ username: loginUsername, password: loginPassword });
-      navigate('/');
-    } catch (err: unknown) {
-      setLoginError(err instanceof Error ? err.message : 'Falha no login');
+      if (activeTab === 'login') {
+        const res = await authApi.login({ username, password });
+        authStorage.setToken(res.token);
+        authStorage.setUser(res.user);
+        navigate('/');
+      } else {
+        await authApi.register({ username, email, password });
+        // Automatically login after successful registration
+        const loginRes = await authApi.login({ username, password });
+        authStorage.setToken(loginRes.token);
+        authStorage.setUser(loginRes.user);
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erro ao processar solicitação.');
     } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegError(null);
-
-    if (regPassword !== regPasswordConfirm) {
-      setRegError('As senhas não coincidem');
-      return;
-    }
-
-    setRegLoading(true);
-    try {
-      await api.register({
-        username: regUsername.trim(),
-        email: regEmail.trim(),
-        password: regPassword,
-      });
-      await api.login({ username: regUsername.trim(), password: regPassword });
-      navigate('/');
-    } catch (err: unknown) {
-      setRegError(err instanceof Error ? err.message : 'Falha no cadastro');
-    } finally {
-      setRegLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between font-sans selection:bg-brand-blue/30 selection:text-blue-300">
-      {/* Sleek Minimal Header */}
-      <header className="w-full glass-header py-4 px-6 sticky top-0 z-30">
-        <div className="max-w-[1180px] mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-blue to-neon-cyan flex items-center justify-center shadow-glow-blue">
-              <span className="text-white font-display font-bold text-base lowercase">e</span>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 relative overflow-hidden bg-[#0a0c10] text-neutral-100">
+      {/* Ambient Volumetric Glow Orbs from Stitch */}
+      <div className="orb-glow-1" />
+      <div className="orb-glow-2" />
+
+      {/* Floating Liquid Glass Card (Stitch Specification) */}
+      <div className="glass-surface backdrop-blur-3xl rounded-3xl border border-white/15 shadow-[0_24px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(56,189,248,0.15)] max-w-lg w-full p-8 md:p-10 relative overflow-hidden z-10">
+        {/* Subtle top rim light */}
+        <div className="absolute -top-16 -right-16 w-36 h-36 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Card Header with Prism Logo */}
+        <div className="text-center space-y-2 mb-6">
+          <Link to="/" className="inline-flex items-center gap-2.5 mb-2 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-cyan-400 to-indigo-500 p-[1.5px] shadow-[0_0_16px_rgba(76,215,246,0.4)] group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-[#0d0f14] rounded-[10px] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[22px] text-cyan-300">auto_awesome</span>
+              </div>
             </div>
-            <span className="font-display font-bold text-xl text-white tracking-tight">
-              espectro
+            <span className="text-2xl font-display font-bold tracking-tight bg-gradient-to-r from-blue-400 via-cyan-300 to-white bg-clip-text text-transparent">
+              espectro.
             </span>
           </Link>
 
-          <Link to="/" className="text-xs text-neutral-400 hover:text-white transition-colors">
-            ← Voltar ao início
-          </Link>
+          <div>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-400/10 text-cyan-300 border border-cyan-400/30 tracking-wider">
+              v2.4 GLASS • ÓRBITA
+            </span>
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-display font-bold text-white pt-1">
+            A rede social nostálgica para a era espacial
+          </h2>
+          <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+            Conecte-se aos seus círculos, scraps do futuro e comunidades retrô.
+          </p>
         </div>
-      </header>
 
-      {/* Main Liquid Glass Canvas */}
-      <main className="flex-grow flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-[960px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          {/* Left Column: Modern Value Prop */}
-          <section className="lg:col-span-6 space-y-6">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-blue/15 border border-brand-blue/30 text-blue-400 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse"></span>
-                Liquid Glass Design System
-              </div>
-
-              <h1 className="text-3xl sm:text-4xl font-display font-bold text-white tracking-tight leading-tight">
-                A nova geração da rede social descentralizada e acolhedora.
-              </h1>
-
-              <p className="text-sm text-neutral-400 leading-relaxed font-sans">
-                O Espectro une o calor das comunidades com a estética moderna e fluida do Liquid Glass. Fóruns temáticos, discussões em thread e recados autênticos.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
-              <div className="glass-panel p-4 rounded-2xl space-y-1">
-                <span className="material-symbols-outlined text-brand-blue text-2xl">hub</span>
-                <h3 className="font-display font-bold text-sm text-white">e/Comunidades</h3>
-                <p className="text-xs text-neutral-400">URLs amigáveis com /e/ e debates em tópicos.</p>
-              </div>
-
-              <div className="glass-panel p-4 rounded-2xl space-y-1">
-                <span className="material-symbols-outlined text-neon-green text-2xl">thumb_up</span>
-                <h3 className="font-display font-bold text-sm text-white">Upvotes Neons</h3>
-                <p className="text-xs text-neutral-400">Curadoria orgânica e positiva da comunidade.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Right Column: Glass Card */}
-          <section className="lg:col-span-6 w-full">
-            <div className="glass-panel bg-[#131722]/85 rounded-3xl p-6 sm:p-8 space-y-6 border border-white/10 shadow-2xl">
-              {/* Tab Selector */}
-              <div className="flex bg-white/[0.04] p-1 rounded-2xl border border-white/10 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('login')}
-                  className={`flex-1 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-                    activeTab === 'login'
-                      ? 'bg-brand-blue text-white shadow-glow-blue font-bold'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Entrar na Conta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cadastro')}
-                  className={`flex-1 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-                    activeTab === 'cadastro'
-                      ? 'bg-brand-blue text-white shadow-glow-blue font-bold'
-                      : 'text-neutral-400 hover:text-white'
-                  }`}
-                >
-                  Criar Nova Conta
-                </button>
-              </div>
-
-              {/* Login Form */}
-              {activeTab === 'login' && (
-                <form onSubmit={handleLoginSubmit} className="space-y-4">
-                  {loginError && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                      {loginError}
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-neutral-300" htmlFor="login-username">
-                      Usuário ou E-mail:
-                    </label>
-                    <input
-                      id="login-username"
-                      type="text"
-                      required
-                      value={loginUsername}
-                      onChange={(e) => setLoginUsername(e.target.value)}
-                      placeholder="seu_usuario"
-                      className="w-full glass-input px-4 py-2.5 rounded-xl text-sm text-white outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-neutral-300" htmlFor="login-pass">
-                      Senha de Acesso:
-                    </label>
-                    <input
-                      id="login-pass"
-                      type="password"
-                      required
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full glass-input px-4 py-2.5 rounded-xl text-sm text-white outline-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loginLoading}
-                    className="w-full btn-primary-blue text-sm font-semibold py-2.5 rounded-xl cursor-pointer disabled:opacity-50 mt-2 shadow-glow-blue"
-                  >
-                    {loginLoading ? 'Conectando...' : 'Entrar no Espectro'}
-                  </button>
-                </form>
-              )}
-
-              {/* Register Form */}
-              {activeTab === 'cadastro' && (
-                <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-                  {regError && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-                      {regError}
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-neutral-300" htmlFor="cad-nick">
-                      Nome de usuário (@apelido):
-                    </label>
-                    <input
-                      id="cad-nick"
-                      type="text"
-                      required
-                      value={regUsername}
-                      onChange={(e) => setRegUsername(e.target.value)}
-                      placeholder="clara2026"
-                      className="w-full glass-input px-4 py-2 text-sm rounded-xl text-white outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-neutral-300" htmlFor="cad-email">
-                      E-mail:
-                    </label>
-                    <input
-                      id="cad-email"
-                      type="email"
-                      required
-                      value={regEmail}
-                      onChange={(e) => setRegEmail(e.target.value)}
-                      placeholder="seu.email@provedor.com"
-                      className="w-full glass-input px-4 py-2 text-sm rounded-xl text-white outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="space-y-1">
-                      <label className="block text-xs font-medium text-neutral-300" htmlFor="cad-pass">
-                        Senha:
-                      </label>
-                      <input
-                        id="cad-pass"
-                        type="password"
-                        required
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full glass-input px-3.5 py-2 text-sm rounded-xl text-white outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="block text-xs font-medium text-neutral-300" htmlFor="cad-pass-confirm">
-                        Confirmar:
-                      </label>
-                      <input
-                        id="cad-pass-confirm"
-                        type="password"
-                        required
-                        value={regPasswordConfirm}
-                        onChange={(e) => setRegPasswordConfirm(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full glass-input px-3.5 py-2 text-sm rounded-xl text-white outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={regLoading}
-                    className="w-full btn-primary-blue text-sm font-semibold py-2.5 rounded-xl cursor-pointer disabled:opacity-50 mt-2 shadow-glow-blue"
-                  >
-                    {regLoading ? 'Criando perfil...' : 'Criar Conta no Espectro'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </section>
+        {/* Capsule Tab Switcher */}
+        <div className="grid grid-cols-2 p-1 rounded-2xl glass-recessed border border-white/10 mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('login');
+              setError(null);
+            }}
+            className={`py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'login'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('register');
+              setError(null);
+            }}
+            className={`py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              activeTab === 'register'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            Criar Conta
+          </button>
         </div>
-      </main>
 
-      {/* Modern Footer */}
-      <footer className="w-full border-t border-white/[0.06] py-5 px-6 text-center text-xs text-neutral-500">
-        <p>© 2026 Espectro. Liquid Glass Design System. Cloudflare Pages &amp; D1.</p>
-      </footer>
+        {error && (
+          <div className="bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs px-3.5 py-2.5 rounded-xl mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Form Fields (Recessed Glass Inputs) */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+              Nome de Usuário
+            </label>
+            <div className="relative flex items-center">
+              <span className="material-symbols-outlined absolute left-3.5 text-neutral-400 text-[18px]">
+                person
+              </span>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="@seunome"
+                className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm rounded-xl glass-recessed text-white placeholder:text-neutral-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+              />
+            </div>
+          </div>
+
+          {activeTab === 'register' && (
+            <div>
+              <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                E-mail
+              </label>
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-3.5 text-neutral-400 text-[18px]">
+                  alternate_email
+                </span>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm rounded-xl glass-recessed text-white placeholder:text-neutral-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+              Senha secreta
+            </label>
+            <div className="relative flex items-center">
+              <span className="material-symbols-outlined absolute left-3.5 text-neutral-400 text-[18px]">
+                lock
+              </span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-10 py-3 text-xs sm:text-sm rounded-xl glass-recessed text-white placeholder:text-neutral-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-neutral-400 hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'login' && (
+            <div className="flex items-center justify-between text-xs pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-neutral-400 hover:text-white">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded bg-white/10 border-white/20 text-blue-500 focus:ring-0"
+                />
+                <span>Lembrar nesta nave</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => alert('Para redefinir sua senha, entre em contato com o suporte do Espectro.')}
+                className="text-cyan-400 hover:underline cursor-pointer"
+              >
+                Esqueceu a chave?
+              </button>
+            </div>
+          )}
+
+          {/* Primary Action Button from Stitch */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-indigo-600 text-white font-semibold text-sm shadow-[0_0_25px_rgba(56,189,248,0.45)] hover:shadow-[0_0_35px_rgba(56,189,248,0.65)] hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
+          >
+            <span>
+              {loading
+                ? 'Processando...'
+                : activeTab === 'login'
+                ? 'Entrar no Espectro'
+                : 'Criar Minha Conta'}
+            </span>
+            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          </button>
+        </form>
+
+        {/* Nostalgic 2000s Badges Footer from Stitch */}
+        <div className="mt-8 pt-6 border-t border-white/10">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[11px] block font-semibold text-amber-300">🌟 100%</span>
+              <span className="text-[9px] text-neutral-400 uppercase tracking-wider">Confiável</span>
+            </div>
+            <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[11px] block font-semibold text-rose-400">🔥 100%</span>
+              <span className="text-[9px] text-neutral-400 uppercase tracking-wider">Legal</span>
+            </div>
+            <div className="p-2 rounded-xl bg-white/5 border border-white/5">
+              <span className="text-[11px] block font-semibold text-cyan-300">💎 100%</span>
+              <span className="text-[9px] text-neutral-400 uppercase tracking-wider">Nostálgico</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-4 text-[10px] text-neutral-500">
+            © 2025 Espectro Inc. • Protocolo Karma
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,234 +1,271 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api, authStorage, Community } from '../lib/api';
+import { authStorage, Community, CreatePostData } from '../lib/api';
 
 interface CreatePostFormProps {
+  onPostCreated: (data: CreatePostData) => Promise<void>;
   communities?: Community[];
   defaultCommunityId?: number | null;
-  defaultCommunitySlug?: string | null;
-  onPostCreated: () => void;
 }
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
-  communities = [],
-  defaultCommunityId,
-  defaultCommunitySlug,
   onPostCreated,
+  communities = [],
+  defaultCommunityId = null,
 }) => {
-  const navigate = useNavigate();
   const user = authStorage.getUser();
-
   const [postType, setPostType] = useState<'discussion' | 'scrap'>('discussion');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [selectedCommunity, setSelectedCommunity] = useState<number | ''>(defaultCommunityId || '');
+  const [communityId, setCommunityId] = useState<number | ''>(defaultCommunityId || '');
   const [mediaUrl, setMediaUrl] = useState('');
-  const [mediaType, setMediaType] = useState<'image' | 'video' | 'gif' | ''>('');
   const [showMediaInput, setShowMediaInput] = useState(false);
-  const [posting, setPosting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    setError(null);
 
     if (!user) {
-      setError('Você precisa estar autenticado para postar!');
+      setError('Você precisa estar logado para publicar.');
       return;
     }
 
-    try {
-      setPosting(true);
-      setError(null);
-      setSuccessMsg(null);
+    if (postType === 'discussion' && !title.trim()) {
+      setError('Discussões precisam ter um título.');
+      return;
+    }
 
-      await api.createPost({
+    if (!content.trim()) {
+      setError('Escreva algo na sua publicação.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await onPostCreated({
+        title: postType === 'discussion' ? title.trim() : undefined,
         content: content.trim(),
-        title: postType === 'discussion' && title.trim() ? title.trim() : undefined,
-        community_id: selectedCommunity ? Number(selectedCommunity) : (defaultCommunityId || null),
-        community_slug: defaultCommunitySlug || null,
-        media_url: mediaUrl.trim() || undefined,
-        media_type: mediaType ? mediaType : undefined,
         post_type: postType,
+        community_id: communityId === '' ? undefined : Number(communityId),
+        media_url: mediaUrl.trim() || undefined,
+        media_type: mediaUrl.trim() ? 'image' : undefined,
       });
 
-      setContent('');
+      // Reset form
       setTitle('');
+      setContent('');
       setMediaUrl('');
-      setMediaType('');
       setShowMediaInput(false);
-      setSuccessMsg(postType === 'discussion' ? 'Discussão iniciada com sucesso!' : 'Scrap publicado com sucesso!');
-      onPostCreated();
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao publicar');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao criar publicação.');
     } finally {
-      setPosting(false);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <div className="glass-panel rounded-2xl overflow-hidden p-5 transition-all">
-      {/* Top Switcher */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-brand-blue text-[20px]">edit_square</span>
-          <span className="font-display font-bold text-sm text-white">Criar Publicação</span>
+  if (!user) {
+    return (
+      <article className="glass-surface rounded-2xl p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400">
+            <span className="material-symbols-outlined text-[20px]">lock</span>
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-semibold text-white">Faça parte do Espectro</h4>
+            <p className="text-[11px] text-neutral-400">
+              Conecte-se para publicar discussões, deixar scraps e interagir em comunidades.
+            </p>
+          </div>
         </div>
+        <a
+          href="/login"
+          className="btn-primary-blue text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap"
+        >
+          Entrar / Cadastrar
+        </a>
+      </article>
+    );
+  }
 
-        <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
+  return (
+    <article className="glass-surface rounded-2xl p-5 flex flex-col gap-4 relative shadow-[0_4px_20px_-2px_rgba(0,0,0,0.4)]">
+      {/* Mode Tabs from Stitch: Discussão vs Scrap */}
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setPostType('discussion')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               postType === 'discussion'
-                ? 'bg-brand-blue text-white shadow-glow-blue'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-white/10 text-cyan-300 border border-cyan-400/30 shadow-[0_0_10px_rgba(76,215,246,0.15)]'
+                : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px]">forum</span>
-            Discussão
+            <span className="material-symbols-outlined text-[16px]">edit_note</span>
+            <span>Discussão</span>
           </button>
+
           <button
             type="button"
             onClick={() => setPostType('scrap')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               postType === 'scrap'
-                ? 'bg-brand-blue text-white shadow-glow-blue'
-                : 'text-neutral-400 hover:text-white'
+                ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+                : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span className="material-symbols-outlined text-[15px]">chat</span>
-            Scrap
+            <span className="material-symbols-outlined text-[16px]">auto_stories</span>
+            <span>Scrap (Nostalgia)</span>
           </button>
         </div>
+
+        <span className="text-[10px] font-semibold text-neutral-400 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          Modo Conectado
+        </span>
       </div>
 
-      {successMsg && (
-        <div className="mb-3 p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs flex items-center gap-2">
-          <span className="material-symbols-outlined text-[16px]">check_circle</span>
-          {successMsg}
-        </div>
-      )}
-
       {error && (
-        <div className="mb-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs px-3.5 py-2 rounded-xl flex items-center gap-2">
           <span className="material-symbols-outlined text-[16px]">error</span>
-          {error}
+          <span>{error}</span>
         </div>
       )}
 
-      {user ? (
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Discussion Title & Community Picker */}
-          {postType === 'discussion' && (
-            <div className="space-y-2.5">
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título da discussão..."
-                className="w-full glass-input px-3.5 py-2 text-sm font-display font-semibold rounded-xl text-white outline-none"
-              />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {/* Title Input (Discussão) */}
+        {postType === 'discussion' && (
+          <input
+            id="composer-title-input"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título da sua publicação..."
+            className="w-full bg-transparent px-3 py-2 text-base font-display font-semibold text-white placeholder:text-neutral-500 border-b border-white/5 focus:border-cyan-400 focus:outline-none transition-colors"
+          />
+        )}
 
-              {!defaultCommunityId && communities.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-400 font-medium">Comunidade:</span>
-                  <select
-                    value={selectedCommunity}
-                    onChange={(e) => setSelectedCommunity(e.target.value ? Number(e.target.value) : '')}
-                    className="glass-input px-3 py-1.5 rounded-xl text-xs text-white outline-none bg-[#141822]"
-                  >
-                    <option value="">Feed Geral</option>
-                    {communities.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        e/{c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+        {/* Content Area with Avatar */}
+        <div className="flex gap-3 items-start pt-1">
+          <div className="w-10 h-10 rounded-full p-[1.5px] bg-gradient-to-tr from-cyan-400 to-blue-600 shrink-0 mt-1">
+            <div className="w-full h-full bg-[#111318] rounded-full flex items-center justify-center text-white text-xs font-bold font-display uppercase">
+              {user.username.charAt(0)}
             </div>
-          )}
-
-          {/* Text Area */}
+          </div>
           <textarea
-            rows={postType === 'discussion' ? 3 : 2}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={
               postType === 'discussion'
-                ? 'Compartilhe seus pensamentos, ideias ou questionamentos...'
-                : 'Deixe um recado rápido para a rede...'
+                ? 'O que está ecoando na sua mente?'
+                : 'Deixe aquele scrap maroto pro feed ou comunidade... (não apaga!!)'
             }
-            disabled={posting}
-            className="w-full glass-input p-3 text-sm rounded-xl text-neutral-200 outline-none resize-y"
+            rows={3}
+            className="w-full bg-transparent resize-none text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none p-1 font-sans"
           />
+        </div>
 
-          {/* Media input toggle */}
-          {showMediaInput && (
-            <div className="p-3 bg-white/[0.03] border border-white/10 rounded-xl flex flex-col sm:flex-row gap-2">
-              <input
-                type="url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="Cole o link da imagem, GIF ou vídeo (https://...)"
-                className="flex-1 glass-input px-3 py-1.5 text-xs rounded-lg text-white font-mono"
-              />
-              <select
-                value={mediaType}
-                onChange={(e) => setMediaType(e.target.value as any)}
-                className="glass-input px-3 py-1.5 rounded-lg text-xs text-white bg-[#141822]"
+        {/* Media URL Input Drawer */}
+        {showMediaInput && (
+          <div className="flex items-center gap-2 px-3 py-2 glass-recessed rounded-xl border border-white/10">
+            <span className="material-symbols-outlined text-[16px] text-cyan-400">link</span>
+            <input
+              type="url"
+              value={mediaUrl}
+              onChange={(e) => setMediaUrl(e.target.value)}
+              placeholder="Cole o link de uma imagem (https://...)"
+              className="w-full bg-transparent text-xs text-white placeholder:text-neutral-500 focus:outline-none"
+            />
+            {mediaUrl && (
+              <button
+                type="button"
+                onClick={() => setMediaUrl('')}
+                className="text-neutral-400 hover:text-white text-xs"
               >
-                <option value="">Tipo de Mídia</option>
-                <option value="image">Imagem</option>
-                <option value="gif">GIF</option>
-                <option value="video">Vídeo</option>
-              </select>
-            </div>
-          )}
+                Limpar
+              </button>
+            )}
+          </div>
+        )}
 
-          {/* Bottom Actions */}
-          <div className="flex items-center justify-between pt-1">
+        {/* Media Preview Box */}
+        {mediaUrl && (
+          <div className="relative rounded-xl overflow-hidden max-h-48 border border-white/10">
+            <img
+              src={mediaUrl}
+              alt="Preview"
+              className="w-full h-full object-cover"
+              onError={() => setError('Não foi possível carregar a prévia da imagem.')}
+            />
+          </div>
+        )}
+
+        {/* Composer Toolbar & Action Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+          {/* Media & Formatting Buttons */}
+          <div className="flex items-center gap-1 text-neutral-400">
             <button
               type="button"
               onClick={() => setShowMediaInput(!showMediaInput)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
-                showMediaInput
-                  ? 'bg-white/15 text-white border border-white/20'
-                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+              className={`p-2 rounded-xl transition-all ${
+                showMediaInput ? 'bg-cyan-500/20 text-cyan-300' : 'hover:bg-white/5 hover:text-white'
               }`}
+              title="Adicionar Imagem/Mídia"
             >
-              <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
-              <span>Anexar Mídia</span>
+              <span className="material-symbols-outlined text-[20px]">image</span>
             </button>
 
             <button
-              type="submit"
-              disabled={posting || !content.trim()}
-              className="btn-primary-blue text-xs font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              type="button"
+              onClick={() => setContent((prev) => prev + '\n```\n// seu código aqui\n```\n')}
+              className="p-2 rounded-xl hover:bg-white/5 hover:text-white transition-all"
+              title="Trecho de Código"
             >
-              <span className="material-symbols-outlined text-[16px]">send</span>
-              <span>{posting ? 'Publicando...' : postType === 'discussion' ? 'Publicar' : 'Enviar'}</span>
+              <span className="material-symbols-outlined text-[20px]">code</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setContent((prev) => prev + ' ✌️✨')}
+              className="p-2 rounded-xl hover:bg-white/5 hover:text-white transition-all"
+              title="Emoji Nostálgico"
+            >
+              <span className="material-symbols-outlined text-[20px]">mood</span>
+            </button>
+
+            <div className="h-4 w-px bg-white/10 mx-1" />
+
+            {/* Community Selector Tag */}
+            {communities.length > 0 && !defaultCommunityId && (
+              <select
+                value={communityId}
+                onChange={(e) => setCommunityId(e.target.value === '' ? '' : Number(e.target.value))}
+                className="bg-white/5 text-neutral-300 hover:text-white text-xs rounded-lg px-2.5 py-1.5 border border-white/10 focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+              >
+                <option value="" className="bg-[#121620] text-neutral-300">
+                  Geral / Sem comunidade
+                </option>
+                {communities.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-[#121620] text-neutral-200">
+                    e/{c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-        </form>
-      ) : (
-        <div className="text-center py-4 space-y-2">
-          <p className="text-sm text-neutral-300 font-medium">
-            Junte-se ao Espectro para criar tópicos e interagir.
-          </p>
+
+          {/* Primary Publish Button */}
           <button
-            type="button"
-            onClick={() => navigate('/login')}
-            className="btn-primary-blue text-xs font-semibold px-5 py-2 rounded-xl cursor-pointer"
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-500 text-white font-semibold text-xs sm:text-sm border border-white/20 shadow-[0_0_20px_rgba(59,130,246,0.45)] hover:shadow-[0_0_28px_rgba(59,130,246,0.65)] active:scale-95 transition-all duration-150 disabled:opacity-50 cursor-pointer"
           >
-            Fazer Login ou Criar Conta
+            <span>{submitting ? 'Publicando...' : 'Publicar'}</span>
+            <span className="material-symbols-outlined text-[18px]">send</span>
           </button>
         </div>
-      )}
-    </div>
+      </form>
+    </article>
   );
 };
