@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { communitiesApi, Community, authStorage } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
+import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Communities: React.FC = () => {
   const navigate = useNavigate();
@@ -12,10 +13,6 @@ export const Communities: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const loadCommunities = async () => {
     try {
@@ -32,36 +29,8 @@ export const Communities: React.FC = () => {
     loadCommunities();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!user) {
-      setError('Você precisa estar logado para fundar uma comunidade.');
-      return;
-    }
-
-    if (!name.trim()) {
-      setError('O nome da comunidade é obrigatório.');
-      return;
-    }
-
-    setCreating(true);
-    try {
-      const created = await communitiesApi.create({
-        name: name.trim(),
-        description: description.trim(),
-      });
-      setCommunities((prev) => [created, ...prev]);
-      setShowModal(false);
-      setName('');
-      setDescription('');
-      navigate(`/e/${created.slug || created.id}`);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao criar comunidade.');
-    } finally {
-      setCreating(false);
-    }
+  const handleCommunityCreated = (created: Community) => {
+    setCommunities((prev) => [created, ...prev]);
   };
 
   const filtered = communities.filter(
@@ -82,9 +51,9 @@ export const Communities: React.FC = () => {
             <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant/30">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
-                  <span>e/Comunidades</span>
+                  <span>c/Comunidades</span>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-medium">
-                    Catálogo
+                    Catálogo Oficial
                   </span>
                 </h1>
                 <p className="text-xs text-on-surface-variant mt-1">
@@ -101,41 +70,41 @@ export const Communities: React.FC = () => {
                     setShowModal(true);
                   }
                 }}
-                className="px-4 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                <span className="material-symbols-outlined text-[18px]">add</span>
                 <span>Criar Comunidade</span>
               </button>
             </div>
 
-            {/* Search and Filters */}
-            <div className="relative w-full">
-              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
+            {/* Barra de Pesquisa */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
                 search
               </span>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Pesquisar por nome ou assunto da comunidade..."
-                className="w-full pl-12 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-xs sm:text-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 shadow-xs transition-all"
+                placeholder="Buscar comunidades por nome ou tópicos..."
+                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
             </div>
 
-            {/* Communities Grid */}
+            {/* Lista de Comunidades */}
             {loading ? (
               <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
                 <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
                   progress_activity
                 </span>
-                <p className="mt-2 text-xs">Carregando comunidades do Espectro...</p>
+                <p className="mt-2 text-xs">Carregando catálogo de comunidades...</p>
               </div>
             ) : filtered.length === 0 ? (
               <div className="bg-surface-container-lowest rounded-2xl p-12 text-center text-on-surface-variant border border-outline-variant/30 shadow-sm">
                 <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40 mb-2">
                   group_off
                 </span>
-                <p className="text-sm font-semibold text-on-surface">
+                <p className="font-semibold text-sm text-on-surface">
                   Nenhuma comunidade encontrada
                 </p>
                 <p className="text-xs text-on-surface-variant mt-1">
@@ -151,20 +120,21 @@ export const Communities: React.FC = () => {
                   >
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-secondary p-0.5 flex-shrink-0 shadow-xs">
-                          <div className="w-full h-full bg-surface-container-lowest rounded-[10px] flex items-center justify-center font-bold text-primary text-base">
-                            {comm.name.charAt(0).toUpperCase()}
-                          </div>
+                        <div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-base flex-shrink-0 shadow-xs"
+                          style={{ backgroundColor: comm.icon_color || '#712ae2' }}
+                        >
+                          {comm.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <Link
-                            to={`/e/${comm.slug || comm.id}`}
+                            to={`/c/${comm.slug || comm.id}`}
                             className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate"
                           >
-                            e/{comm.name}
+                            c/{comm.name}
                           </Link>
                           <span className="text-[11px] text-on-surface-variant">
-                            {comm.members_count} membros
+                            {comm.members_count} {comm.members_count === 1 ? 'membro' : 'membros'}
                           </span>
                         </div>
                       </div>
@@ -179,7 +149,7 @@ export const Communities: React.FC = () => {
                         Desde 2026
                       </span>
                       <Link
-                        to={`/e/${comm.slug || comm.id}`}
+                        to={`/c/${comm.slug || comm.id}`}
                         className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-colors flex items-center gap-1 shadow-xs"
                       >
                         <span>Visitar</span>
@@ -195,76 +165,11 @@ export const Communities: React.FC = () => {
       </div>
 
       {/* Modal Criar Comunidade */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-              <h2 className="text-base font-bold text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[20px]">group_add</span>
-                <span>Fundar Nova Comunidade</span>
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-on-surface-variant hover:text-on-surface p-1 rounded-lg"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-error-container text-error text-xs font-medium">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleCreate} className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-on-surface">Nome da Comunidade</label>
-                <div className="flex items-center rounded-xl bg-surface-container-low border border-outline-variant/30 px-3">
-                  <span className="text-xs text-primary font-bold">e/</span>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="tecnologia, cinema, retro..."
-                    className="w-full py-2.5 px-1.5 text-xs bg-transparent text-on-surface focus:outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-on-surface">Descrição</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Qual o propósito deste espaço no Espectro?"
-                  rows={3}
-                  className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-full text-on-surface-variant hover:bg-surface-container text-xs font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  className="px-5 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all disabled:opacity-50"
-                >
-                  {creating ? 'Criando...' : 'Fundar Comunidade'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateCommunityModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onCommunityCreated={handleCommunityCreated}
+      />
     </div>
   );
 };

@@ -17,10 +17,20 @@ function generateSlug(text: string): string {
   );
 }
 
+// Garante que a coluna icon_color exista na tabela communities
+async function ensureCommunitiesTable(db: D1Database) {
+  try {
+    await db.prepare("ALTER TABLE communities ADD COLUMN icon_color TEXT DEFAULT '#712ae2'").run();
+  } catch {
+    // ignore se já existe
+  }
+}
+
 // GET: lista todas as comunidades ou busca uma única por slug/id
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
+    await ensureCommunitiesTable(env.DB);
     const url = new URL(request.url);
     const slug = url.searchParams.get("slug");
     const id = url.searchParams.get("id");
@@ -37,6 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           c.name,
           c.slug,
           c.description,
+          c.icon_color,
           c.owner_id,
           c.created_at,
           u.username AS owner_name,
@@ -46,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         JOIN users u ON c.owner_id = u.id
         LEFT JOIN community_members cm ON c.id = cm.community_id
         WHERE c.slug = ? OR CAST(c.id AS TEXT) = ?
-        GROUP BY c.id, c.name, c.slug, c.description, c.owner_id, c.created_at, u.username
+        GROUP BY c.id, c.name, c.slug, c.description, c.icon_color, c.owner_id, c.created_at, u.username
       `;
 
       const community = await env.DB.prepare(singleQuery)
@@ -69,6 +80,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         c.name,
         c.slug,
         c.description,
+        c.icon_color,
         c.owner_id,
         c.created_at,
         u.username AS owner_name,
@@ -77,7 +89,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       FROM communities c
       JOIN users u ON c.owner_id = u.id
       LEFT JOIN community_members cm ON c.id = cm.community_id
-      GROUP BY c.id, c.name, c.slug, c.description, c.owner_id, c.created_at, u.username
+      GROUP BY c.id, c.name, c.slug, c.description, c.icon_color, c.owner_id, c.created_at, u.username
       ORDER BY members_count DESC, c.id DESC
     `;
 
@@ -196,6 +208,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Ação: Criar nova comunidade
     const { name, description } = body;
+    const icon_color = (body as any).icon_color;
     if (!name || typeof name !== "string" || name.trim().length < 2) {
       return errorResponse("Nome da comunidade deve ter ao menos 2 caracteres.", 400);
     }
@@ -203,6 +216,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const cleanName = name.trim();
     const cleanDesc = description ? description.trim() : "";
     const cleanSlug = body.slug?.trim() ? generateSlug(body.slug) : generateSlug(cleanName);
+    const cleanColor = typeof icon_color === "string" && icon_color.trim().startsWith("#") ? icon_color.trim() : "#712ae2";
 
     // Verifica se já existe com esse nome ou slug
     const existing = await env.DB.prepare(
@@ -215,11 +229,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Já existe uma comunidade com este nome ou slug.", 409);
     }
 
-    // Insere comunidade com slug
+    await ensureCommunitiesTable(env.DB);
+
+    // Insere comunidade com slug e icon_color
     const insertResult = await env.DB.prepare(
-      "INSERT INTO communities (name, slug, description, owner_id) VALUES (?, ?, ?, ?)"
+      "INSERT INTO communities (name, slug, description, icon_color, owner_id) VALUES (?, ?, ?, ?, ?)"
     )
-      .bind(cleanName, cleanSlug, cleanDesc, user.id)
+      .bind(cleanName, cleanSlug, cleanDesc, cleanColor, user.id)
       .run();
 
     const communityId = insertResult.meta.last_row_id;
@@ -237,6 +253,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         name: cleanName,
         slug: cleanSlug,
         description: cleanDesc,
+        icon_color: cleanColor,
         owner_id: user.id,
         owner_name: user.username,
         members_count: 1,

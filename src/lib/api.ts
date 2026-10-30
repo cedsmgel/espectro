@@ -19,6 +19,7 @@ export interface Post {
   author_avatar?: string | null;
   community_name: string | null;
   community_slug?: string | null;
+  community_icon_color?: string | null;
   comments_count: number;
 }
 
@@ -27,6 +28,7 @@ export interface Community {
   name: string;
   slug?: string;
   description: string | null;
+  icon_color?: string | null;
   owner_id: number;
   owner_name?: string;
   created_at: string;
@@ -197,11 +199,12 @@ export const api = {
     authStorage.clear();
   },
 
-  async getPosts(filters?: { community_id?: number; community_slug?: string; post_type?: string }): Promise<Post[]> {
+  async getPosts(filters?: { community_id?: number; community_slug?: string; post_type?: string; feed?: string }): Promise<Post[]> {
     const params = new URLSearchParams();
     if (filters?.community_id) params.set('community_id', String(filters.community_id));
     if (filters?.community_slug) params.set('community_slug', filters.community_slug);
     if (filters?.post_type) params.set('post_type', filters.post_type);
+    if (filters?.feed) params.set('feed', filters.feed);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
   },
@@ -232,7 +235,7 @@ export const api = {
     return apiRequest<Community>(`/api/communities?slug=${encodeURIComponent(slug)}`, { method: 'GET' });
   },
 
-  async createCommunity(params: { name: string; slug?: string; description?: string }): Promise<Community> {
+  async createCommunity(params: { name: string; slug?: string; description?: string; icon_color?: string }): Promise<Community> {
     return apiRequest<Community>('/api/communities', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -267,7 +270,7 @@ export const api = {
 export const authApi = api;
 
 export const postsApi = {
-  list: (filters?: { community_id?: number; community_slug?: string; post_type?: string }) =>
+  list: (filters?: { community_id?: number; community_slug?: string; post_type?: string; feed?: string }) =>
     api.getPosts(filters),
   create: (data: CreatePostData) => api.createPost(data),
   vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
@@ -280,7 +283,7 @@ export const postsApi = {
 export const communitiesApi = {
   list: () => api.getCommunities(),
   getBySlug: (slug: string) => api.getCommunityBySlug(slug),
-  create: (data: { name: string; slug?: string; description?: string }) =>
+  create: (data: { name: string; slug?: string; description?: string; icon_color?: string }) =>
     api.createCommunity(data),
   join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
   leave: (communityId: number) => api.leaveCommunity(communityId),

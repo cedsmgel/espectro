@@ -138,32 +138,51 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         className="hidden"
       />
 
-      {/* Selector: Post Regular vs Scrap */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/20 pb-2">
-        <button
-          type="button"
-          onClick={() => setPostType('discussion')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-            postType === 'discussion'
-              ? 'bg-primary-container text-on-primary shadow-xs'
-              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px]">edit_note</span>
-          <span>Discussão</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setPostType('scrap')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-            postType === 'scrap'
-              ? 'bg-secondary-container text-on-secondary-container shadow-xs'
-              : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-          <span>Scrap Nostálgico</span>
-        </button>
+      {/* Selector: Post Regular vs Scrap e Dropdown de Comunidade Permanente */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPostType('discussion')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              postType === 'discussion'
+                ? 'bg-primary-container text-on-primary shadow-xs'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">edit_note</span>
+            <span>Discussão</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPostType('scrap')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              postType === 'scrap'
+                ? 'bg-secondary-container text-on-secondary-container shadow-xs'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">auto_stories</span>
+            <span>Scrap Nostálgico</span>
+          </button>
+        </div>
+
+        {/* Seletor de Comunidade Destino (ou Feed Geral) */}
+        <div className="flex items-center gap-1.5 bg-surface-container-low px-2.5 py-1 rounded-full border border-outline-variant/30">
+          <span className="material-symbols-outlined text-secondary text-[16px]">groups</span>
+          <select
+            value={communityId}
+            onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
+            className="bg-transparent text-xs text-on-surface font-semibold focus:outline-none cursor-pointer"
+          >
+            <option value="">Publicar no Feed Geral</option>
+            {communities.map((c) => (
+              <option key={c.id} value={c.id}>
+                c/{c.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -270,26 +289,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           </div>
         )}
 
-        {/* Seletor de Comunidade */}
-        {showCommunitySelect && communities.length > 0 && (
-          <div className="pl-13 flex items-center gap-2">
-            <span className="material-symbols-outlined text-secondary text-[20px]">groups</span>
-            <select
-              value={communityId}
-              onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
-              className="bg-surface-container-low rounded-xl px-3 py-1.5 text-xs text-on-surface border border-outline-variant/30 focus:outline-none"
-            >
-              <option value="">Publicar no Feed Geral</option>
-              {communities.map((c) => (
-                <option key={c.id} value={c.id}>
-                  e/{c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Barra de Ações: Imagem, Vídeo, Link, Comunidade e Botão Publicar */}
+        {/* Barra de Ações: Imagem, Vídeo, Link e Botão Publicar */}
         <div className="flex flex-wrap items-center justify-between pt-2 border-t border-outline-variant/20 gap-3">
           <div className="flex items-center gap-1">
             {/* Upload de Imagem para o R2 */}
@@ -325,16 +325,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             >
               <span className="material-symbols-outlined text-[18px]">link</span>
               <span>Link</span>
-            </button>
-
-            {/* Alternar Comunidade */}
-            <button
-              type="button"
-              onClick={() => setShowCommunitySelect(!showCommunitySelect)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-surface-container text-on-surface-variant text-xs font-semibold transition-colors hidden sm:inline-flex cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">tag</span>
-              <span>Comunidade</span>
             </button>
           </div>
 

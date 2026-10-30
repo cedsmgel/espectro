@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
 import { ContactsDrawer } from './ContactsDrawer';
+import { CreateCommunityModal } from './CreateCommunityModal';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -13,6 +14,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
 
   const handleLogout = () => {
     authStorage.clear();
@@ -72,21 +75,63 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {user ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const composer = document.getElementById('composer-textarea');
-                    if (composer) {
-                      composer.focus();
-                    } else {
-                      navigate('/');
-                    }
-                  }}
-                  className="hidden md:flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-primary-container text-on-primary font-medium text-sm shadow-xs hover:bg-primary transition-all cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                  <span>Criar</span>
-                </button>
+                {/* Botão e Dropdown Criar */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateDropdown((prev) => !prev)}
+                    className="hidden md:flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-primary-container text-on-primary font-medium text-sm shadow-xs hover:bg-primary transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">add</span>
+                    <span>Criar</span>
+                    <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                  </button>
+
+                  {showCreateDropdown && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-30"
+                        onClick={() => setShowCreateDropdown(false)}
+                      />
+                      <div className="absolute right-0 top-10 z-40 w-52 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-1.5 flex flex-col animate-in fade-in duration-150">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateDropdown(false);
+                            const composer = document.getElementById('composer-textarea');
+                            if (composer) {
+                              composer.focus();
+                            } else {
+                              navigate('/');
+                            }
+                          }}
+                          className="px-4 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer text-left transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-primary">edit_note</span>
+                          <div>
+                            <p className="font-semibold">Nova Publicação</p>
+                            <p className="text-[10px] text-on-surface-variant">Postar no feed ou scrap</p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateDropdown(false);
+                            setShowCommunityModal(true);
+                          }}
+                          className="px-4 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer text-left transition-colors border-t border-outline-variant/20"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-secondary">group_add</span>
+                          <div>
+                            <p className="font-semibold">Criar Comunidade</p>
+                            <p className="text-[10px] text-on-surface-variant">Fundar um novo espaço</p>
+                          </div>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* Botão Mensagens com Badge */}
                 <button
@@ -202,6 +247,12 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
       {/* Slide-in Contacts Drawer (Direct rápido) */}
       <ContactsDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+      {/* Modal Global Criar Comunidade */}
+      <CreateCommunityModal
+        isOpen={showCommunityModal}
+        onClose={() => setShowCommunityModal(false)}
+      />
     </>
   );
 };

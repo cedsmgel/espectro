@@ -133,15 +133,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete }) =>
               </span>
               {post.community_name ? (
                 <Link
-                  to={`/e/${post.community_slug || post.community_id}`}
-                  className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-medium flex items-center gap-1 hover:bg-secondary-fixed-dim transition-colors"
+                  to={`/c/${post.community_slug || post.community_id}`}
+                  className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border border-purple-300/60 text-xs font-semibold flex items-center gap-1.5 hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors shadow-xs"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                  e/{post.community_name}
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: post.community_icon_color || '#712ae2' }}
+                  />
+                  <span>c/{post.community_name}</span>
                 </Link>
               ) : (
-                <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface text-xs font-medium">
-                  e/geral
+                <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-medium">
+                  c/geral
                 </span>
               )}
               <span className="text-on-surface-variant text-xs">
@@ -177,7 +180,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete }) =>
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      window.location.origin + `/e/${post.community_slug || post.community_id || 'geral'}#post-${post.id}`
+                      window.location.origin + `/c/${post.community_slug || post.community_id || 'geral'}#post-${post.id}`
                     );
                     setShowMenu(false);
                     alert('Link copiado para a área de transferência!');

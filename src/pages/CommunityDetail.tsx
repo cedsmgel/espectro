@@ -213,10 +213,17 @@ export const CommunityDetail: React.FC = () => {
                 {/* Community Header Banner */}
                 <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30">
                   {/* Subtle Gradient Cover */}
-                  <div className="h-36 sm:h-44 w-full bg-gradient-to-r from-primary via-secondary to-primary-container relative p-4 flex items-end justify-between">
-                    <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <div
+                    className="h-36 sm:h-44 w-full relative p-4 flex items-end justify-between transition-all"
+                    style={{
+                      background: community.icon_color
+                        ? `linear-gradient(135deg, ${community.icon_color}dd 0%, #1e1b4b 100%)`
+                        : 'linear-gradient(135deg, #712ae2 0%, #4f46e5 50%, #312e81 100%)',
+                    }}
+                  >
+                    <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
                       <span className="material-symbols-outlined text-[14px]">tag</span>
-                      <span>Espaço Oficial e/{community.slug || community.id} (ID #{community.id})</span>
+                      <span>Espaço Oficial c/{community.slug || community.id}</span>
                     </span>
                   </div>
 
@@ -225,30 +232,33 @@ export const CommunityDetail: React.FC = () => {
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12">
                       <div className="flex items-end gap-4">
                         <div className="w-24 h-24 rounded-2xl p-1 bg-surface-container-lowest shadow-md">
-                          <div className="w-full h-full rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center font-bold text-3xl text-white">
+                          <div
+                            className="w-full h-full rounded-xl flex items-center justify-center font-bold text-3xl text-white shadow-xs"
+                            style={{ backgroundColor: community.icon_color || '#712ae2' }}
+                          >
                             {community.name.charAt(0).toUpperCase()}
                           </div>
                         </div>
                         <div className="flex flex-col pb-1">
                           <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
-                            <span>e/{community.name}</span>
+                            <span>c/{community.name}</span>
                             <span className="material-symbols-outlined text-primary text-[20px]">
                               verified
                             </span>
                           </h1>
                           <span className="text-xs text-on-surface-variant">
-                            {community.members_count || 1} {community.members_count === 1 ? 'membro ativo' : 'membros ativos'} no Espectro
+                            {community.members_count || 1} {community.members_count === 1 ? 'membro' : 'membros'} no Espectro
                           </span>
                         </div>
                       </div>
 
-                      {/* Join / Entrar na Comunidade Button */}
+                      {/* Join / Participar da Comunidade Button */}
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
                           onClick={handleToggleJoin}
                           disabled={actionLoading}
-                          className={`px-5 py-2 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer flex items-center gap-1.5 ${
+                          className={`px-6 py-2.5 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer flex items-center gap-1.5 ${
                             isMember
                               ? 'bg-surface-container-high text-on-surface hover:bg-error-container hover:text-error'
                               : 'bg-primary-container text-on-primary hover:bg-primary'
@@ -259,12 +269,12 @@ export const CommunityDetail: React.FC = () => {
                           ) : isMember ? (
                             <>
                               <span className="material-symbols-outlined text-[16px] text-emerald-500">check</span>
-                              <span>Membro Ativo (Sair)</span>
+                              <span>Participando (Sair)</span>
                             </>
                           ) : (
                             <>
                               <span className="material-symbols-outlined text-[16px]">group_add</span>
-                              <span>Entrar na Comunidade</span>
+                              <span>Participar</span>
                             </>
                           )}
                         </button>

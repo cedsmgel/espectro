@@ -30,7 +30,7 @@ async function ensurePostsTable(db: D1Database) {
   }
 }
 
-// GET: lista os posts com filtros opcionais (community_id, community_slug, post_type)
+// GET: lista os posts com filtros opcionais (community_id, community_slug, post_type, feed)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -39,6 +39,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const communityId = url.searchParams.get("community_id");
     const communitySlug = url.searchParams.get("community_slug");
     const postType = url.searchParams.get("post_type");
+    const feed = url.searchParams.get("feed"); // 'home' | 'all'
+    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const authUser = await getAuthUser(request, secret);
 
     let query = `
       SELECT 
@@ -57,6 +60,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         p.community_id,
         c.name AS community_name,
         c.slug AS community_slug,
+        c.icon_color AS community_icon_color,
         (SELECT COUNT(1) FROM comments WHERE comments.post_id = p.id) AS comments_count
       FROM posts p
       JOIN users u ON p.author_id = u.id
@@ -69,11 +73,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (communityId) {
       query += ` AND p.community_id = ?`;
       params.push(Number(communityId));
-    }
-
-    if (communitySlug) {
+    } else if (communitySlug) {
       query += ` AND (c.slug = ? OR CAST(c.id AS TEXT) = ?)`;
       params.push(communitySlug, communitySlug);
+    } else if (feed === "home" && authUser) {
+      // Feed Principal: exibe posts gerais (sem comunidade) E posts das comunidades em que o usuário participa
+      query += ` AND (p.community_id IS NULL OR p.community_id IN (SELECT community_id FROM community_members WHERE user_id = ?))`;
+      params.push(authUser.id);
     }
 
     if (postType) {
@@ -223,6 +229,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         p.community_id,
         c.name AS community_name,
         c.slug AS community_slug,
+        c.icon_color AS community_icon_color,
         0 AS comments_count
       FROM posts p
       JOIN users u ON p.author_id = u.id

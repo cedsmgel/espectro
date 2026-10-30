@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { postsApi, communitiesApi, Post, Community, CreatePostData } from '../lib/api';
+import { postsApi, communitiesApi, Post, Community, CreatePostData, authStorage } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
+import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,6 +13,7 @@ export const Feed: React.FC = () => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'trending'>('foryou');
+  const [showCommunityModal, setShowCommunityModal] = useState(false);
 
   const queryParam = searchParams.get('q');
   const typeParam = searchParams.get('type');
@@ -19,8 +21,9 @@ export const Feed: React.FC = () => {
 
   const loadData = async () => {
     try {
+      const user = authStorage.getUser();
       const [fetchedPosts, fetchedCommunities] = await Promise.all([
-        postsApi.list(),
+        postsApi.list({ feed: user ? 'home' : undefined }),
         communitiesApi.list(),
       ]);
       setPosts(fetchedPosts);
@@ -288,40 +291,64 @@ export const Feed: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card: Comunidades Ativas */}
+                {/* Card: Comunidades em Alta (D1) */}
                 <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-bold text-sm text-on-surface">Comunidades Ativas</h2>
-                    <Link to="/comunidades" className="text-xs font-semibold text-primary hover:underline">
-                      Explorar
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-secondary text-[20px]">local_fire_department</span>
+                      <h2 className="font-bold text-sm text-on-surface">Comunidades em Alta</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowCommunityModal(true)}
+                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">add</span>
+                      <span>Criar</span>
+                    </button>
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    {communities.slice(0, 3).map((c) => (
-                      <div key={c.id} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-xl bg-secondary-fixed flex items-center justify-center text-secondary font-bold text-xs flex-shrink-0">
+                    {communities.slice(0, 5).map((c, idx) => (
+                      <div key={c.id} className="flex items-center justify-between gap-2 group">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-[11px] font-bold text-on-surface-variant w-4 text-center">
+                            #{idx + 1}
+                          </span>
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                            style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                          >
                             {c.name.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <Link to={`/e/${c.slug || c.id}`} className="text-xs font-semibold text-on-surface truncate hover:text-primary">
-                              e/{c.name}
+                            <Link
+                              to={`/c/${c.slug || c.id}`}
+                              className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
+                            >
+                              c/{c.name}
                             </Link>
                             <span className="text-[11px] text-on-surface-variant truncate">
-                              {c.members_count} membros
+                              {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
                             </span>
                           </div>
                         </div>
                         <Link
-                          to={`/e/${c.slug || c.id}`}
-                          className="px-3 py-1 rounded-full bg-surface-container-low text-primary text-xs font-semibold hover:bg-surface-container transition-colors flex-shrink-0"
+                          to={`/c/${c.slug || c.id}`}
+                          className="px-3 py-1 rounded-full bg-surface-container text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
                         >
-                          + Entrar
+                          Ver
                         </Link>
                       </div>
                     ))}
                   </div>
+
+                  <Link
+                    to="/comunidades"
+                    className="pt-2 border-t border-outline-variant/20 text-xs font-semibold text-primary hover:underline text-center block"
+                  >
+                    Explorar todas as comunidades →
+                  </Link>
                 </div>
 
                 {/* Card: Quem Seguir */}
@@ -398,6 +425,15 @@ export const Feed: React.FC = () => {
           </div>
         </footer>
       </div>
+
+      {/* Modal Criar Comunidade */}
+      <CreateCommunityModal
+        isOpen={showCommunityModal}
+        onClose={() => setShowCommunityModal(false)}
+        onCommunityCreated={(newComm) => {
+          setCommunities((prev) => [newComm, ...prev]);
+        }}
+      />
     </div>
   );
 };
