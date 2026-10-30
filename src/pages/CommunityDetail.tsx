@@ -73,97 +73,71 @@ export const CommunityDetail: React.FC = () => {
   };
 
   return (
-    <div className="bg-surface-variant text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-secondary-container selection:text-primary">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-blue/30 selection:text-blue-300">
       <Header />
 
-      {/* 3-Column Layout: Esquerda (Navegação) | Centro (Feed da Comunidade) | Direita (Contatos) */}
-      <main className="flex-1 w-full max-w-[1180px] mx-auto px-space-md sm:px-space-lg py-space-md">
-        {/* Breadcrumb Bar */}
-        <div className="mb-space-sm bg-surface-container border border-outline-variant rounded p-space-sm flex items-center justify-between text-body-sm shadow-sm">
-          <div className="flex items-center gap-1.5 text-primary">
-            <span className="material-symbols-outlined text-[16px]">home</span>
-            <Link to="/" className="hover:underline">Início</Link>
-            <span className="text-secondary">&gt;</span>
-            <Link to="/comunidades" className="hover:underline">e/Comunidades</Link>
-            <span className="text-secondary">&gt;</span>
-            <span className="font-bold text-on-surface">e/{community ? community.name : slug}</span>
-          </div>
-
-          <Link to="/comunidades" className="text-label-sm text-primary hover:underline font-bold">
-            ← Ver todas as comunidades
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-space-md items-start">
-          {/* ================= COLUNA ESQUERDA: NAVEGAÇÃO ================= */}
-          <aside className="md:col-span-3 lg:col-span-3">
+      <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Left Column */}
+          <aside className="md:col-span-3 lg:col-span-3 sticky top-20">
             <SidebarNav communities={communities} />
           </aside>
 
-          {/* ================= COLUNA CENTRAL: FEED DA COMUNIDADE ================= */}
-          <section className="md:col-span-9 lg:col-span-6 space-y-space-md">
-            {/* Banner da Comunidade */}
+          {/* Center Column */}
+          <section className="md:col-span-9 lg:col-span-6 space-y-5">
+            {/* Community Liquid Glass Banner */}
             {loading ? (
-              <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary">
-                Carregando informações da comunidade...
+              <div className="glass-panel rounded-2xl p-8 text-center text-neutral-400">
+                Carregando detalhes da comunidade...
               </div>
             ) : community ? (
-              <div className="bg-white rounded classic-bevel-border overflow-hidden">
-                <div className="header-bar-gradient px-space-md py-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded bg-primary-container text-white flex items-center justify-center font-bold text-xl uppercase shadow-sm">
+              <div className="glass-panel rounded-2xl overflow-hidden p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-blue to-neon-cyan flex items-center justify-center font-display font-bold text-2xl text-white shadow-glow-blue uppercase">
                       {community.name.charAt(0)}
                     </div>
                     <div>
-                      <h1 className="text-headline-sm font-bold text-primary">
+                      <h1 className="text-xl sm:text-2xl font-display font-bold text-white tracking-tight">
                         e/{community.name}
                       </h1>
-                      <span className="text-[11px] text-secondary font-mono">
-                        /e/{community.slug || community.id}
-                      </span>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-neutral-400 font-mono">
+                        <span>/e/{community.slug || community.id}</span>
+                        <span>•</span>
+                        <span className="text-neon-green font-semibold">{community.members_count} membros</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <span className="bg-secondary-container text-on-secondary-fixed text-label-sm font-bold px-2 py-0.5 rounded">
-                      {community.members_count} membros
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleJoin}
-                      disabled={joining}
-                      className="retro-btn-primary text-white text-label-sm px-3 py-1 rounded font-bold shadow-sm cursor-pointer disabled:opacity-50"
-                    >
-                      {joining ? 'Entrando...' : '+ Entrar na Comunidade'}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleJoin}
+                    disabled={joining}
+                    className="btn-primary-blue text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">add</span>
+                    {joining ? 'Entrando...' : 'Entrar na Comunidade'}
+                  </button>
                 </div>
 
-                <div className="p-space-md bg-surface-container-lowest border-t border-outline-variant">
-                  <p className="text-body-md text-on-surface leading-relaxed">
-                    {community.description || 'Comunidade acolhedora no Espectro. Participe dos tópicos e discussões!'}
-                  </p>
-                  <div className="mt-2 text-[11px] text-secondary flex flex-wrap gap-x-4 gap-y-1">
-                    <span><strong>Fundador:</strong> @{community.owner_name || 'membro'}</span>
-                    <span><strong>Criada em:</strong> {new Date(community.created_at).toLocaleDateString('pt-BR')}</span>
-                    <span><strong>Fórum:</strong> Aberto para membros</span>
-                  </div>
+                <p className="text-sm text-neutral-300 leading-relaxed font-sans">
+                  {community.description || 'Comunidade oficial no Espectro. Participe dos debates e compartilhe suas ideias.'}
+                </p>
 
-                  {joinSuccess && (
-                    <div className="mt-2 p-2 rounded bg-[#e7f7ed] text-[#1e6f3b] text-body-sm border border-[#a3dfb4] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                      {joinSuccess}
-                    </div>
-                  )}
-                </div>
+                {joinSuccess && (
+                  <div className="p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                    {joinSuccess}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-error">
+              <div className="glass-panel rounded-2xl p-8 text-center text-rose-400">
                 Comunidade não encontrada.
               </div>
             )}
 
-            {/* Formulário de Criação com a Comunidade pré-selecionada */}
+            {/* Post Creator Pre-Linked to this community */}
             {community && (
               <CreatePostForm
                 communities={communities}
@@ -173,36 +147,38 @@ export const CommunityDetail: React.FC = () => {
               />
             )}
 
-            {/* Feed de Discussões da Comunidade */}
-            <div className="space-y-space-md">
-              <div className="bg-surface-container-high px-space-md py-1.5 border border-outline-variant rounded flex items-center justify-between text-body-sm font-body-sm">
-                <span className="text-primary font-bold text-label-sm uppercase">
-                  Tópicos e Discussões em e/{community?.name || slug} ({posts.length})
-                </span>
+            {/* Posts Stream */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-display font-bold text-sm text-neutral-300">
+                  Discussões em e/{community?.name || slug} ({posts.length})
+                </h3>
                 <button
                   type="button"
                   onClick={fetchCommunityAndPosts}
                   disabled={loadingPosts}
-                  className="text-[11px] text-primary underline hover:text-primary-container flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-brand-blue hover:text-blue-300 flex items-center gap-1 cursor-pointer"
                 >
-                  <span className={`material-symbols-outlined text-[12px] ${loadingPosts ? 'animate-spin' : ''}`}>
+                  <span className={`material-symbols-outlined text-[15px] ${loadingPosts ? 'animate-spin' : ''}`}>
                     refresh
                   </span>
-                  atualizar
+                  Atualizar
                 </button>
               </div>
 
               {loadingPosts && (
-                <div className="p-space-lg text-center text-secondary flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-                  Carregando tópicos da comunidade...
+                <div className="glass-panel rounded-2xl p-8 text-center text-neutral-400 flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined animate-spin text-brand-blue">sync</span>
+                  Carregando tópicos...
                 </div>
               )}
 
               {!loadingPosts && posts.length === 0 && (
-                <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary">
-                  <p className="font-semibold text-primary mb-1">Nenhum tópico nesta comunidade ainda.</p>
-                  <p className="text-body-sm">Seja o primeiro a iniciar uma discussão aqui!</p>
+                <div className="glass-panel rounded-2xl p-10 text-center space-y-2">
+                  <p className="font-display font-bold text-base text-white">Nenhum tópico ainda</p>
+                  <p className="text-xs text-neutral-400">
+                    Seja o primeiro a inaugurar uma conversa nesta comunidade.
+                  </p>
                 </div>
               )}
 
@@ -212,8 +188,8 @@ export const CommunityDetail: React.FC = () => {
             </div>
           </section>
 
-          {/* ================= COLUNA DIREITA: CONTATOS WIDGET ================= */}
-          <aside className="md:col-span-12 lg:col-span-3">
+          {/* Right Column */}
+          <aside className="md:col-span-12 lg:col-span-3 sticky top-20">
             <ContactsWidget />
           </aside>
         </div>

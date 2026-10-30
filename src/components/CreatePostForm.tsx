@@ -18,7 +18,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const navigate = useNavigate();
   const user = authStorage.getUser();
 
-  const [postType, setPostType] = useState<'discussion' | 'scrap'>('scrap');
+  const [postType, setPostType] = useState<'discussion' | 'scrap'>('discussion');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState<number | ''>(defaultCommunityId || '');
@@ -34,7 +34,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     if (!content.trim()) return;
 
     if (!user) {
-      setError('Você precisa estar conectado para postar!');
+      setError('Você precisa estar autenticado para postar!');
       return;
     }
 
@@ -58,7 +58,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setMediaUrl('');
       setMediaType('');
       setShowMediaInput(false);
-      setSuccessMsg(postType === 'discussion' ? 'Tópico de discussão criado com sucesso!' : 'Recado postado com sucesso!');
+      setSuccessMsg(postType === 'discussion' ? 'Discussão iniciada com sucesso!' : 'Scrap publicado com sucesso!');
       onPostCreated();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
@@ -68,225 +68,167 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
-  const addEmoticon = (emo: string) => {
-    setContent((prev) => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + emo + ' ');
-  };
-
   return (
-    <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
-      {/* Header com Abas: Discussão vs Scrap */}
-      <div className="retro-header-strip px-space-md py-space-sm flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[18px] text-primary">edit_note</span>
-          <span className="text-label-md font-bold text-primary">Criar Nova Publicação</span>
+    <div className="glass-panel rounded-2xl overflow-hidden p-5 transition-all">
+      {/* Top Switcher */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-brand-blue text-[20px]">edit_square</span>
+          <span className="font-display font-bold text-sm text-white">Criar Publicação</span>
         </div>
 
-        {/* Post Type Selector: Discussão (Título + Texto + Mídia) vs Scrap (Texto curto) */}
-        <div className="flex items-center bg-white p-0.5 rounded border border-outline-variant text-label-sm font-label-sm">
-          <button
-            type="button"
-            onClick={() => setPostType('scrap')}
-            className={`px-3 py-1 rounded transition-all cursor-pointer flex items-center gap-1 ${
-              postType === 'scrap'
-                ? 'bg-primary text-white font-bold shadow-sm'
-                : 'text-secondary hover:text-primary'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[13px]">chat</span>
-            Scrap (Recado)
-          </button>
+        <div className="flex items-center bg-white/[0.04] p-1 rounded-xl border border-white/10 text-xs">
           <button
             type="button"
             onClick={() => setPostType('discussion')}
-            className={`px-3 py-1 rounded transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
               postType === 'discussion'
-                ? 'bg-primary text-white font-bold shadow-sm'
-                : 'text-secondary hover:text-primary'
+                ? 'bg-brand-blue text-white shadow-glow-blue'
+                : 'text-neutral-400 hover:text-white'
             }`}
           >
-            <span className="material-symbols-outlined text-[13px]">forum</span>
+            <span className="material-symbols-outlined text-[15px]">forum</span>
             Discussão
+          </button>
+          <button
+            type="button"
+            onClick={() => setPostType('scrap')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer font-medium flex items-center gap-1.5 ${
+              postType === 'scrap'
+                ? 'bg-brand-blue text-white shadow-glow-blue'
+                : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[15px]">chat</span>
+            Scrap
           </button>
         </div>
       </div>
 
-      <div className="p-space-md bg-surface-container-low">
-        {successMsg && (
-          <div className="mb-2 p-2 rounded bg-[#e7f7ed] text-[#1e6f3b] text-body-sm border border-[#a3dfb4] flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            {successMsg}
-          </div>
-        )}
+      {successMsg && (
+        <div className="mb-3 p-3 rounded-xl bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px]">check_circle</span>
+          {successMsg}
+        </div>
+      )}
 
-        {error && (
-          <div className="mb-2 p-2 rounded bg-error-container text-on-error-container text-body-sm border border-error flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[16px]">error</span>
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="mb-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px]">error</span>
+          {error}
+        </div>
+      )}
 
-        {user ? (
-          <form onSubmit={handleSubmit} className="space-y-2">
-            {/* Campos exclusivos de Discussão (Título + Mídia + Comunidade) */}
-            {postType === 'discussion' && (
-              <div className="space-y-2 bg-white p-2.5 rounded border border-outline-variant shadow-inner">
-                <div>
-                  <label className="block text-[11px] font-bold text-primary uppercase mb-0.5" htmlFor="post-title">
-                    Título da Discussão:
-                  </label>
-                  <input
-                    id="post-title"
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex: Qual foi o melhor jogo dos anos 2000?"
-                    className="w-full bg-surface-container-lowest border border-outline-variant rounded px-2.5 py-1.5 text-body-md font-bold text-primary focus:border-primary outline-none"
-                  />
+      {user ? (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Discussion Title & Community Picker */}
+          {postType === 'discussion' && (
+            <div className="space-y-2.5">
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título da discussão..."
+                className="w-full glass-input px-3.5 py-2 text-sm font-display font-semibold rounded-xl text-white outline-none"
+              />
+
+              {!defaultCommunityId && communities.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-neutral-400 font-medium">Comunidade:</span>
+                  <select
+                    value={selectedCommunity}
+                    onChange={(e) => setSelectedCommunity(e.target.value ? Number(e.target.value) : '')}
+                    className="glass-input px-3 py-1.5 rounded-xl text-xs text-white outline-none bg-[#141822]"
+                  >
+                    <option value="">Feed Geral</option>
+                    {communities.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        e/{c.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
-                {!defaultCommunityId && communities.length > 0 && (
-                  <div>
-                    <label className="block text-[11px] font-bold text-primary uppercase mb-0.5">
-                      Vincular à Comunidade:
-                    </label>
-                    <select
-                      value={selectedCommunity}
-                      onChange={(e) => setSelectedCommunity(e.target.value ? Number(e.target.value) : '')}
-                      className="w-full bg-white border border-outline-variant rounded px-2 py-1 text-body-sm text-primary outline-none"
-                    >
-                      <option value="">Feed Geral (Sem comunidade)</option>
-                      {communities.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          e/{c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Toolbar Retrô */}
-            <div className="flex items-center flex-wrap gap-1 p-1 bg-surface-container-highest border border-outline-variant rounded-t text-body-sm">
-              <button
-                type="button"
-                onClick={() => addEmoticon(':-)')}
-                className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded cursor-pointer"
-                title="Sorriso"
-              >
-                :-)
-              </button>
-              <button
-                type="button"
-                onClick={() => addEmoticon(';-)')}
-                className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded cursor-pointer"
-                title="Piscadela"
-              >
-                ;-)
-              </button>
-              <button
-                type="button"
-                onClick={() => addEmoticon('s2')}
-                className="px-1.5 py-0.5 retro-btn-secondary text-[11px] text-error font-bold rounded cursor-pointer"
-                title="Coração"
-              >
-                s2
-              </button>
-              <button
-                type="button"
-                onClick={() => addEmoticon(':-P')}
-                className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded cursor-pointer"
-                title="Língua"
-              >
-                :-P
-              </button>
-              <div className="h-4 w-px bg-outline-variant mx-1"></div>
-              <button
-                type="button"
-                onClick={() => setShowMediaInput(!showMediaInput)}
-                className={`px-2 py-0.5 rounded text-[11px] flex items-center gap-1 border cursor-pointer ${
-                  showMediaInput
-                    ? 'bg-primary text-white border-primary font-bold'
-                    : 'retro-btn-secondary text-primary'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[13px]">add_photo_alternate</span>
-                {postType === 'discussion' ? 'Anexar Mídia (GIF / Foto / Vídeo)' : 'Anexar Imagem'}
-              </button>
+              )}
             </div>
+          )}
 
-            {/* Inputs de Mídia */}
-            {showMediaInput && (
-              <div className="p-2 bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row gap-2">
-                <input
-                  type="url"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder="Link direto da imagem, GIF ou vídeo (ex: https://...)"
-                  className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none font-mono text-primary"
-                />
-                <select
-                  value={mediaType}
-                  onChange={(e) => setMediaType(e.target.value as any)}
-                  className="bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none text-primary"
-                >
-                  <option value="">Tipo: Imagem/GIF</option>
-                  <option value="image">Imagem</option>
-                  <option value="gif">GIF</option>
-                  <option value="video">Vídeo</option>
-                </select>
-              </div>
-            )}
+          {/* Text Area */}
+          <textarea
+            rows={postType === 'discussion' ? 3 : 2}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={
+              postType === 'discussion'
+                ? 'Compartilhe seus pensamentos, ideias ou questionamentos...'
+                : 'Deixe um recado rápido para a rede...'
+            }
+            disabled={posting}
+            className="w-full glass-input p-3 text-sm rounded-xl text-neutral-200 outline-none resize-y"
+          />
 
-            {/* Textarea */}
-            <textarea
-              rows={postType === 'discussion' ? 4 : 3}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={
-                postType === 'discussion'
-                  ? 'Escreva os detalhes, perguntas ou argumentos da sua discussão...'
-                  : 'Escreva seu recado ou novidade aqui... (lembre-se: recado não é chat!)'
-              }
-              disabled={posting}
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-b p-space-sm text-body-sm focus:border-primary-container focus:ring-1 focus:ring-secondary-container outline-none transition-all resize-y shadow-inner text-on-surface"
-            />
-
-            {/* Action Bar */}
-            <div className="mt-space-sm flex items-center justify-between">
-              <span className="text-[11px] text-secondary italic">
-                {postType === 'discussion' ? 'Discuta com respeito e cordialidade' : 'Visível para todos os amigos'}
-              </span>
-
-              <button
-                type="submit"
-                disabled={posting || !content.trim()}
-                className="px-4 py-1.5 retro-btn-primary text-on-primary rounded text-label-md font-label-md font-bold tracking-wide flex items-center gap-1 shadow active:translate-y-px disabled:opacity-50 cursor-pointer"
+          {/* Media input toggle */}
+          {showMediaInput && (
+            <div className="p-3 bg-white/[0.03] border border-white/10 rounded-xl flex flex-col sm:flex-row gap-2">
+              <input
+                type="url"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
+                placeholder="Cole o link da imagem, GIF ou vídeo (https://...)"
+                className="flex-1 glass-input px-3 py-1.5 text-xs rounded-lg text-white font-mono"
+              />
+              <select
+                value={mediaType}
+                onChange={(e) => setMediaType(e.target.value as any)}
+                className="glass-input px-3 py-1.5 rounded-lg text-xs text-white bg-[#141822]"
               >
-                <span className="material-symbols-outlined text-[14px]">send</span>
-                {posting ? 'Enviando...' : postType === 'discussion' ? 'Publicar Discussão' : 'Enviar Recado'}
-              </button>
+                <option value="">Tipo de Mídia</option>
+                <option value="image">Imagem</option>
+                <option value="gif">GIF</option>
+                <option value="video">Vídeo</option>
+              </select>
             </div>
-          </form>
-        ) : (
-          <div className="p-space-md bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-space-sm">
-            <div className="flex items-center gap-2 text-secondary">
-              <span className="material-symbols-outlined text-primary text-[20px]">lock</span>
-              <span className="text-body-sm">
-                Faça login para criar discussões, enviar recados e votar.
-              </span>
-            </div>
+          )}
+
+          {/* Bottom Actions */}
+          <div className="flex items-center justify-between pt-1">
             <button
               type="button"
-              onClick={() => navigate('/login')}
-              className="retro-btn-primary text-white text-label-md px-space-md py-1 rounded font-bold whitespace-nowrap cursor-pointer shadow"
+              onClick={() => setShowMediaInput(!showMediaInput)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer ${
+                showMediaInput
+                  ? 'bg-white/15 text-white border border-white/20'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+              }`}
             >
-              Entrar no Espectro
+              <span className="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+              <span>Anexar Mídia</span>
+            </button>
+
+            <button
+              type="submit"
+              disabled={posting || !content.trim()}
+              className="btn-primary-blue text-xs font-semibold px-5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[16px]">send</span>
+              <span>{posting ? 'Publicando...' : postType === 'discussion' ? 'Publicar' : 'Enviar'}</span>
             </button>
           </div>
-        )}
-      </div>
+        </form>
+      ) : (
+        <div className="text-center py-4 space-y-2">
+          <p className="text-sm text-neutral-300 font-medium">
+            Junte-se ao Espectro para criar tópicos e interagir.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="btn-primary-blue text-xs font-semibold px-5 py-2 rounded-xl cursor-pointer"
+          >
+            Fazer Login ou Criar Conta
+          </button>
+        </div>
+      )}
     </div>
   );
 };

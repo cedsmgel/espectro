@@ -15,82 +15,83 @@ export const Header: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <header className="w-full bg-surface-container-high border-b border-outline-variant shadow-sm sticky top-0 z-30">
-      <div className="flex justify-between items-center w-full px-space-lg py-space-sm max-w-[1180px] mx-auto gap-space-md">
-        {/* Brand Logo & Motto */}
-        <div className="flex items-center gap-space-sm flex-shrink-0">
-          <Link to="/" className="flex items-center gap-space-xs group">
-            <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shadow-inner border border-primary">
-              <span className="text-on-primary font-bold text-headline-sm lowercase tracking-tighter">e</span>
+    <header className="w-full glass-header sticky top-0 z-40 transition-colors">
+      <div className="flex justify-between items-center w-full px-4 sm:px-6 py-3.5 max-w-[1240px] mx-auto gap-4">
+        {/* Brand Logo */}
+        <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-blue to-neon-cyan flex items-center justify-center shadow-glow-blue transition-transform group-hover:scale-105">
+              <span className="text-white font-display font-bold text-lg lowercase">e</span>
             </div>
-            <span className="text-headline-lg font-headline-lg font-bold lowercase tracking-tight text-primary font-retro-brand select-none">
+            <span className="text-xl font-display font-bold tracking-tight text-white group-hover:text-blue-400 transition-colors">
               espectro
             </span>
           </Link>
-          <span className="hidden md:inline-block text-outline text-label-md font-label-md pl-space-xs border-l border-outline-variant italic">
-            conecta amigos, comunidades e memórias
+
+          <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/[0.05] border border-white/10 text-xs text-neutral-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></span>
+            liquid network
           </span>
         </div>
 
         {/* Central Nav Links */}
-        <nav className="flex items-center gap-space-sm sm:gap-space-md text-label-md font-label-md">
+        <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             to="/"
-            className={`px-space-xs py-1 transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
               isActive('/')
-                ? 'text-primary font-bold border-b-2 border-primary'
-                : 'text-secondary hover:text-primary'
+                ? 'bg-white/[0.1] text-white shadow-sm border border-white/10'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
             }`}
           >
-            Início / Recados
+            Feed
           </Link>
-          <span className="text-outline-variant">|</span>
           <Link
             to="/comunidades"
-            className={`px-space-xs py-1 transition-colors ${
+            className={`px-3.5 py-1.5 rounded-xl text-sm font-medium transition-all ${
               isActive('/comunidades')
-                ? 'text-primary font-bold border-b-2 border-primary'
-                : 'text-secondary hover:text-primary'
+                ? 'bg-white/[0.1] text-white shadow-sm border border-white/10'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
             }`}
           >
-            Comunidades
+            e/Comunidades
           </Link>
         </nav>
 
         {/* User Session / Trailing Controls */}
-        <div className="flex items-center gap-space-md flex-shrink-0">
+        <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-space-sm bg-surface-container-lowest border border-outline-variant px-space-sm py-1 rounded shadow-sm">
-              <div className="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-label-sm font-bold uppercase shadow-inner">
+            <div className="flex items-center gap-2.5 bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-2xl shadow-glass">
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-brand-blue to-purple-500 text-white flex items-center justify-center text-xs font-bold font-display uppercase shadow-sm">
                 {user.username.charAt(0)}
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-body-sm text-secondary">Olá,</span>
-                <span className="text-label-md font-bold text-primary">@{user.username}</span>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-bold text-white leading-tight font-display">
+                  @{user.username}
+                </span>
+                <span className="text-[10px] text-neutral-400 leading-tight">conectado</span>
               </div>
-              <span className="text-secondary text-[11px]">•</span>
               <button
                 onClick={handleLogout}
-                className="text-label-sm text-error hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
-                title="Sair da sua conta"
+                className="text-neutral-400 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-white/[0.05] ml-1 cursor-pointer"
+                title="Sair"
               >
-                <span className="material-symbols-outlined text-[13px]">logout</span>
-                Sair
+                <span className="material-symbols-outlined text-[16px]">logout</span>
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-space-xs">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="retro-btn text-primary font-label-md text-label-md px-space-md py-1 rounded hover:bg-surface-container-highest transition-colors active:translate-y-px cursor-pointer"
+                className="btn-glass text-xs sm:text-sm font-medium px-4 py-1.5 rounded-xl cursor-pointer"
               >
                 Entrar
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/login?tab=cadastro')}
-                className="retro-btn-primary text-white font-label-md text-label-md px-space-md py-1 rounded transition-colors active:translate-y-px shadow-sm cursor-pointer"
+                className="btn-primary-blue text-xs sm:text-sm font-medium px-4 py-1.5 rounded-xl cursor-pointer shadow-glow-blue"
               >
                 Criar Conta
               </button>

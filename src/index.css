@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Subtle Noise Texture & Dark Liquid Canvas */
+body {
+  background-color: #0d0f14;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.05) 0px, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.035'/%3E%3C/svg%3E");
+  color: #f1f5f9;
+  min-height: 100vh;
+}
+
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -17,72 +29,81 @@
   direction: ltr;
 }
 
-/* Web 2.0 Skeuomorphic Accents & Tactile Textures from Stitch Design */
-.retro-bevel-card {
-  box-shadow: 0 1px 4px rgba(43, 78, 153, 0.12), inset 0 1px 0 #FFFFFF;
+/* Apple Liquid Glass Utility Tokens */
+.glass-panel {
+  background: rgba(18, 22, 31, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.classic-bevel-border {
-  border: 1px solid #b2c9ea;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(9, 54, 129, 0.08);
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-.retro-border {
-  border: 1px solid #b4cef8;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 3px rgba(43, 78, 153, 0.08);
+.glass-header {
+  background: rgba(13, 16, 23, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.retro-btn {
-  background: linear-gradient(to bottom, #f8fafe, #dce6f8);
-  border: 1px solid #8eaedc;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 1px rgba(0,0,0,0.06);
+.glass-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  transition: all 0.2s ease;
 }
 
-.retro-btn:active {
-  background: linear-gradient(to bottom, #d5e2f7, #e9f0fd);
-  box-shadow: inset 0 1px 2px rgba(43, 78, 153, 0.25);
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.25);
 }
 
-.retro-btn-primary {
-  background: linear-gradient(180deg, #3B65BE 0%, #23458F 100%);
-  border: 1px solid #1A3775;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 1px 2px rgba(9, 54, 129, 0.25);
+.btn-primary-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
 }
 
-.retro-btn-primary:hover {
-  background: linear-gradient(180deg, #4672cf 0%, #294ea1 100%);
+.btn-primary-blue:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+  transform: translateY(-1px);
 }
 
-.retro-btn-primary:active {
-  background: linear-gradient(180deg, #203f82 0%, #3058a8 100%);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+.btn-primary-blue:active {
+  transform: translateY(0);
 }
 
-.retro-btn-secondary {
-  background: linear-gradient(180deg, #FFFFFF 0%, #E3EDFB 100%);
-  border: 1px solid #9BB7E4;
-  box-shadow: inset 0 1px 0 #ffffff, 0 1px 1px rgba(0,0,0,0.05);
+.btn-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 
-.retro-btn-secondary:hover {
-  background: linear-gradient(180deg, #F5F9FF 0%, #D8E7FA 100%);
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
 }
 
-.retro-header-strip {
-  background: linear-gradient(180deg, #F0F5FD 0%, #DCE8FA 100%);
-  border-bottom: 1px solid #A8C4ED;
+/* Scrollbar Stylings */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-.header-bar-gradient {
-  background: linear-gradient(to bottom, #e8eefa, #d2e2fc);
-  border-bottom: 1px solid #b2ccf7;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.custom-dotted-link {
-  border-bottom: 1px dotted #2b4e99;
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
 }
-
-.custom-dotted-link:hover {
-  border-bottom: 1px solid #093681;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
 }

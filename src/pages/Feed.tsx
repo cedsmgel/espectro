@@ -10,12 +10,11 @@ import { api, Community, Post } from '../lib/api';
 export const Feed: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const typeFilter = searchParams.get('type'); // 'scrap' ou undefined
+  const typeFilter = searchParams.get('type');
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
-  const [loadingCommunities, setLoadingCommunities] = useState(true);
 
   const fetchPosts = async () => {
     try {
@@ -32,13 +31,10 @@ export const Feed: React.FC = () => {
 
   const fetchCommunities = async () => {
     try {
-      setLoadingCommunities(true);
       const data = await api.getCommunities();
       setCommunities(data);
     } catch (err: unknown) {
       console.error(err);
-    } finally {
-      setLoadingCommunities(false);
     }
   };
 
@@ -51,70 +47,71 @@ export const Feed: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-surface-variant text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-secondary-container selection:text-primary">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-blue/30 selection:text-blue-300">
       <Header />
 
-      {/* 3-Column Layout: Esquerda (Navegação) | Centro (Feed) | Direita (Contatos) */}
-      <main className="flex-1 w-full max-w-[1180px] mx-auto px-space-md sm:px-space-lg py-space-md">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-space-md items-start">
-          {/* ================= COLUNA ESQUERDA (3 COLS) ================= */}
-          <aside className="md:col-span-3 lg:col-span-3">
+      {/* 3-Column Liquid Glass Grid: 3 cols (Left Nav) | 6 cols (Feed) | 3 cols (Contacts) */}
+      <main className="flex-1 w-full max-w-[1240px] mx-auto px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Navigation & Profile */}
+          <aside className="md:col-span-3 lg:col-span-3 sticky top-20">
             <SidebarNav communities={communities} />
           </aside>
 
-          {/* ================= COLUNA CENTRAL: FEED (6 COLS) ================= */}
-          <section className="md:col-span-9 lg:col-span-6 space-y-space-md">
-            {/* Formulário de Criação de Post (Alterna entre Discussão e Scrap) */}
+          {/* Center Column: Feed Principal */}
+          <section className="md:col-span-9 lg:col-span-6 space-y-5">
             <CreatePostForm
               communities={communities}
               onPostCreated={fetchPosts}
             />
 
-            {/* Cabeçalho da Lista de Posts */}
-            <div className="bg-surface-container-high px-space-md py-1.5 border border-outline-variant rounded flex items-center justify-between text-body-sm font-body-sm">
-              <span className="text-primary font-bold text-label-sm uppercase">
-                {typeFilter === 'scrap' ? 'Scraps Recentes' : 'Feed de Atualizações e Discussões'} ({posts.length})
-              </span>
+            {/* Feed Filter Header */}
+            <div className="flex items-center justify-between px-2 pt-1">
+              <h2 className="font-display font-bold text-sm text-neutral-300 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-blue animate-pulse"></span>
+                {typeFilter === 'scrap' ? 'Recados (Scraps)' : 'Feed Principal'}
+                <span className="text-xs font-mono text-neutral-500 font-normal">({posts.length})</span>
+              </h2>
+
               <button
                 type="button"
                 onClick={fetchPosts}
                 disabled={loadingPosts}
-                className="text-[11px] text-primary underline hover:text-primary-container flex items-center gap-1 cursor-pointer"
+                className="text-xs text-brand-blue hover:text-blue-300 flex items-center gap-1 cursor-pointer transition-colors"
               >
-                <span className={`material-symbols-outlined text-[12px] ${loadingPosts ? 'animate-spin' : ''}`}>
+                <span className={`material-symbols-outlined text-[15px] ${loadingPosts ? 'animate-spin' : ''}`}>
                   refresh
                 </span>
-                atualizar
+                Atualizar
               </button>
             </div>
 
-            {/* Lista de Post Cards */}
-            <div className="space-y-space-md">
+            {/* Posts Stream */}
+            <div className="space-y-4">
               {loadingPosts && (
-                <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-                  Carregando publicações...
+                <div className="glass-panel rounded-2xl p-8 text-center text-neutral-400 flex items-center justify-center gap-2.5">
+                  <span className="material-symbols-outlined animate-spin text-brand-blue text-2xl">sync</span>
+                  <span className="text-sm font-medium">Carregando feed liquid glass...</span>
                 </div>
               )}
 
               {!loadingPosts && posts.length === 0 && (
-                <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary">
-                  <p className="font-semibold text-primary mb-1">Nenhum post encontrado.</p>
-                  <p className="text-body-sm">Seja o primeiro a enviar um scrap ou iniciar uma discussão!</p>
+                <div className="glass-panel rounded-2xl p-10 text-center space-y-2">
+                  <p className="font-display font-bold text-base text-white">Nenhuma publicação por enquanto</p>
+                  <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+                    Seja o pioneiro a inaugurar o novo feed do Espectro com uma discussão ou recado.
+                  </p>
                 </div>
               )}
 
               {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                />
+                <PostCard key={post.id} post={post} />
               ))}
             </div>
           </section>
 
-          {/* ================= COLUNA DIREITA (3 COLS): WIDGET DE CONTATOS ================= */}
-          <aside className="md:col-span-12 lg:col-span-3">
+          {/* Right Column: Contacts Widget */}
+          <aside className="md:col-span-12 lg:col-span-3 sticky top-20">
             <ContactsWidget />
           </aside>
         </div>

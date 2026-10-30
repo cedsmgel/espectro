@@ -5,16 +5,16 @@ interface Contact {
   name: string;
   status: 'online' | 'offline';
   customMessage: string;
-  avatarChar: string;
+  avatarGradient: string;
 }
 
 const DEFAULT_CONTACTS: Contact[] = [
-  { id: 1, name: 'Bia', status: 'online', customMessage: 'jogando The Sims 2...', avatarChar: 'B' },
-  { id: 2, name: 'Felipe', status: 'online', customMessage: 'ouvindo Linkin Park no Winamp', avatarChar: 'F' },
-  { id: 3, name: 'Carol', status: 'online', customMessage: 'estudando pro vestibular s2', avatarChar: 'C' },
-  { id: 4, name: 'Lucas "Dexter"', status: 'offline', customMessage: 'jogando CS 1.6 na Lan House', avatarChar: 'L' },
-  { id: 5, name: 'Mariana Costa', status: 'online', customMessage: 'Porto Seguro 2004 inesquecível!', avatarChar: 'M' },
-  { id: 6, name: 'Diego', status: 'offline', customMessage: 'volto mais tarde (ausente)', avatarChar: 'D' },
+  { id: 1, name: 'Bia Ribeiro', status: 'online', customMessage: 'criando no figma...', avatarGradient: 'from-pink-500 to-rose-500' },
+  { id: 2, name: 'Felipe Santos', status: 'online', customMessage: 'ouvindo synthwave & codando', avatarGradient: 'from-blue-500 to-cyan-500' },
+  { id: 3, name: 'Carol Andrade', status: 'online', customMessage: 'café e novas playlists', avatarGradient: 'from-amber-500 to-orange-500' },
+  { id: 4, name: 'Lucas "Dexter"', status: 'offline', customMessage: 'ausente • volta às 18h', avatarGradient: 'from-indigo-500 to-purple-500' },
+  { id: 5, name: 'Mariana Costa', status: 'online', customMessage: 'admirando o visual liquid glass!', avatarGradient: 'from-emerald-500 to-teal-500' },
+  { id: 6, name: 'Diego Martins', status: 'offline', customMessage: 'ocupado', avatarGradient: 'from-violet-500 to-fuchsia-500' },
 ];
 
 export const ContactsWidget: React.FC = () => {
@@ -29,75 +29,69 @@ export const ContactsWidget: React.FC = () => {
   const onlineCount = contacts.filter((c) => c.status === 'online').length;
 
   return (
-    <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
+    <div className="glass-panel rounded-2xl overflow-hidden p-4 space-y-3">
       {/* Header */}
-      <div className="retro-header-strip px-space-sm py-1.5 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="material-symbols-outlined text-[16px] text-primary">contacts</span>
-          <span className="text-label-sm font-label-sm text-primary uppercase font-bold tracking-wide">
-            Contatos ({onlineCount} online)
-          </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-brand-blue text-[20px]">group</span>
+          <h3 className="font-display font-bold text-sm text-white">Contatos</h3>
         </div>
+        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neon-green/10 border border-neon-green/20 text-[11px] text-neon-green font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-neon-green"></span>
+          {onlineCount} online
+        </span>
       </div>
 
-      {/* Quick Search */}
-      <div className="p-2 border-b border-outline-variant bg-surface-container-low">
-        <div className="relative">
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="buscar contato..."
-            className="w-full pl-6 pr-2 py-0.5 text-body-sm bg-white border border-outline-variant rounded outline-none focus:border-primary text-primary"
-          />
-          <span className="material-symbols-outlined absolute left-1.5 top-1 text-secondary text-[14px]">
-            search
-          </span>
-        </div>
+      {/* Modern Search */}
+      <div className="relative">
+        <input
+          type="text"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filtrar amigos..."
+          className="w-full glass-input pl-8 pr-3 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 rounded-xl"
+        />
+        <span className="material-symbols-outlined absolute left-2.5 top-2 text-neutral-500 text-[16px]">
+          search
+        </span>
       </div>
 
-      {/* Contact List */}
-      <div className="p-2 space-y-1.5 max-h-96 overflow-y-auto">
+      {/* Contacts List */}
+      <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1">
         {filtered.map((contact) => (
           <div
             key={contact.id}
-            className="flex items-center gap-2 p-1.5 rounded hover:bg-surface-container transition-colors cursor-pointer group"
+            className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/[0.05] transition-all cursor-pointer group"
           >
-            {/* Avatar with Dot Indicator */}
+            {/* Avatar with Status Dot */}
             <div className="relative flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                {contact.avatarChar}
+              <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${contact.avatarGradient} text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm`}>
+                {contact.name.charAt(0)}
               </div>
               <span
-                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
-                  contact.status === 'online' ? 'bg-[#62B33C]' : 'bg-[#94a3b8]'
+                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#121620] ${
+                  contact.status === 'online'
+                    ? 'bg-neon-green shadow-glow-green'
+                    : 'bg-neutral-500'
                 }`}
-                title={contact.status === 'online' ? 'Online' : 'Offline'}
               />
             </div>
 
-            {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-primary text-body-sm truncate group-hover:underline">
+                <span className="font-display font-semibold text-xs text-white group-hover:text-blue-400 transition-colors truncate">
                   {contact.name}
                 </span>
-                <span className="text-[10px] text-secondary">
-                  {contact.status === 'online' ? 'online' : 'off'}
+                <span className="text-[10px] text-neutral-500">
+                  {contact.status === 'online' ? 'agora' : 'offline'}
                 </span>
               </div>
-              <p className="text-[11px] text-secondary truncate italic">
+              <p className="text-[11px] text-neutral-400 truncate">
                 {contact.customMessage}
               </p>
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Footer MSN Style Status */}
-      <div className="bg-surface-container p-2 border-t border-outline-variant text-center text-[11px] text-secondary flex items-center justify-center gap-1">
-        <span className="w-2 h-2 rounded-full bg-[#62B33C] inline-block animate-pulse"></span>
-        Rede do Espectro ativa
       </div>
     </div>
   );

@@ -94,93 +94,103 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCitar }) => {
   const comSlug = post.community_slug || post.community_id;
 
   return (
-    <article className="bg-white rounded classic-bevel-border overflow-hidden p-space-md transition-shadow hover:shadow-sm">
-      <div className="flex items-start gap-space-md">
-        {/* Vote Pillar (Reddit style) */}
-        <div className="flex flex-col items-center bg-surface-container rounded p-1 border border-outline-variant shrink-0">
+    <article className="glass-panel rounded-2xl p-5 transition-all duration-200 hover:border-white/15">
+      <div className="flex items-start gap-4">
+        {/* Upvote / Downvote Pillar with Neon Green Highlights */}
+        <div className="flex flex-col items-center bg-white/[0.04] rounded-2xl p-1.5 border border-white/[0.08] shrink-0">
           <button
             type="button"
             onClick={() => handleVote('up')}
             disabled={voting}
-            title="Gostei / Upvote"
-            className={`p-1 rounded hover:bg-surface-container-high transition-colors cursor-pointer ${
-              voted === 'up' ? 'text-primary font-bold' : 'text-secondary'
+            title="Upvote"
+            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+              voted === 'up'
+                ? 'bg-neon-green/20 text-neon-green shadow-glow-green font-bold'
+                : 'text-neutral-400 hover:text-neon-green hover:bg-neon-green/10'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">thumb_up</span>
+            <span className="material-symbols-outlined text-[20px]">arrow_upward</span>
           </button>
-          <span className={`text-label-md font-bold my-0.5 ${score > 0 ? 'text-primary' : score < 0 ? 'text-error' : 'text-secondary'}`}>
+
+          <span
+            className={`text-xs font-bold font-display my-1 ${
+              score > 0
+                ? 'text-neon-green'
+                : score < 0
+                ? 'text-rose-400'
+                : 'text-neutral-400'
+            }`}
+          >
             {score}
           </span>
+
           <button
             type="button"
             onClick={() => handleVote('down')}
             disabled={voting}
-            title="Não gostei / Downvote"
-            className={`p-1 rounded hover:bg-surface-container-high transition-colors cursor-pointer ${
-              voted === 'down' ? 'text-error font-bold' : 'text-secondary'
+            title="Downvote"
+            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+              voted === 'down'
+                ? 'bg-rose-500/20 text-rose-400 font-bold'
+                : 'text-neutral-400 hover:text-rose-400 hover:bg-rose-500/10'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">thumb_down</span>
+            <span className="material-symbols-outlined text-[20px]">arrow_downward</span>
           </button>
         </div>
 
         {/* Post Main Body */}
         <div className="flex-1 min-w-0">
           {/* Header Metadata */}
-          <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-dashed border-outline-variant pb-1 mb-1.5 text-body-sm">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-primary">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-white/[0.06] text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-display font-bold text-white text-sm">
                 @{post.author_name || `usuario_${post.author_id}`}
               </span>
 
+              {post.community_name && comSlug && (
+                <Link
+                  to={`/e/${comSlug}`}
+                  className="px-2 py-0.5 rounded-lg bg-brand-blue/15 border border-brand-blue/30 text-blue-400 font-medium hover:bg-brand-blue/25 transition-colors"
+                >
+                  e/{post.community_name}
+                </Link>
+              )}
+
               {post.post_type === 'discussion' && (
-                <span className="bg-primary text-white text-[10px] px-1.5 py-0.2 rounded font-bold uppercase">
+                <span className="px-2 py-0.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 font-mono text-[10px] uppercase font-bold">
                   discussão
                 </span>
               )}
-
-              {post.community_name && comSlug && (
-                <span className="text-[11px] text-secondary">
-                  em{' '}
-                  <Link
-                    to={`/e/${comSlug}`}
-                    className="bg-surface-container-highest px-1.5 py-0.5 rounded text-primary font-semibold hover:underline"
-                  >
-                    e/{post.community_name}
-                  </Link>
-                </span>
-              )}
             </div>
 
-            <div className="flex items-center gap-1 text-[11px] text-secondary">
-              <span className="material-symbols-outlined text-[13px]">schedule</span>
-              {new Date(post.created_at).toLocaleString('pt-BR')}
-            </div>
+            <span className="text-neutral-500 text-xs">
+              {new Date(post.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
 
-          {/* Title (for discussion posts) */}
+          {/* Title (for discussions) */}
           {post.title && (
-            <h3 className="text-primary font-bold text-headline-sm mb-1">
+            <h3 className="text-white font-display font-bold text-lg leading-snug mb-2">
               {post.title}
             </h3>
           )}
 
-          {/* Post Text */}
-          <p className="text-body-md font-body-md text-on-surface leading-relaxed whitespace-pre-wrap">
+          {/* Content */}
+          <p className="text-neutral-200 text-sm leading-relaxed whitespace-pre-wrap font-sans">
             {post.content}
           </p>
 
           {/* Media (Image / Video / GIF) */}
           {post.media_url && (
-            <div className="mt-2 rounded overflow-hidden border border-outline-variant inline-block max-w-full">
+            <div className="mt-3.5 rounded-2xl overflow-hidden border border-white/10 bg-black/30 inline-block max-w-full">
               {post.media_type === 'video' ? (
-                <video controls src={post.media_url} className="max-h-80 w-auto rounded" />
+                <video controls src={post.media_url} className="max-h-96 w-auto rounded-2xl" />
               ) : (
                 <img
                   src={post.media_url}
-                  alt="Mídia do post"
-                  className="max-h-72 w-auto object-contain rounded bg-black/5"
+                  alt="Mídia da postagem"
+                  className="max-h-80 w-auto object-contain rounded-2xl"
                   loading="lazy"
                 />
               )}
@@ -188,18 +198,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCitar }) => {
           )}
 
           {/* Action Row */}
-          <div className="mt-2.5 flex items-center justify-between pt-1 border-t border-dotted border-outline-variant text-label-sm">
+          <div className="mt-4 flex items-center justify-between pt-2 border-t border-white/[0.06] text-xs">
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={toggleComments}
-                className={`px-2 py-0.5 rounded border flex items-center gap-1 transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all cursor-pointer text-xs font-medium ${
                   showComments
-                    ? 'bg-primary text-white border-primary font-bold'
-                    : 'bg-surface-container text-primary border-outline-variant hover:bg-surface-container-high'
+                    ? 'bg-brand-blue text-white border-brand-blue shadow-glow-blue'
+                    : 'bg-white/[0.04] text-neutral-300 border-white/10 hover:bg-white/[0.08] hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[13px]">chat_bubble</span>
+                <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
                 <span>{commentsCount} {commentsCount === 1 ? 'Comentário' : 'Comentários'}</span>
               </button>
 
@@ -207,73 +217,74 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCitar }) => {
                 <button
                   type="button"
                   onClick={() => onCitar(post.author_name)}
-                  className="text-secondary hover:text-primary transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
                 >
-                  [Citar]
+                  Citar
                 </button>
               )}
             </div>
 
-            <span className="text-[10px] text-secondary">
-              {post.post_type === 'discussion' ? 'Tópico de Comunidade' : 'Scrapbook'}
+            <span className="text-[11px] text-neutral-500 font-mono">
+              #{post.id}
             </span>
           </div>
 
           {/* Threaded Comments Section */}
           {showComments && (
-            <div className="mt-3 p-3 bg-surface-container-low rounded border border-[#b2ccf7] space-y-3 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-outline-variant pb-1">
-                <span className="font-bold text-primary text-label-md flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">forum</span>
-                  Comentários ({comments.length})
+            <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                <span className="font-display font-bold text-xs text-neutral-300 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-brand-blue">forum</span>
+                  Respostas da Comunidade ({comments.length})
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowComments(false)}
-                  className="text-[11px] text-secondary hover:underline cursor-pointer"
+                  className="text-xs text-neutral-400 hover:text-white cursor-pointer"
                 >
                   Fechar
                 </button>
               </div>
 
               {loadingComments && (
-                <p className="text-center text-body-sm text-secondary py-2">
-                  Carregando comentários...
+                <p className="text-center text-xs text-neutral-400 py-3">
+                  Carregando respostas...
                 </p>
               )}
 
               {!loadingComments && comments.length === 0 && (
-                <p className="text-body-sm text-secondary text-center py-2 italic">
-                  Nenhum comentário por enquanto. Deixe a sua resposta!
+                <p className="text-xs text-neutral-400 text-center py-3 italic">
+                  Nenhum comentário por enquanto. Seja o primeiro a responder!
                 </p>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {comments.map((c) => (
                   <div
                     key={c.id}
-                    className={`p-2 bg-white rounded border border-outline-variant text-body-sm ${
-                      c.parent_id ? 'ml-6 border-l-4 border-l-primary-container' : ''
+                    className={`p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-xs space-y-1.5 ${
+                      c.parent_id ? 'ml-6 border-l-2 border-l-brand-blue' : ''
                     }`}
                   >
-                    <div className="flex items-center justify-between text-[11px] text-secondary mb-1">
-                      <span className="font-bold text-primary">
+                    <div className="flex items-center justify-between text-neutral-400 text-[11px]">
+                      <span className="font-display font-bold text-white">
                         @{c.author_name}
-                        {c.parent_id && <span className="font-normal text-secondary ml-1">(em resposta)</span>}
+                        {c.parent_id && <span className="text-neutral-500 font-normal ml-1.5 font-sans">(respondendo)</span>}
                       </span>
                       <span>{new Date(c.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p className="text-on-surface whitespace-pre-wrap">{c.content}</p>
+
+                    <p className="text-neutral-200 leading-relaxed font-sans">{c.content}</p>
 
                     {user && (
-                      <div className="mt-1 text-right">
+                      <div className="text-right">
                         <button
                           type="button"
                           onClick={() => {
                             setReplyParentId(c.id);
                             setNewComment(`@${c.author_name} `);
                           }}
-                          className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
+                          className="text-[11px] text-blue-400 hover:text-blue-300 font-medium cursor-pointer"
                         >
                           Responder »
                         </button>
@@ -283,45 +294,46 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onCitar }) => {
                 ))}
               </div>
 
-              {/* Form to submit reply/comment */}
+              {/* Form to submit reply */}
               {user ? (
-                <form onSubmit={handleSendComment} className="space-y-1.5 pt-2 border-t border-outline-variant">
+                <form onSubmit={handleSendComment} className="space-y-2 pt-2 border-t border-white/[0.06]">
                   {replyParentId && (
-                    <div className="flex items-center justify-between text-[11px] text-primary bg-surface-container px-2 py-0.5 rounded">
+                    <div className="flex items-center justify-between text-xs text-blue-400 bg-brand-blue/10 px-3 py-1 rounded-xl border border-brand-blue/20">
                       <span>Respondendo ao comentário #{replyParentId}</span>
                       <button
                         type="button"
                         onClick={() => setReplyParentId(null)}
-                        className="text-error font-bold cursor-pointer"
+                        className="text-rose-400 hover:underline cursor-pointer"
                       >
                         ✕ Cancelar
                       </button>
                     </div>
                   )}
+
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Escreva seu comentário..."
+                      placeholder="Adicione um comentário construtivo..."
                       disabled={submittingComment}
-                      className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none focus:border-primary text-primary"
+                      className="flex-1 glass-input px-3 py-2 text-xs rounded-xl text-white outline-none"
                     />
                     <button
                       type="submit"
                       disabled={submittingComment || !newComment.trim()}
-                      className="retro-btn-primary text-white text-label-sm px-3 py-1 rounded font-bold disabled:opacity-50 cursor-pointer"
+                      className="btn-primary-blue text-xs font-medium px-4 py-2 rounded-xl disabled:opacity-50 cursor-pointer shrink-0"
                     >
-                      {submittingComment ? '...' : 'Enviar'}
+                      {submittingComment ? '...' : 'Publicar'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <p className="text-body-sm text-secondary text-center pt-1">
-                  <Link to="/login" className="text-primary font-bold underline">
-                    Faça login
+                <p className="text-xs text-neutral-400 text-center pt-2">
+                  <Link to="/login" className="text-brand-blue font-bold hover:underline">
+                    Conecte-se
                   </Link>{' '}
-                  para responder a este post.
+                  para participar da discussão.
                 </p>
               )}
             </div>
