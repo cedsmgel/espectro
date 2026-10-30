@@ -14,6 +14,7 @@ export const Communities: React.FC = () => {
 
   // New community form state
   const [newName, setNewName] = useState('');
+  const [newSlug, setNewSlug] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -49,9 +50,11 @@ export const Communities: React.FC = () => {
       setCreateError(null);
       await api.createCommunity({
         name: newName.trim(),
+        slug: newSlug.trim() || undefined,
         description: newDescription.trim() || undefined,
       });
       setNewName('');
+      setNewSlug('');
       setNewDescription('');
       setShowModal(false);
       setSuccessToast('Comunidade criada com sucesso!');
@@ -187,55 +190,65 @@ export const Communities: React.FC = () => {
                 </div>
               )}
 
-              {filteredCommunities.map((community, index) => (
-                <article key={community.id} className="bg-white retro-border rounded overflow-hidden">
-                  <div className="header-bar-gradient px-space-md py-1 flex justify-between items-center">
-                    <h2 className="text-label-md font-label-md text-primary font-bold hover:underline cursor-pointer">
-                      {index + 1}. {community.name}
-                    </h2>
-                    <span className="text-body-sm font-body-sm bg-secondary-container text-on-secondary-fixed px-1.5 py-0.2 rounded font-semibold">
-                      {community.member_count} {community.member_count === 1 ? 'membro' : 'membros'}
-                    </span>
-                  </div>
-
-                  <div className="p-space-md flex flex-col sm:flex-row gap-space-md items-start">
-                    {/* Thumbnail */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-primary-container text-white border border-[#9bb7e4] rounded p-1 flex items-center justify-center shadow-inner font-bold text-2xl uppercase">
-                      {community.name.charAt(0)}
+              {filteredCommunities.map((community, index) => {
+                const memberCount = (community.members_count ?? (community as any).member_count ?? 1);
+                const comSlug = community.slug || community.id;
+                return (
+                  <article key={community.id} className="bg-white retro-border rounded overflow-hidden">
+                    <div className="header-bar-gradient px-space-md py-1 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-label-md font-label-md text-primary font-bold hover:underline cursor-pointer">
+                          {index + 1}. {community.name}
+                        </h2>
+                        <span className="text-[11px] text-secondary font-mono bg-surface-container px-1 py-0.2 rounded">
+                          /e/{comSlug}
+                        </span>
+                      </div>
+                      <span className="text-body-sm font-body-sm bg-secondary-container text-on-secondary-fixed px-1.5 py-0.2 rounded font-semibold">
+                        {memberCount} {memberCount === 1 ? 'membro' : 'membros'}
+                      </span>
                     </div>
 
-                    {/* Meta & Description */}
-                    <div className="flex-grow flex flex-col justify-between">
-                      <p className="text-body-md font-body-md text-on-surface">
-                        {community.description || 'Comunidade sem descrição adicional.'}
-                      </p>
-                      <div className="mt-space-sm flex flex-wrap items-center gap-x-space-md gap-y-1 text-body-sm font-body-sm text-secondary">
-                        <span><strong>Categoria:</strong> Fórum Nostálgico</span>
-                        <span><strong>Tipo:</strong> Pública</span>
-                        <span><strong>Fundada em:</strong> {new Date(community.created_at).toLocaleDateString('pt-BR')}</span>
+                    <div className="p-space-md flex flex-col sm:flex-row gap-space-md items-start">
+                      {/* Thumbnail */}
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-primary-container text-white border border-[#9bb7e4] rounded p-1 flex items-center justify-center shadow-inner font-bold text-2xl uppercase">
+                        {community.name.charAt(0)}
+                      </div>
+
+                      {/* Meta & Description */}
+                      <div className="flex-grow flex flex-col justify-between">
+                        <p className="text-body-md font-body-md text-on-surface">
+                          {community.description || 'Comunidade sem descrição adicional.'}
+                        </p>
+                        <div className="mt-space-sm flex flex-wrap items-center gap-x-space-md gap-y-1 text-body-sm font-body-sm text-secondary">
+                          <span><strong>Slug:</strong> /e/{comSlug}</span>
+                          <span><strong>Categoria:</strong> Fórum Nostálgico</span>
+                          <span><strong>Tipo:</strong> Pública</span>
+                          <span><strong>Fundada em:</strong> {new Date(community.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex sm:flex-col gap-space-xs shrink-0 w-full sm:w-36 mt-2 sm:mt-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!user) {
+                              navigate('/login');
+                              return;
+                            }
+                            alert(`Você agora faz parte da comunidade "${community.name}"!`);
+                          }}
+                          className="retro-btn-primary text-white font-label-md text-label-md py-1 px-space-sm rounded w-full flex items-center justify-center gap-1 active:translate-y-px cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">group_add</span>
+                          Participar
+                        </button>
                       </div>
                     </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex sm:flex-col gap-space-xs shrink-0 w-full sm:w-36 mt-2 sm:mt-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!user) {
-                            navigate('/login');
-                            return;
-                          }
-                          alert(`Você agora faz parte da comunidade "${community.name}"!`);
-                        }}
-                        className="retro-btn-primary text-white font-label-md text-label-md py-1 px-space-sm rounded w-full flex items-center justify-center gap-1 active:translate-y-px cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">group_add</span>
-                        Participar
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
@@ -254,7 +267,7 @@ export const Communities: React.FC = () => {
                       #{i + 1} {c.name}
                     </span>
                     <span className="text-secondary text-label-sm shrink-0">
-                      {c.member_count} {c.member_count === 1 ? 'membro' : 'membros'}
+                      {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
                     </span>
                   </div>
                 ))}
@@ -312,10 +325,37 @@ export const Communities: React.FC = () => {
                   type="text"
                   required
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    if (!newSlug || newSlug === newName.toLowerCase().replace(/\s+/g, '-')) {
+                      setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'));
+                    }
+                  }}
                   placeholder="Ex: Eu odeio acordar cedo"
                   className="w-full text-body-md font-body-md px-space-sm py-1.5 rounded border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-inner"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-label-md font-label-md text-primary font-bold" htmlFor="com-slug">
+                  Slug / URL Amigável:
+                </label>
+                <div className="flex items-center">
+                  <span className="bg-surface-container px-2 py-1.5 border border-r-0 border-outline-variant rounded-l text-secondary text-body-sm font-mono">
+                    /e/
+                  </span>
+                  <input
+                    id="com-slug"
+                    type="text"
+                    value={newSlug}
+                    onChange={(e) => setNewSlug(e.target.value)}
+                    placeholder="eu-odeio-acordar-cedo"
+                    className="w-full text-body-md font-body-md px-space-sm py-1.5 rounded-r border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none shadow-inner font-mono text-sm"
+                  />
+                </div>
+                <p className="text-[11px] text-secondary">
+                  Identificador único na URL (deixe em branco para gerar automaticamente).
+                </p>
               </div>
 
               <div className="space-y-1">

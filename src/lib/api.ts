@@ -7,19 +7,40 @@ export interface Post {
   id: number;
   author_id: number;
   community_id: number | null;
+  title?: string | null;
   content: string;
+  media_url?: string | null;
+  media_type?: 'image' | 'video' | 'gif' | null;
+  upvotes?: number;
+  downvotes?: number;
+  post_type?: 'discussion' | 'scrap';
   created_at: string;
   author_name: string;
+  author_avatar?: string | null;
   community_name: string | null;
+  community_slug?: string | null;
 }
 
 export interface Community {
   id: number;
   name: string;
+  slug?: string;
   description: string | null;
   owner_id: number;
+  owner_name?: string;
   created_at: string;
-  member_count: number;
+  members_count: number;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  author_id: number;
+  parent_id: number | null;
+  content: string;
+  created_at: string;
+  author_name: string;
+  author_avatar?: string | null;
 }
 
 const TOKEN_KEY = 'espectro_token';
@@ -103,8 +124,8 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
   let response: Response;
   try {
     response = await fetch(url, { ...options, headers });
-  } catch (err) {
-    throw new Error('Falha de conexão com o servidor. Verifique sua internet.');
+  } catch {
+    throw new Error('Falha de conexão com o servidor. Verifique sua rede.');
   }
 
   const contentType = response.headers.get('content-type') || '';
@@ -145,11 +166,22 @@ export const api = {
     authStorage.clear();
   },
 
-  async getPosts(): Promise<Post[]> {
-    return apiRequest<Post[]>('/api/posts', { method: 'GET' });
+  async getPosts(filters?: { community_id?: number; post_type?: string }): Promise<Post[]> {
+    const params = new URLSearchParams();
+    if (filters?.community_id) params.set('community_id', String(filters.community_id));
+    if (filters?.post_type) params.set('post_type', filters.post_type);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
   },
 
-  async createPost(params: { content: string; community_id?: number | null }): Promise<Post> {
+  async createPost(params: {
+    content: string;
+    title?: string;
+    community_id?: number | null;
+    media_url?: string;
+    media_type?: 'image' | 'video' | 'gif' | null;
+    post_type?: 'discussion' | 'scrap';
+  }): Promise<Post> {
     return apiRequest<Post>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -160,8 +192,19 @@ export const api = {
     return apiRequest<Community[]>('/api/communities', { method: 'GET' });
   },
 
-  async createCommunity(params: { name: string; description?: string }): Promise<Community> {
+  async createCommunity(params: { name: string; slug?: string; description?: string }): Promise<Community> {
     return apiRequest<Community>('/api/communities', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  },
+
+  async getComments(postId: number): Promise<Comment[]> {
+    return apiRequest<Comment[]>(`/api/comments?post_id=${postId}`, { method: 'GET' });
+  },
+
+  async createComment(params: { post_id: number; content: string; parent_id?: number | null }): Promise<Comment> {
+    return apiRequest<Comment>('/api/comments', {
       method: 'POST',
       body: JSON.stringify(params),
     });

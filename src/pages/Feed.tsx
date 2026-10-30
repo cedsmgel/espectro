@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { api, authStorage, Post, Community } from '../lib/api';
+import { api, authStorage, Post, Community, Comment } from '../lib/api';
 
 export const Feed: React.FC = () => {
   const navigate = useNavigate();
@@ -9,12 +9,28 @@ export const Feed: React.FC = () => {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
-  const [content, setContent] = useState('');
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
-  const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // New post form state
+  const [postType, setPostType] = useState<'scrap' | 'discussion'>('scrap');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [selectedCommunity, setSelectedCommunity] = useState<number | ''>('');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'image' | 'video' | 'gif' | ''>('');
+  const [showMediaInput, setShowMediaInput] = useState(false);
+  const [posting, setPosting] = useState(false);
+
+  // Comments state per post
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<number | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<number, Comment[]>>({});
+  const [loadingComments, setLoadingComments] = useState<boolean>(false);
+  const [commentContent, setCommentContent] = useState('');
+  const [replyParentId, setReplyParentId] = useState<number | null>(null);
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   const fetchPosts = async () => {
     try {
@@ -60,13 +76,26 @@ export const Feed: React.FC = () => {
       setPosting(true);
       setError(null);
       setSuccessMsg(null);
-      await api.createPost({ content: content.trim() });
+
+      await api.createPost({
+        content: content.trim(),
+        title: title.trim() || undefined,
+        community_id: selectedCommunity ? Number(selectedCommunity) : null,
+        media_url: mediaUrl.trim() || undefined,
+        media_type: mediaType ? mediaType : undefined,
+        post_type: postType,
+      });
+
       setContent('');
-      setSuccessMsg('Recado enviado com sucesso!');
+      setTitle('');
+      setMediaUrl('');
+      setMediaType('');
+      setShowMediaInput(false);
+      setSuccessMsg(postType === 'discussion' ? 'Tópico de discussão criado com sucesso!' : 'Recado enviado com sucesso!');
       await fetchPosts();
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao publicar recado');
+      setError(err instanceof Error ? err.message : 'Erro ao publicar');
     } finally {
       setPosting(false);
     }
@@ -76,7 +105,55 @@ export const Feed: React.FC = () => {
     setContent((prev) => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + emo + ' ');
   };
 
-  // Contagem de recados do usuário conectado
+  const toggleComments = async (postId: number) => {
+    if (activeCommentsPostId === postId) {
+      setActiveCommentsPostId(null);
+      return;
+    }
+
+    setActiveCommentsPostId(postId);
+    setReplyParentId(null);
+    setCommentContent('');
+
+    try {
+      setLoadingComments(true);
+      const data = await api.getComments(postId);
+      setCommentsMap((prev) => ({ ...prev, [postId]: data }));
+    } catch (err) {
+      console.error('Erro ao carregar comentários:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleCreateComment = async (e: React.FormEvent, postId: number) => {
+    e.preventDefault();
+    if (!commentContent.trim()) return;
+
+    if (!user) {
+      alert('Você precisa estar conectado para comentar!');
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      await api.createComment({
+        post_id: postId,
+        content: commentContent.trim(),
+        parent_id: replyParentId,
+      });
+
+      setCommentContent('');
+      setReplyParentId(null);
+      const updated = await api.getComments(postId);
+      setCommentsMap((prev) => ({ ...prev, [postId]: updated }));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Erro ao enviar comentário');
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
   const userScrapCount = user ? posts.filter((p) => p.author_id === user.id).length : 0;
 
   return (
@@ -154,7 +231,7 @@ export const Feed: React.FC = () => {
                       São Paulo, SP • Brasil • Conectado
                     </p>
 
-                    {/* Medidores de Karma do Usuário */}
+                    {/* Medidores de Karma */}
                     <div className="mt-space-md pt-space-sm border-t border-dashed border-outline-variant text-left space-y-1.5 bg-surface-bright p-space-sm rounded">
                       <div className="flex items-center justify-between text-body-sm font-body-sm">
                         <span className="text-secondary font-medium flex items-center gap-1">
@@ -195,14 +272,14 @@ export const Feed: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate('/login')}
-                        className="retro-btn-primary text-white text-label-md py-1 px-space-sm rounded font-bold text-center"
+                        className="retro-btn-primary text-white text-label-md py-1 px-space-sm rounded font-bold text-center cursor-pointer"
                       >
                         Fazer Login
                       </button>
                       <button
                         type="button"
                         onClick={() => navigate('/login?tab=cadastro')}
-                        className="retro-btn text-primary text-label-md py-1 px-space-sm rounded font-bold text-center"
+                        className="retro-btn text-primary text-label-md py-1 px-space-sm rounded font-bold text-center cursor-pointer"
                       >
                         Criar Conta
                       </button>
@@ -218,7 +295,7 @@ export const Feed: React.FC = () => {
                     <Link to="/" className="flex items-center justify-between py-1 px-1.5 text-primary font-bold">
                       <span className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[15px] text-primary">chat</span>
-                        <span className="underline">Recados (Scraps)</span>
+                        <span className="underline">Recados &amp; Fórum</span>
                       </span>
                       <span className="bg-primary text-on-primary text-[10px] px-1.5 py-0.5 rounded font-bold">
                         {posts.length}
@@ -258,27 +335,48 @@ export const Feed: React.FC = () => {
             </div>
           </aside>
 
-          {/* ================= CENTER COLUMN: RECADOS ================= */}
+          {/* ================= CENTER COLUMN: RECADOS E DISCUSSÕES ================= */}
           <section className="md:col-span-9 lg:col-span-6 space-y-space-md">
             <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
+              {/* Header com Abas: Recados vs Discussões */}
               <div className="retro-header-strip px-space-md py-space-sm flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-[18px]">forum</span>
                   <h2 className="text-headline-sm font-headline-sm text-primary">Página de Recados e Amigos</h2>
                 </div>
-                <span className="text-label-sm font-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded border border-outline-variant">
-                  Scrapbook Oficial
-                </span>
+                <div className="flex items-center gap-1 text-label-sm">
+                  <button
+                    type="button"
+                    onClick={() => setPostType('scrap')}
+                    className={`px-2 py-0.5 rounded border ${
+                      postType === 'scrap'
+                        ? 'bg-primary text-white border-primary font-bold'
+                        : 'bg-surface-container text-secondary border-outline-variant'
+                    }`}
+                  >
+                    Scrap
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('discussion')}
+                    className={`px-2 py-0.5 rounded border ${
+                      postType === 'discussion'
+                        ? 'bg-primary text-white border-primary font-bold'
+                        : 'bg-surface-container text-secondary border-outline-variant'
+                    }`}
+                  >
+                    Discussão
+                  </button>
+                </div>
               </div>
 
-              {/* Caixa de Criação de Recado */}
+              {/* Caixa de Criação */}
               <div className="p-space-md bg-surface-container-low border-b border-outline-variant">
                 <h3 className="text-label-md font-label-md font-bold text-primary mb-space-xs flex items-center gap-1">
                   <span className="material-symbols-outlined text-[15px]">edit_note</span>
-                  Deixe um recado para seus amigos
+                  {postType === 'discussion' ? 'Iniciar nova discussão / tópico' : 'Deixe um recado para seus amigos'}
                 </h3>
 
-                {/* Toasts / Alerts de Feedback */}
                 {successMsg && (
                   <div className="mb-2 p-2 rounded bg-[#e7f7ed] text-[#1e6f3b] text-body-sm border border-[#a3dfb4] flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
@@ -294,9 +392,40 @@ export const Feed: React.FC = () => {
                 )}
 
                 {user ? (
-                  <>
+                  <form onSubmit={handleCreatePost} className="space-y-2">
+                    {/* Se for discussão, exibe campo de Título e seleção de Comunidade */}
+                    {postType === 'discussion' && (
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          placeholder="Título do Tópico..."
+                          className="w-full bg-white border border-outline-variant rounded px-space-sm py-1 text-body-md font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        />
+
+                        {communities.length > 0 && (
+                          <div className="flex items-center gap-2 pt-1 text-body-sm">
+                            <span className="text-secondary">Comunidade:</span>
+                            <select
+                              value={selectedCommunity}
+                              onChange={(e) => setSelectedCommunity(e.target.value ? Number(e.target.value) : '')}
+                              className="bg-white border border-outline-variant rounded px-2 py-0.5 text-body-sm text-primary outline-none"
+                            >
+                              <option value="">Geral (Sem comunidade)</option>
+                              {communities.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Toolbar Retrô */}
-                    <div className="flex items-center flex-wrap gap-1 mb-1 p-1 bg-surface-container-highest border border-outline-variant rounded-t text-body-sm font-body-sm">
+                    <div className="flex items-center flex-wrap gap-1 p-1 bg-surface-container-highest border border-outline-variant rounded-t text-body-sm font-body-sm">
                       <button
                         type="button"
                         onClick={() => addEmoticon(':-)')}
@@ -330,46 +459,82 @@ export const Feed: React.FC = () => {
                         :-P
                       </button>
                       <div className="h-4 w-px bg-outline-variant mx-1"></div>
-                      <span className="text-[11px] text-secondary italic">recado não é chat!</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowMediaInput(!showMediaInput)}
+                        className={`px-2 py-0.5 rounded text-[11px] flex items-center gap-1 border ${
+                          showMediaInput
+                            ? 'bg-primary text-white border-primary'
+                            : 'retro-btn-secondary text-primary'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">add_photo_alternate</span>
+                        Mídia (GIF/Foto/Vídeo)
+                      </button>
                     </div>
 
-                    <form onSubmit={handleCreatePost}>
-                      <textarea
-                        rows={3}
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Escreva seu recado ou novidade aqui..."
-                        disabled={posting}
-                        className="w-full bg-surface-container-lowest border border-outline-variant rounded-b p-space-sm text-body-sm font-body-sm focus:border-primary-container focus:ring-1 focus:ring-secondary-container outline-none transition-all resize-y shadow-inner text-on-surface"
-                      />
-
-                      <div className="mt-space-sm flex items-center justify-between">
-                        <label className="flex items-center gap-1.5 text-body-sm font-body-sm text-secondary cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            defaultChecked
-                            className="rounded border-outline-variant text-primary focus:ring-0"
-                          />
-                          Visível para toda a rede
-                        </label>
-
-                        <button
-                          type="submit"
-                          disabled={posting || !content.trim()}
-                          className="px-4 py-1.5 retro-btn-primary text-on-primary rounded text-label-md font-label-md font-bold tracking-wide flex items-center gap-1 shadow active:translate-y-px disabled:opacity-50 cursor-pointer"
+                    {/* Inputs de Mídia Opcionais */}
+                    {showMediaInput && (
+                      <div className="p-2 bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="url"
+                          value={mediaUrl}
+                          onChange={(e) => setMediaUrl(e.target.value)}
+                          placeholder="https://exemplo.com/imagem.gif"
+                          className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none font-mono"
+                        />
+                        <select
+                          value={mediaType}
+                          onChange={(e) => setMediaType(e.target.value as any)}
+                          className="bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none text-primary"
                         >
-                          <span className="material-symbols-outlined text-[14px]">send</span>
-                          {posting ? 'Enviando recado...' : 'Enviar Recado'}
-                        </button>
+                          <option value="">Tipo automático</option>
+                          <option value="image">Imagem</option>
+                          <option value="gif">GIF</option>
+                          <option value="video">Vídeo</option>
+                        </select>
                       </div>
-                    </form>
-                  </>
+                    )}
+
+                    <textarea
+                      rows={3}
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder={
+                        postType === 'discussion'
+                          ? 'Escreva os detalhes da discussão ou dúvida...'
+                          : 'Escreva seu recado ou novidade aqui...'
+                      }
+                      disabled={posting}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-b p-space-sm text-body-sm font-body-sm focus:border-primary-container focus:ring-1 focus:ring-secondary-container outline-none transition-all resize-y shadow-inner text-on-surface"
+                    />
+
+                    <div className="mt-space-sm flex items-center justify-between">
+                      <label className="flex items-center gap-1.5 text-body-sm font-body-sm text-secondary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          defaultChecked
+                          className="rounded border-outline-variant text-primary focus:ring-0"
+                        />
+                        Visível para toda a rede
+                      </label>
+
+                      <button
+                        type="submit"
+                        disabled={posting || !content.trim()}
+                        className="px-4 py-1.5 retro-btn-primary text-on-primary rounded text-label-md font-label-md font-bold tracking-wide flex items-center gap-1 shadow active:translate-y-px disabled:opacity-50 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">send</span>
+                        {posting ? 'Publicando...' : postType === 'discussion' ? 'Criar Tópico' : 'Enviar Recado'}
+                      </button>
+                    </div>
+                  </form>
                 ) : (
                   <div className="p-space-md bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-space-sm">
                     <div className="flex items-center gap-2 text-secondary">
                       <span className="material-symbols-outlined text-primary text-[20px]">lock</span>
                       <span className="text-body-sm">
-                        Faça login no Espectro para enviar scraps e interagir com amigos.
+                        Faça login no Espectro para enviar scraps, criar discussões e comentar.
                       </span>
                     </div>
                     <button
@@ -383,10 +548,10 @@ export const Feed: React.FC = () => {
                 )}
               </div>
 
-              {/* Header da Lista de Recados */}
+              {/* Header da Lista de Posts */}
               <div className="bg-surface-container-high px-space-md py-1.5 border-b border-outline-variant flex items-center justify-between text-body-sm font-body-sm">
-                <span className="text-primary font-bold text-label-sm font-label-sm uppercase">
-                  Recados Recentes ({posts.length} no total)
+                <span className="text-primary font-bold text-label-sm uppercase">
+                  Feed e Atualizações ({posts.length} no total)
                 </span>
                 <button
                   type="button"
@@ -401,82 +566,254 @@ export const Feed: React.FC = () => {
                 </button>
               </div>
 
-              {/* LISTA DE RECADOS DO BANCO D1 */}
+              {/* LISTA DE POSTS */}
               <div className="divide-y divide-outline-variant">
                 {loadingPosts && (
                   <div className="p-space-lg text-center text-secondary flex items-center justify-center gap-2">
                     <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-                    Carregando recados do Espectro...
+                    Carregando recados e discussões...
                   </div>
                 )}
 
                 {!loadingPosts && posts.length === 0 && (
                   <div className="p-space-lg text-center text-secondary">
-                    <p className="font-semibold text-primary mb-1">Nenhum recado encontrado ainda!</p>
-                    <p className="text-body-sm">Seja o primeiro a enviar uma mensagem para a rede.</p>
+                    <p className="font-semibold text-primary mb-1">Nenhum recado ou discussão encontrada.</p>
+                    <p className="text-body-sm">Seja o primeiro a publicar algo legal!</p>
                   </div>
                 )}
 
-                {posts.map((post, idx) => (
-                  <article
-                    key={post.id}
-                    className={`p-space-md ${
-                      idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low'
-                    } hover:bg-surface-bright transition-colors`}
-                  >
-                    <div className="flex items-start gap-space-md">
-                      {/* Avatar do Autor */}
-                      <div className="flex-shrink-0 text-center">
-                        <div className="w-12 h-12 bg-primary-container text-white border border-outline-variant rounded shadow-sm flex items-center justify-center font-bold text-headline-sm uppercase">
-                          {post.author_name ? post.author_name.charAt(0) : 'U'}
-                        </div>
-                        <span className="text-[9px] text-secondary font-bold block mt-1">membro</span>
-                      </div>
+                {posts.map((post, idx) => {
+                  const comments = commentsMap[post.id] || [];
+                  const isCommentsOpen = activeCommentsPostId === post.id;
 
-                      {/* Conteúdo */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-dashed border-outline-variant pb-1 mb-1.5">
-                          <span className="font-bold text-primary text-body-md font-body-md">
-                            @{post.author_name || `usuario_${post.author_id}`}
-                          </span>
-                          <div className="flex items-center gap-1 text-[11px] text-secondary">
-                            <span className="material-symbols-outlined text-[13px]">schedule</span>
-                            {new Date(post.created_at).toLocaleString('pt-BR')}
+                  return (
+                    <article
+                      key={post.id}
+                      className={`p-space-md ${
+                        idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low'
+                      } hover:bg-surface-bright transition-colors`}
+                    >
+                      <div className="flex items-start gap-space-md">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0 text-center">
+                          <div className="w-12 h-12 bg-primary-container text-white border border-outline-variant rounded shadow-sm flex items-center justify-center font-bold text-headline-sm uppercase">
+                            {post.author_name ? post.author_name.charAt(0) : 'U'}
                           </div>
+                          <span className="text-[9px] text-secondary font-bold block mt-1">membro</span>
                         </div>
 
-                        {post.community_name && (
-                          <div className="mb-1 text-[11px] text-secondary">
-                            na comunidade:{' '}
-                            <span className="bg-surface-container-highest px-1 py-0.5 rounded text-primary font-semibold">
-                              {post.community_name}
-                            </span>
+                        {/* Conteúdo */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-dashed border-outline-variant pb-1 mb-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-primary text-body-md">
+                                @{post.author_name || `usuario_${post.author_id}`}
+                              </span>
+                              {post.post_type === 'discussion' && (
+                                <span className="bg-primary text-white text-[10px] px-1.5 py-0.2 rounded font-bold uppercase">
+                                  tópico
+                                </span>
+                              )}
+                              {post.community_name && (
+                                <span className="text-[11px] text-secondary">
+                                  em{' '}
+                                  <Link
+                                    to="/comunidades"
+                                    className="bg-surface-container-highest px-1 py-0.5 rounded text-primary font-semibold hover:underline"
+                                  >
+                                    {post.community_name}
+                                  </Link>
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1 text-[11px] text-secondary">
+                              <span className="material-symbols-outlined text-[13px]">schedule</span>
+                              {new Date(post.created_at).toLocaleString('pt-BR')}
+                            </div>
                           </div>
-                        )}
 
-                        <p className="text-body-md font-body-md text-on-surface leading-relaxed whitespace-pre-wrap">
-                          {post.content}
-                        </p>
+                          {/* Título de Discussão */}
+                          {post.title && (
+                            <h4 className="text-primary font-bold text-headline-sm mb-1">
+                              {post.title}
+                            </h4>
+                          )}
 
-                        <div className="mt-2.5 flex items-center justify-between pt-1 border-t border-dotted border-outline-variant">
-                          <div className="flex items-center gap-2">
-                            {user && (
+                          {/* Texto do Post */}
+                          <p className="text-body-md font-body-md text-on-surface leading-relaxed whitespace-pre-wrap">
+                            {post.content}
+                          </p>
+
+                          {/* Mídia Anexada (Imagem, GIF, Vídeo) */}
+                          {post.media_url && (
+                            <div className="mt-2 rounded overflow-hidden border border-outline-variant inline-block max-w-full">
+                              {post.media_type === 'video' ? (
+                                <video controls src={post.media_url} className="max-h-80 w-auto rounded" />
+                              ) : (
+                                <img
+                                  src={post.media_url}
+                                  alt="Mídia da postagem"
+                                  className="max-h-72 w-auto object-contain rounded bg-black/5"
+                                  loading="lazy"
+                                />
+                              )}
+                            </div>
+                          )}
+
+                          {/* Rodapé de Ações: Votos, Comentários, Responder */}
+                          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-dotted border-outline-variant text-label-sm">
+                            <div className="flex items-center gap-2">
+                              {/* Votos Retrô */}
+                              <div className="flex items-center bg-surface-container rounded border border-outline-variant px-1.5 py-0.5 gap-1">
+                                <span className="material-symbols-outlined text-[14px] text-primary">thumb_up</span>
+                                <span className="font-bold text-primary">{post.upvotes || 0}</span>
+                              </div>
+
+                              {/* Botão de Comentários em Thread */}
                               <button
                                 type="button"
-                                onClick={() => setContent(`@${post.author_name} `)}
-                                className="text-label-sm font-label-sm text-primary bg-surface-container px-2 py-0.5 rounded border border-outline-variant hover:bg-surface-container-high transition-colors flex items-center gap-1 cursor-pointer"
+                                onClick={() => toggleComments(post.id)}
+                                className={`px-2 py-0.5 rounded border flex items-center gap-1 transition-colors cursor-pointer ${
+                                  isCommentsOpen
+                                    ? 'bg-primary text-white border-primary font-bold'
+                                    : 'bg-surface-container text-primary border-outline-variant hover:bg-surface-container-high'
+                                }`}
                               >
-                                <span className="material-symbols-outlined text-[12px]">reply</span>
-                                [Responder]
+                                <span className="material-symbols-outlined text-[12px]">comment</span>
+                                [Comentários]
                               </button>
-                            )}
+
+                              {user && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setContent(`@${post.author_name} `);
+                                    window.scrollTo({ top: 200, behavior: 'smooth' });
+                                  }}
+                                  className="text-secondary hover:text-primary transition-colors cursor-pointer"
+                                >
+                                  [Citar]
+                                </button>
+                              )}
+                            </div>
+
+                            <span className="text-[10px] text-secondary">via Espectro 2004</span>
                           </div>
-                          <span className="text-[10px] text-secondary">via Espectro Social</span>
+
+                          {/* SEÇÃO EXPANSÍVEL DE COMENTÁRIOS / THREADS */}
+                          {isCommentsOpen && (
+                            <div className="mt-3 p-3 bg-surface-container-low rounded border border-[#b2ccf7] space-y-3">
+                              <div className="flex items-center justify-between border-b border-outline-variant pb-1">
+                                <span className="font-bold text-primary text-label-md flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[14px]">forum</span>
+                                  Comentários e Respostas do Tópico
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleComments(post.id)}
+                                  className="text-[11px] text-secondary hover:underline"
+                                >
+                                  Fechar
+                                </button>
+                              </div>
+
+                              {loadingComments && (
+                                <p className="text-center text-body-sm text-secondary py-2">
+                                  Carregando comentários...
+                                </p>
+                              )}
+
+                              {!loadingComments && comments.length === 0 && (
+                                <p className="text-body-sm text-secondary text-center py-2 italic">
+                                  Nenhum comentário ainda. Deixe a sua resposta!
+                                </p>
+                              )}
+
+                              {/* Lista de Comentários Aninhados */}
+                              <div className="space-y-2">
+                                {comments.map((comm) => (
+                                  <div
+                                    key={comm.id}
+                                    className={`p-2 bg-white rounded border border-outline-variant text-body-sm ${
+                                      comm.parent_id ? 'ml-6 border-l-4 border-l-primary-container' : ''
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between text-[11px] text-secondary mb-1">
+                                      <span className="font-bold text-primary">
+                                        @{comm.author_name}
+                                        {comm.parent_id && <span className="font-normal text-secondary ml-1">(em resposta)</span>}
+                                      </span>
+                                      <span>{new Date(comm.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    <p className="text-on-surface whitespace-pre-wrap">{comm.content}</p>
+
+                                    {user && (
+                                      <div className="mt-1 text-right">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setReplyParentId(comm.id);
+                                            setCommentContent(`@${comm.author_name} `);
+                                          }}
+                                          className="text-[10px] text-primary hover:underline font-bold"
+                                        >
+                                          Responder a este comentário »
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Formulário de Novo Comentário */}
+                              {user ? (
+                                <form onSubmit={(e) => handleCreateComment(e, post.id)} className="space-y-1.5 pt-2 border-t border-outline-variant">
+                                  {replyParentId && (
+                                    <div className="flex items-center justify-between text-[11px] text-primary bg-surface-container px-2 py-0.5 rounded">
+                                      <span>Respondendo ao comentário #{replyParentId}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setReplyParentId(null)}
+                                        className="text-error font-bold"
+                                      >
+                                        ✕ Cancelar resposta
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={commentContent}
+                                      onChange={(e) => setCommentContent(e.target.value)}
+                                      placeholder="Escreva sua resposta..."
+                                      disabled={submittingComment}
+                                      className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none focus:border-primary"
+                                    />
+                                    <button
+                                      type="submit"
+                                      disabled={submittingComment || !commentContent.trim()}
+                                      className="retro-btn-primary text-white text-label-sm px-3 py-1 rounded font-bold disabled:opacity-50 cursor-pointer"
+                                    >
+                                      {submittingComment ? '...' : 'Comentar'}
+                                    </button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <p className="text-body-sm text-secondary text-center pt-1">
+                                  <Link to="/login" className="text-primary font-bold underline">
+                                    Faça login
+                                  </Link>{' '}
+                                  para responder a este post.
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -506,22 +843,25 @@ export const Feed: React.FC = () => {
                   </div>
                 ) : (
                   <ul className="space-y-1 text-body-sm">
-                    {communities.slice(0, 6).map((c) => (
-                      <li key={c.id}>
-                        <Link
-                          to="/comunidades"
-                          className="flex items-center justify-between p-1 rounded hover:bg-surface-container transition-colors group"
-                        >
-                          <span className="flex items-center gap-1.5 truncate group-hover:text-primary">
-                            <span className="material-symbols-outlined text-secondary text-[14px]">groups</span>
-                            <span className="truncate">{c.name}</span>
-                          </span>
-                          <span className="text-[10px] text-secondary font-medium shrink-0">
-                            {c.member_count} {c.member_count === 1 ? 'm' : 'm'}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
+                    {communities.slice(0, 6).map((c) => {
+                      const count = (c.members_count ?? (c as any).member_count ?? 1);
+                      return (
+                        <li key={c.id}>
+                          <Link
+                            to="/comunidades"
+                            className="flex items-center justify-between p-1 rounded hover:bg-surface-container transition-colors group"
+                          >
+                            <span className="flex items-center gap-1.5 truncate group-hover:text-primary">
+                              <span className="material-symbols-outlined text-secondary text-[14px]">groups</span>
+                              <span className="truncate">{c.name}</span>
+                            </span>
+                            <span className="text-[10px] text-secondary font-medium shrink-0">
+                              {count} {count === 1 ? 'm' : 'm'}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

@@ -5,7 +5,19 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-// GET: lista todas as comunidades com contagem de membros
+// Helper para gerar slug amigável
+function generateSlug(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || `comunidade-${Date.now()}`
+  );
+}
+
+// GET: lista todas as comunidades com contagem de membros e slug
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { env } = context;
@@ -14,6 +26,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       SELECT 
         c.id,
         c.name,
+        c.slug,
         c.description,
         c.owner_id,
         c.created_at,
@@ -22,7 +35,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       FROM communities c
       JOIN users u ON c.owner_id = u.id
       LEFT JOIN community_members cm ON c.id = cm.community_id
-      GROUP BY c.id, c.name, c.description, c.owner_id, c.created_at, u.username
+      GROUP BY c.id, c.name, c.slug, c.description, c.owner_id, c.created_at, u.username
       ORDER BY members_count DESC, c.id DESC
     `;
 
@@ -50,6 +63,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     let body: {
       action?: "create" | "join";
       name?: string;
+      slug?: string;
       description?: string;
       community_id?: number;
     };
@@ -99,21 +113,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const cleanName = name.trim();
     const cleanDesc = description ? description.trim() : "";
+    const cleanSlug = body.slug?.trim() ? generateSlug(body.slug) : generateSlug(cleanName);
 
-    // Verifica se já existe com esse nome
-    const existing = await env.DB.prepare("SELECT id FROM communities WHERE LOWER(name) = ?")
-      .bind(cleanName.toLowerCase())
+    // Verifica se já existe com esse nome ou slug
+    const existing = await env.DB.prepare(
+      "SELECT id FROM communities WHERE LOWER(name) = ? OR slug = ?"
+    )
+      .bind(cleanName.toLowerCase(), cleanSlug)
       .first();
 
     if (existing) {
-      return errorResponse("Já existe uma comunidade com este nome.", 409);
+      return errorResponse("Já existe uma comunidade com este nome ou slug.", 409);
     }
 
-    // Insere comunidade
+    // Insere comunidade com slug
     const insertResult = await env.DB.prepare(
-      "INSERT INTO communities (name, description, owner_id) VALUES (?, ?, ?)"
+      "INSERT INTO communities (name, slug, description, owner_id) VALUES (?, ?, ?, ?)"
     )
-      .bind(cleanName, cleanDesc, user.id)
+      .bind(cleanName, cleanSlug, cleanDesc, user.id)
       .run();
 
     const communityId = insertResult.meta.last_row_id;
@@ -129,6 +146,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       {
         id: communityId,
         name: cleanName,
+        slug: cleanSlug,
         description: cleanDesc,
         owner_id: user.id,
         owner_name: user.username,
