@@ -7,5 +7,5 @@ JWT_SECRET = "troque-este-segredo"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "espectro-db"
-database_id = "SUBSTITUIR_PELO_ID_REAL"
+database_name = "espectro"
+database_id = "6c7ef540-41b9-46c5-916c-3755b743d4de"
