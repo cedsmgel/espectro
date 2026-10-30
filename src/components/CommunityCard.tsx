@@ -13,39 +13,47 @@ export const CommunityCard: React.FC<CommunityCardProps> = ({
   isJoining = false,
 }) => {
   return (
-    <div className="bg-white border border-[#bfd4f2] rounded-lg p-4 shadow-sm flex flex-col justify-between hover:border-[#85a9df] transition-all">
+    <div className="rounded-xl p-5 bg-surface-container-lowest/80 backdrop-blur-xl border border-outline-variant/30 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
       <div>
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="w-12 h-12 rounded bg-[#e8eef7] border border-[#a2bfeb] flex items-center justify-center font-bold text-[#3b5998] text-xl shadow-inner">
-            {community.name.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-lg bg-surface-container-low border border-outline-variant/30 text-primary flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-primary group-hover:text-white transition-colors">
+              {community.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-sm text-on-surface truncate group-hover:text-primary transition-colors">
+                #{community.name}
+              </h3>
+              <p className="text-[11px] text-outline">
+                Por <span className="text-on-surface-variant font-medium">{community.owner_name}</span>
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-[#2d4373] text-base truncate hover:underline cursor-pointer">
-              {community.name}
-            </h3>
-            <p className="text-xs text-gray-500">
-              Criada por <span className="font-semibold text-gray-700">{community.owner_name}</span>
-            </p>
-          </div>
+
+          <span className="px-2 py-0.5 rounded-full bg-secondary-container/50 text-secondary text-[11px] font-semibold shrink-0">
+            {community.members_count || 1} {community.members_count === 1 ? "membro" : "membros"}
+          </span>
         </div>
 
-        <p className="text-xs text-gray-600 line-clamp-3 my-2 leading-relaxed min-h-[3rem]">
-          {community.description || "Nenhuma descrição informada para esta comunidade."}
+        <p className="text-xs text-on-surface-variant line-clamp-3 my-2 leading-relaxed min-h-[2.75rem]">
+          {community.description || "Comunidade dedicada a discussões, ideias e trocas no Espectro."}
         </p>
       </div>
 
-      <div className="pt-3 border-t border-gray-100 flex items-center justify-between mt-2">
-        <span className="text-xs font-semibold text-[#3b5998] bg-[#e8eef7] px-2.5 py-1 rounded-full border border-[#c9daf3]">
-          👥 {community.members_count || 1} {community.members_count === 1 ? "membro" : "membros"}
+      <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between mt-2">
+        <span className="text-[11px] text-outline flex items-center gap-1">
+          <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+          Ativa
         </span>
 
         {onJoin && (
           <button
             onClick={() => onJoin(community.id)}
             disabled={isJoining}
-            className="text-xs font-bold bg-[#3b5998] hover:bg-[#2d4373] text-white px-3 py-1.5 rounded transition shadow-sm disabled:opacity-50"
+            className="text-xs font-semibold bg-primary-container hover:bg-primary text-on-primary px-3 py-1.5 rounded-lg transition shadow-sm disabled:opacity-50 flex items-center gap-1"
           >
-            {isJoining ? "Entrando..." : "+ Entrar"}
+            <span className="material-symbols-outlined text-[14px]">person_add</span>
+            <span>{isJoining ? "Entrando..." : "Entrar"}</span>
           </button>
         )}
       </div>

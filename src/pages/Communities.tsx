@@ -81,134 +81,139 @@ export const Communities: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      {/* Barra de Título e Ação */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#bfd4f2] pb-3 mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-[#2d4373]">
-            Comunidades do Espectro
-          </h1>
-          <p className="text-xs text-gray-600">
-            Encontre pessoas com os mesmos interesses e participe das discussões.
-          </p>
+    <div className="w-full pt-20 pb-16 bg-background">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-8">
+        {/* Barra de Título e Ação */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-6 mb-6 border-b border-outline-variant/30">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="material-symbols-outlined text-[24px] text-primary">forum</span>
+              <h1 className="text-xl font-bold text-primary">Comunidades & Círculos do Espectro</h1>
+            </div>
+            <p className="text-xs text-on-surface-variant">
+              Espaços de discussão, trocas técnicas, design e interesses coletivos.
+            </p>
+          </div>
+
+          {currentUser ? (
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-primary-container hover:bg-primary text-on-primary text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              <span>{showCreateForm ? "Fechar Formulário" : "Criar Comunidade"}</span>
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="bg-primary-container hover:bg-primary text-on-primary text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm"
+            >
+              Entrar para Criar Comunidade
+            </Link>
+          )}
         </div>
 
-        {currentUser ? (
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="bg-[#3b5998] hover:bg-[#2d4373] text-white text-xs font-bold px-4 py-2 rounded transition shadow-sm"
-          >
-            {showCreateForm ? "Fechar Formulário" : "+ Criar Nova Comunidade"}
-          </button>
+        {/* Feedback */}
+        {feedbackMsg && (
+          <div className="mb-6 p-3 bg-secondary-container/40 border border-secondary/30 text-secondary text-xs rounded-xl flex justify-between items-center">
+            <span className="font-medium">✨ {feedbackMsg}</span>
+            <button
+              onClick={() => setFeedbackMsg(null)}
+              className="text-secondary hover:text-on-surface font-bold text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Formulário de Criação (Expansível) */}
+        {showCreateForm && (
+          <div className="rounded-xl p-6 mb-8 bg-surface-container-lowest border border-outline-variant/30 shadow-md">
+            <h2 className="text-sm font-bold text-primary mb-3 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">group_add</span>
+              Criar Nova Comunidade
+            </h2>
+
+            {formError && (
+              <div className="mb-3 p-2 bg-red-50 text-red-600 border border-red-200 text-xs rounded-lg">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCommunity} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  Nome da Comunidade *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Design Systems Brasil ou Modelos Locais IA"
+                  className="w-full text-xs px-3 py-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  Descrição
+                </label>
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Conte o objetivo, tópicos abordados e regras desta comunidade..."
+                  className="w-full text-xs px-3 py-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="px-3.5 py-2 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-low rounded-lg transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating || !name.trim()}
+                  className="bg-primary-container hover:bg-primary text-on-primary text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm disabled:opacity-50"
+                >
+                  {creating ? "Salvando..." : "Criar Comunidade"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Grid de Comunidades */}
+        {loading ? (
+          <div className="rounded-xl p-12 bg-surface-container-lowest border border-outline-variant/30 text-center text-xs text-outline">
+            Carregando comunidades da rede...
+          </div>
+        ) : error ? (
+          <div className="p-4 bg-red-50 border border-red-200 text-xs text-red-600 rounded-xl text-center">
+            {error}
+          </div>
+        ) : communities.length === 0 ? (
+          <div className="rounded-xl p-12 bg-surface-container-lowest border border-outline-variant/30 text-center text-xs text-outline">
+            Nenhuma comunidade criada ainda. Seja o primeiro a criar um círculo de discussão!
+          </div>
         ) : (
-          <Link
-            to="/login"
-            className="bg-[#3b5998] hover:bg-[#2d4373] text-white text-xs font-bold px-4 py-2 rounded transition shadow-sm"
-          >
-            Entrar para Criar Comunidade
-          </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gutter">
+            {communities.map((comm) => (
+              <CommunityCard
+                key={comm.id}
+                community={comm}
+                onJoin={handleJoin}
+                isJoining={joiningId === comm.id}
+              />
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Mensagem de Feedback Global */}
-      {feedbackMsg && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-[#3b5998] text-xs rounded-md flex justify-between items-center">
-          <span>ℹ️ {feedbackMsg}</span>
-          <button
-            onClick={() => setFeedbackMsg(null)}
-            className="text-gray-400 hover:text-gray-600 font-bold"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Formulário de Criação (Expansível) */}
-      {showCreateForm && (
-        <div className="bg-white border-2 border-[#bfd4f2] rounded-lg p-5 mb-6 shadow-sm">
-          <h2 className="text-sm font-bold text-[#2d4373] mb-3">
-            Nova Comunidade
-          </h2>
-
-          {formError && (
-            <div className="mb-3 p-2 bg-red-50 text-red-600 border border-red-200 text-xs rounded">
-              {formError}
-            </div>
-          )}
-
-          <form onSubmit={handleCreateCommunity} className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Nome da Comunidade *
-              </label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Eu Odeio Acordar Cedo"
-                className="w-full text-sm px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#3b5998]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Descrição
-              </label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Conte sobre o propósito e regras da comunidade..."
-                className="w-full text-sm px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#3b5998]"
-              />
-            </div>
-
-            <div className="flex justify-end space-x-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded text-xs font-semibold hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={creating || !name.trim()}
-                className="bg-[#3b5998] hover:bg-[#2d4373] text-white text-xs font-bold px-4 py-1.5 rounded transition shadow-sm disabled:opacity-50"
-              >
-                {creating ? "Salvando..." : "Criar Comunidade"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Grid de Comunidades */}
-      {loading ? (
-        <div className="bg-white p-8 rounded-lg border border-[#bfd4f2] text-center text-sm text-gray-500">
-          Carregando comunidades...
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-xs text-red-600 text-center">
-          {error}
-        </div>
-      ) : communities.length === 0 ? (
-        <div className="bg-white p-8 rounded-lg border border-[#bfd4f2] text-center text-sm text-gray-500">
-          Nenhuma comunidade encontrada. Crie a primeira comunidade do Espectro!
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {communities.map((comm) => (
-            <CommunityCard
-              key={comm.id}
-              community={comm}
-              onJoin={handleJoin}
-              isJoining={joiningId === comm.id}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };

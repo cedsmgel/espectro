@@ -40,20 +40,23 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto my-12 px-4">
-      <div className="bg-white border-2 border-[#bfd4f2] rounded-xl shadow-md overflow-hidden">
-        {/* Cabeçalho do Card */}
-        <div className="bg-[#3b5998] text-white p-4 text-center">
-          <h1 className="text-xl font-bold tracking-wide">
-            Bem-vindo ao <span className="text-[#ea5b88] font-black">Espectro</span>
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-16 bg-background">
+      <div className="w-full max-w-md bg-surface-container-lowest/90 backdrop-blur-xl border border-outline-variant/30 rounded-xl shadow-xl overflow-hidden p-6 sm:p-8">
+        {/* Cabeçalho */}
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-xl bg-primary-container text-on-primary flex items-center justify-center mx-auto mb-3 shadow-sm">
+            <span className="material-symbols-outlined text-[24px]">blur_on</span>
+          </div>
+          <h1 className="text-xl font-bold text-primary tracking-tight font-sans">
+            Acesse o Espectro
           </h1>
-          <p className="text-xs text-blue-100 mt-1">
-            Conecte-se aos seus amigos e reviva as comunidades clássicas.
+          <p className="text-xs text-on-surface-variant mt-1">
+            Plataforma de conexões, comunidades e curadoria coletiva.
           </p>
         </div>
 
         {/* Abas */}
-        <div className="flex border-b border-[#bfd4f2] bg-[#e8eef7]">
+        <div className="flex p-1 bg-surface-container-low rounded-lg mb-6">
           <button
             type="button"
             onClick={() => {
@@ -61,10 +64,10 @@ export const Login: React.FC = () => {
               setError(null);
               setSuccess(null);
             }}
-            className={`flex-1 py-3 text-sm font-bold transition-colors ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
               isLoginTab
-                ? "bg-white text-[#3b5998] border-b-2 border-[#3b5998]"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-surface-container-lowest text-primary shadow-sm"
+                : "text-outline hover:text-on-surface"
             }`}
           >
             Entrar
@@ -76,87 +79,95 @@ export const Login: React.FC = () => {
               setError(null);
               setSuccess(null);
             }}
-            className={`flex-1 py-3 text-sm font-bold transition-colors ${
+            className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
               !isLoginTab
-                ? "bg-white text-[#3b5998] border-b-2 border-[#3b5998]"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-surface-container-lowest text-primary shadow-sm"
+                : "text-outline hover:text-on-surface"
             }`}
           >
-            Criar Conta
+            Cadastrar
           </button>
         </div>
 
         {/* Mensagens de Feedback */}
-        <div className="p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md font-medium">
-              ⚠️ {error}
-            </div>
-          )}
-          {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-md font-medium">
-              ✅ {success}
-            </div>
-          )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px]">error</span>
+            <span>{error}</span>
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-3 bg-secondary-container/40 border border-secondary/30 text-secondary text-xs rounded-lg font-medium flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+            <span>{success}</span>
+          </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-on-surface mb-1">
+              Nome de Usuário
+            </label>
+            <input
+              type="text"
+              required
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="seu_usuario"
+              className="w-full text-xs px-3 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container"
+            />
+          </div>
+
+          {!isLoginTab && (
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Nome de Usuário
+              <label className="block text-xs font-semibold text-on-surface mb-1">
+                E-mail
               </label>
               <input
-                type="text"
+                type="email"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Ex: joaosilva"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-[#3b5998] focus:ring-1 focus:ring-[#3b5998]"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu.email@empresa.com"
+                className="w-full text-xs px-3 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container"
               />
             </div>
+          )}
 
-            {!isLoginTab && (
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-[#3b5998] focus:ring-1 focus:ring-[#3b5998]"
-                />
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-on-surface mb-1">
+              Senha
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className="w-full text-xs px-3 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full mt-2 bg-primary-container hover:bg-primary text-on-primary font-semibold py-2.5 px-4 rounded-lg text-xs transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5"
+          >
+            {loading ? (
+              <span>Processando...</span>
+            ) : isLoginTab ? (
+              <>
+                <span className="material-symbols-outlined text-[16px]">login</span>
+                <span>Entrar na Rede</span>
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <span>Criar Nova Conta</span>
+              </>
             )}
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Senha
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-[#3b5998] focus:ring-1 focus:ring-[#3b5998]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#3b5998] hover:bg-[#2d4373] text-white font-bold py-2.5 px-4 rounded text-sm transition shadow-sm disabled:opacity-50 mt-2"
-            >
-              {loading
-                ? "Processando..."
-                : isLoginTab
-                ? "Entrar no Espectro"
-                : "Cadastrar Nova Conta"}
-            </button>
-          </form>
-        </div>
+          </button>
+        </form>
       </div>
     </div>
   );
