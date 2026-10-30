@@ -111,41 +111,34 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ communities = [] }) => {
         </div>
 
         {/* Karma Score Tracker */}
-        <div className="glass-recessed rounded-xl p-2.5 flex items-center justify-between border border-white/5">
-          <div className="flex items-center gap-1.5 text-cyan-300 text-xs font-semibold">
-            <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
-            <span>4.892 Karma</span>
+        <div className="glass-recessed rounded-xl p-3 flex items-center justify-between border border-white/5">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Karma</span>
+            <span className="text-base font-display font-bold text-cyan-300">4.892</span>
           </div>
-          <span className="text-[10px] text-neutral-400">Top 3% Feed</span>
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-400/10 text-cyan-300 border border-cyan-400/30">
+            Top 3% Feed
+          </span>
         </div>
 
-        {/* Nostalgic Orkut-Inspired Badges */}
+        {/* Modern Badges */}
         <div className="flex flex-col gap-2 pt-1 border-t border-white/5">
           <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-            Reputação Social
+            Badges
           </div>
-          <div className="grid grid-cols-1 gap-1.5">
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 text-amber-300">
-                <span className="material-symbols-outlined text-[14px]">star</span>
-                ★ 98% Confiável
-              </span>
-              <span className="text-[10px] text-neutral-400">votos (420)</span>
-            </div>
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 text-rose-400">
-                <span className="material-symbols-outlined text-[14px]">local_fire_department</span>
-                🔥 85% Legal
-              </span>
-              <span className="text-[10px] text-neutral-400">votos (310)</span>
-            </div>
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/5 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 text-cyan-300">
-                <span className="material-symbols-outlined text-[14px]">diamond</span>
-                💎 Fã de 12
-              </span>
-              <span className="text-[10px] text-neutral-400">comunidades</span>
-            </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-400/20 text-[11px] font-semibold text-blue-300">
+              <span className="material-symbols-outlined text-[14px]">bolt</span>
+              Pioneiro
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-500/10 border border-purple-400/20 text-[11px] font-semibold text-purple-300">
+              <span className="material-symbols-outlined text-[14px]">verified</span>
+              Verificado
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-[11px] font-semibold text-emerald-300">
+              <span className="material-symbols-outlined text-[14px]">diamond</span>
+              Glass VIP
+            </span>
           </div>
         </div>
 

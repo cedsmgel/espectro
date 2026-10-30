@@ -214,11 +214,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
 
         {/* Media Preview Container from Stitch */}
         {post.media_url && (
-          <div className="relative rounded-xl overflow-hidden border border-white/10 glass-recessed group cursor-pointer my-1">
+          <div className="relative rounded-xl overflow-hidden border border-white/10 glass-recessed group cursor-pointer my-1 w-full max-h-80 aspect-video">
             <img
               src={post.media_url}
               alt="Mídia da postagem"
-              className="w-full max-h-80 object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              style={{ objectFit: 'cover' }}
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';
               }}

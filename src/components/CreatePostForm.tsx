@@ -65,27 +65,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   };
 
   if (!user) {
-    return (
-      <article className="glass-surface rounded-2xl p-5 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-400">
-            <span className="material-symbols-outlined text-[20px]">lock</span>
-          </div>
-          <div>
-            <h4 className="text-xs sm:text-sm font-semibold text-white">Faça parte do Espectro</h4>
-            <p className="text-[11px] text-neutral-400">
-              Conecte-se para publicar discussões, deixar scraps e interagir em comunidades.
-            </p>
-          </div>
-        </div>
-        <a
-          href="/login"
-          className="btn-primary-blue text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap"
-        >
-          Entrar / Cadastrar
-        </a>
-      </article>
-    );
+    return null;
   }
 
   return (
@@ -191,11 +171,12 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
         {/* Media Preview Box */}
         {mediaUrl && (
-          <div className="relative rounded-xl overflow-hidden max-h-48 border border-white/10">
+          <div className="relative rounded-xl overflow-hidden max-h-48 border border-white/10 w-full aspect-video">
             <img
               src={mediaUrl}
               alt="Preview"
               className="w-full h-full object-cover"
+              style={{ objectFit: 'cover' }}
               onError={() => setError('Não foi possível carregar a prévia da imagem.')}
             />
           </div>
