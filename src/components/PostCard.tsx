@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Post, Comment, commentsApi, authStorage } from '../lib/api';
+import { VideoPlayer } from './VideoPlayer';
 
 interface PostCardProps {
   post: Post;
@@ -152,18 +153,26 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => {
           </p>
         )}
 
-        {/* Mídia Principal */}
+        {/* Mídia Principal: Player de Vídeo Widescreen 16:9 ou Imagem */}
         {post.media_url && (
-          <div className="relative w-full rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-96 mt-1">
-            <img
-              src={post.media_url}
-              alt="Mídia da postagem"
-              className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.01]"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-          </div>
+          post.media_type === 'video' ||
+          /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
+          post.media_url.includes('/videos/') ? (
+            <div className="mt-1">
+              <VideoPlayer src={post.media_url} title={post.title || undefined} />
+            </div>
+          ) : (
+            <div className="relative w-full rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-96 mt-1">
+              <img
+                src={post.media_url}
+                alt="Mídia da postagem"
+                className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.01]"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )
         )}
       </div>
 

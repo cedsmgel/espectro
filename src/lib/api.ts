@@ -311,3 +311,38 @@ export const directMessagesApi = {
       body: JSON.stringify(params),
     }),
 };
+
+export interface UploadResponse {
+  url: string;
+  key: string;
+  media_type: 'video' | 'image';
+  filename: string;
+  size: number;
+  content_type: string;
+}
+
+export const uploadApi = {
+  upload: async (file: File): Promise<UploadResponse> => {
+    const token = authStorage.getToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err: any = await response.json().catch(() => ({ error: 'Falha no upload do arquivo' }));
+      throw new Error(err?.error || `Erro HTTP ${response.status}`);
+    }
+
+    return response.json();
+  },
+};
