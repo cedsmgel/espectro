@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -122,19 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado. Token inválido ou ausente.", 401);
     }
 
-    let body: {
-      action?: "create" | "vote";
-      post_id?: number;
-      vote_type?: "up" | "down";
-      content?: string;
-      title?: string;
-      community_id?: number | null;
-      community_slug?: string | null;
-      media_url?: string;
-      media_type?: "image" | "video" | "gif" | null;
-      post_type?: "discussion" | "scrap";
-    };
-
+    let body: any;
     try {
       body = await request.json();
     } catch {
@@ -175,7 +163,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     let commId = community_id ? Number(community_id) : null;
 
-    // Se forneceu slug em vez de ID, resolve o community_id
     if (!commId && community_slug) {
       const commBySlug = await env.DB.prepare("SELECT id FROM communities WHERE slug = ?")
         .bind(community_slug)
@@ -185,7 +172,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // Se informou comunidade, valida se ela existe
     if (commId) {
       const comm = await env.DB.prepare("SELECT id FROM communities WHERE id = ?")
         .bind(commId)
@@ -221,7 +207,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const newId = insertResult.meta.last_row_id;
 
-    // Busca o post salvo no D1 com os dados completos do autor e comunidade
     const createdPost = await env.DB.prepare(
       `SELECT 
         p.id,
@@ -273,7 +258,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 };
 
-// DELETE: remove o post e primeiro deleta o arquivo físico no Cloudflare R2
+// DELETE: fallback para remoção com query param ?id=...
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -293,7 +278,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
     const numericPostId = Number(postId);
 
-    // 1. Busca o post para verificar a autoria e se possui mídia no R2
     const post = await env.DB.prepare(
       "SELECT id, author_id, media_url, media_type FROM posts WHERE id = ?"
     )
@@ -304,16 +288,12 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       return errorResponse("Publicação não encontrada.", 404);
     }
 
-    // Apenas o autor do post tem permissão de exclusão
     if (post.author_id !== user.id) {
       return errorResponse("Você não tem permissão para excluir esta publicação.", 403);
     }
 
-    // 2. Se tiver mídia associada, chama env.MEDIA_BUCKET.delete(key) PRIMEIRO
     if (post.media_url) {
       let r2Key: string | null = null;
-
-      // Extrai a chave do arquivo (ex: videos/... ou images/...)
       if (post.media_url.includes("/api/media/")) {
         const parts = post.media_url.split("/api/media/");
         r2Key = parts[1] ? decodeURIComponent(parts[1].split("?")[0]) : null;
@@ -328,25 +308,20 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
             await bucket.delete(r2Key);
           } catch (r2Err) {
             console.error("Erro ao deletar arquivo do Cloudflare R2:", r2Err);
-            // Continua para não travar a deleção no banco caso já tenha sido removido
           }
         }
       }
     }
 
-    // 3. Remove comentários do post no D1 para manter integridade
     try {
       await env.DB.prepare("DELETE FROM comments WHERE post_id = ?").bind(numericPostId).run();
-    } catch {
-      // ignore
-    }
+    } catch {}
 
-    // 4. Remove o registro do post do banco D1
     await env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(numericPostId).run();
 
     return jsonResponse({
       success: true,
-      message: "Publicação e arquivos de mídia associados foram excluídos com sucesso.",
+      message: "Publicação excluída com sucesso.",
       deleted_id: numericPostId,
     });
   } catch (err: unknown) {

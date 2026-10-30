@@ -277,8 +277,13 @@ export const postsApi = {
     api.getPosts(filters),
   create: (data: CreatePostData) => api.createPost(data),
   vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
+  update: (postId: number, data: { title?: string | null; content: string }) =>
+    apiRequest<{ success: boolean; message: string; post: Post }>(`/api/posts/${postId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   delete: (postId: number) =>
-    apiRequest<{ success: boolean; message: string; deleted_id: number }>(`/api/posts?id=${postId}`, {
+    apiRequest<{ success: boolean; message: string; deleted_id: number }>(`/api/posts/${postId}`, {
       method: 'DELETE',
     }),
 };

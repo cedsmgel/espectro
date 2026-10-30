@@ -104,6 +104,10 @@ export const Feed: React.FC = () => {
     setPosts((prev) => prev.filter((p) => p.id !== deletedId));
   };
 
+  const handleUpdatePost = (updatedPost: Post) => {
+    setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
+  };
+
   // Filter posts
   const filteredPosts = posts.filter((p) => {
     if (queryParam) {
@@ -318,6 +322,7 @@ export const Feed: React.FC = () => {
                         post={post}
                         onVote={handleVote}
                         onDelete={handleDeletePost}
+                        onUpdate={handleUpdatePost}
                       />
                     ))}
                   </div>

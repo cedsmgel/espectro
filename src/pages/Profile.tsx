@@ -87,6 +87,10 @@ export const Profile: React.FC = () => {
     setPosts((prev) => prev.filter((p) => p.id !== deletedId));
   };
 
+  const handleUpdatePost = (updatedPost: Post) => {
+    setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
+  };
+
   if (!loggedUser && !paramUsername) {
     return (
       <div className="min-h-screen bg-surface text-on-surface flex flex-col">
@@ -280,6 +284,7 @@ export const Profile: React.FC = () => {
                       post={post}
                       onVote={handleVote}
                       onDelete={handleDeletePost}
+                      onUpdate={handleUpdatePost}
                     />
                   ))}
                 </div>

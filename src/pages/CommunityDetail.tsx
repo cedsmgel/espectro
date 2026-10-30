@@ -217,6 +217,11 @@ export const CommunityDetail: React.FC = () => {
     showToast('Publicação excluída com sucesso.');
   };
 
+  const handleUpdatePost = (updatedPost: Post) => {
+    setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
+    showToast('Publicação atualizada com sucesso.');
+  };
+
   // Garante que apenas posts daquela comunidade (ID estrito) sejam exibidos
   const communityFilteredPosts = posts.filter((p) => p.community_id === community?.id);
 
@@ -419,7 +424,12 @@ export const CommunityDetail: React.FC = () => {
                     ) : (
                       <div className="flex flex-col gap-4">
                         {communityFilteredPosts.map((post) => (
-                          <PostCard key={post.id} post={post} onDelete={handleDeletePost} />
+                          <PostCard
+                            key={post.id}
+                            post={post}
+                            onDelete={handleDeletePost}
+                            onUpdate={handleUpdatePost}
+                          />
                         ))}
                       </div>
                     )}
