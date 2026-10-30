@@ -38,6 +38,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const url = new URL(request.url);
     const communityId = url.searchParams.get("community_id");
     const communitySlug = url.searchParams.get("community_slug");
+    const authorId = url.searchParams.get("author_id");
+    const authorName = url.searchParams.get("author_name");
     const postType = url.searchParams.get("post_type");
     const feed = url.searchParams.get("feed"); // 'home' | 'all'
     const secret = env.JWT_SECRET || "troque-este-segredo";
@@ -69,6 +71,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     `;
 
     const params: unknown[] = [];
+
+    if (authorId) {
+      query += ` AND p.author_id = ?`;
+      params.push(Number(authorId));
+    } else if (authorName) {
+      query += ` AND LOWER(u.username) = ?`;
+      params.push(authorName.toLowerCase());
+    }
 
     if (communityId) {
       query += ` AND p.community_id = ?`;

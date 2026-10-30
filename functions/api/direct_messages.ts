@@ -37,6 +37,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     await ensureMessagesTable(env.DB);
 
     const url = new URL(request.url);
+    const unreadParam = url.searchParams.get("unread");
+
+    // Retorna a contagem real de mensagens não lidas recebidas pelo usuário logado
+    if (unreadParam === "count") {
+      const countRes = await env.DB.prepare(`
+        SELECT COUNT(*) AS unread_count 
+        FROM direct_messages 
+        WHERE receiver_id = ? AND read_at IS NULL
+      `)
+        .bind(user.id)
+        .first<{ unread_count: number }>();
+
+      return jsonResponse({ unread_count: countRes?.unread_count || 0 });
+    }
+
     const friendId = url.searchParams.get("friend_id");
 
     if (!friendId) {

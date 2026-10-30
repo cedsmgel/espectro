@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authStorage } from '../lib/api';
+import { authStorage, directMessagesApi } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
@@ -19,6 +19,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
+  const [unreadDms, setUnreadDms] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      directMessagesApi
+        .getUnreadCount()
+        .then((res) => setUnreadDms(res.unread_count || 0))
+        .catch(() => setUnreadDms(0));
+    }
+  }, [user]);
 
   const handleLogout = () => {
     authStorage.clear();
@@ -136,19 +146,20 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   )}
                 </div>
 
-                {/* Botão Mensagens com Badge */}
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(true)}
-                  aria-label="Abrir mensagens rápidas"
+                {/* Botão Mensagens com link para /mensagens e Badge real */}
+                <Link
+                  to="/mensagens"
+                  aria-label="Abrir mensagens privadas"
                   className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Mensagens Diretas"
                 >
                   <span className="material-symbols-outlined text-[22px]">chat_bubble</span>
-                  <span className="absolute top-1 right-1 px-1.5 py-0.2 rounded-full bg-secondary-container text-on-secondary-container text-[10px] leading-tight font-bold">
-                    4
-                  </span>
-                </button>
+                  {unreadDms > 0 && (
+                    <span className="absolute top-1 right-1 px-1.5 py-0.2 rounded-full bg-secondary-container text-on-secondary-container text-[10px] leading-tight font-bold">
+                      {unreadDms}
+                    </span>
+                  )}
+                </Link>
 
                 {/* Botão Notificações */}
                 <Link
@@ -158,7 +169,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[22px]">notifications</span>
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary" />
                 </Link>
 
                 <div className="h-6 w-px bg-outline-variant/40 mx-0.5 hidden sm:block" />
@@ -187,14 +197,22 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                     <div className="absolute right-0 mt-2 w-52 bg-surface-container-lowest rounded-2xl p-2 shadow-lg border border-outline-variant/30 z-50 animate-in fade-in duration-150">
                       <div className="px-3 py-2 border-b border-outline-variant/20 mb-1">
                         <p className="text-xs font-bold text-on-surface">@{user.username}</p>
-                        <p className="text-[11px] text-primary font-medium">Karma ▲ 4.892</p>
+                        <p className="text-[11px] text-on-surface-variant">Conectado ao Espectro</p>
                       </div>
+                      <Link
+                        to="/perfil"
+                        onClick={() => setShowDropdown(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-primary">person</span>
+                        <span>Meu Perfil</span>
+                      </Link>
                       <Link
                         to="/mensagens"
                         onClick={() => setShowDropdown(false)}
                         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[18px] text-primary">chat_bubble</span>
+                        <span className="material-symbols-outlined text-[18px] text-secondary">chat_bubble</span>
                         <span>Direct Mensagens</span>
                       </Link>
                       <Link

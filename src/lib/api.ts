@@ -312,6 +312,8 @@ export const friendsApi = {
 export const directMessagesApi = {
   list: (friendId: number) =>
     apiRequest<DirectMessage[]>(`/api/direct_messages?friend_id=${friendId}`, { method: 'GET' }),
+  getUnreadCount: () =>
+    apiRequest<{ unread_count: number }>('/api/direct_messages?unread=count', { method: 'GET' }),
   send: (params: { receiver_id: number; content: string }) =>
     apiRequest<DirectMessage>('/api/direct_messages', {
       method: 'POST',

@@ -8,6 +8,7 @@ import { CommunityDetail } from './pages/CommunityDetail';
 import { DirectMessages } from './pages/DirectMessages';
 import { Videos } from './pages/Videos';
 import { Notifications } from './pages/Notifications';
+import { Profile } from './pages/Profile';
 
 export const App: React.FC = () => {
   return (
@@ -15,6 +16,9 @@ export const App: React.FC = () => {
       <SidebarProvider>
         <Routes>
           <Route path="/" element={<Feed />} />
+          <Route path="/perfil" element={<Profile />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/u/:username" element={<Profile />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
           <Route path="/c/:slug" element={<CommunityDetail />} />
           <Route path="/comunidade/:slug" element={<CommunityDetail />} />

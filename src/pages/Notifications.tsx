@@ -42,116 +42,8 @@ export const Notifications: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Notificações dinâmicas da plataforma
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif-1',
-      type: 'mention',
-      authorName: 'Camila Brandão',
-      authorUsername: 'camilab',
-      communityName: 'DesignSystem & UI',
-      communitySlug: 'designsystem-ui',
-      title: 'mencionou você em',
-      content: '“Dá uma olhada na nova documentação de tokens com o tom espectral ultravioleta! Ficou excelente a hierarquia das bordas suaves.”',
-      timestamp: 'há 12 min',
-      group: 'hoje',
-      read: false,
-      actionUrl: '/',
-    },
-    {
-      id: 'notif-2',
-      type: 'upvote',
-      authorName: 'Comunidade Espectro',
-      authorUsername: 'espectro',
-      communityName: 'programacao',
-      communitySlug: 'programacao',
-      title: 'Sua publicação em c/programacao atingiu 500 upvotes! 🔥',
-      content: 'Arquitetura de microsserviços com filas orientadas a eventos e Cloudflare Workers',
-      timestamp: 'há 1 hora',
-      group: 'hoje',
-      read: false,
-      actionUrl: '/',
-    },
-    {
-      id: 'notif-3',
-      type: 'video',
-      authorName: 'Sintaxe Livre',
-      authorUsername: 'sintaxelivre',
-      title: 'publicou um novo clipe no Espectro Play',
-      content: 'Shader com Three.js em 45 linhas de puro código procedural e WebGL',
-      timestamp: 'há 2 horas',
-      group: 'hoje',
-      read: false,
-      actionUrl: '/videos',
-      videoDuration: '04:22',
-    },
-    {
-      id: 'notif-4',
-      type: 'follow',
-      authorName: 'Lucas Silveira',
-      authorUsername: 'lucassilv',
-      title: 'começou a seguir suas publicações no Espectro',
-      content: 'Desenvolvedor Full Stack • Curioso sobre redes edge',
-      timestamp: 'há 3 horas',
-      group: 'hoje',
-      read: false,
-      actionUrl: '/mensagens',
-    },
-    {
-      id: 'notif-5',
-      type: 'reaction',
-      authorName: 'Mariana Costa',
-      authorUsername: 'mari_c',
-      title: 'reagiu com ❤️ à sua última mensagem no Direct',
-      content: 'Mensagem de voz sobre o lançamento do Espectro',
-      timestamp: 'há 5 horas',
-      group: 'hoje',
-      read: false,
-      actionUrl: '/mensagens',
-    },
-    {
-      id: 'notif-6',
-      type: 'community',
-      authorName: 'Conselho Espectro',
-      authorUsername: 'espectro_admin',
-      communityName: 'tecnologia',
-      communitySlug: 'tecnologia',
-      title: 'Você foi promovido a Moderador Colaborador em c/tecnologia',
-      content: 'Agora você pode organizar discussões temáticas e moderar o feed desta comunidade.',
-      timestamp: 'Ontem às 18:32',
-      group: 'ontem',
-      read: true,
-      actionUrl: '/comunidades',
-    },
-    {
-      id: 'notif-7',
-      type: 'mention',
-      authorName: 'Thiago Mendes',
-      authorUsername: 'thiagom',
-      communityName: 'devops',
-      communitySlug: 'devops',
-      title: 'respondeu ao seu tópico em',
-      content: '“Consegui reproduzir a esteira CI/CD usando sua dica de deploy automático no Pages. O tempo caiu pela metade!”',
-      timestamp: 'Ontem às 11:15',
-      group: 'ontem',
-      read: true,
-      actionUrl: '/',
-    },
-    {
-      id: 'notif-8',
-      type: 'video',
-      authorName: 'Workshop Semanal',
-      authorUsername: 'espectro_live',
-      communityName: 'DesignSystem & UI',
-      communitySlug: 'designsystem-ui',
-      title: 'Transmissão agendada: Workshop de Variáveis e Componentes 2026',
-      content: 'O evento ao vivo começa nesta quinta às 19h00 (Horário de Brasília).',
-      timestamp: 'Terça-feira',
-      group: 'esta_semana',
-      read: true,
-      actionUrl: '/videos',
-    },
-  ]);
+  // Notificações dinâmicas da plataforma (carregadas limpas sem mock)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
     // Carrega comunidades reais do D1
@@ -478,21 +370,21 @@ export const Notifications: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-secondary text-[20px]">insights</span>
-                      <h2 className="font-bold text-sm text-on-surface">Resumo Semanal</h2>
+                      <h2 className="font-bold text-sm text-on-surface">Resumo de Atividade</h2>
                     </div>
                     <span className="text-xs text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">
-                      +24% vs. anterior
+                      Tempo Real
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
-                      <span className="text-[11px] text-on-surface-variant">Upvotes totais</span>
-                      <span className="text-lg font-bold text-primary mt-1">+1.240</span>
+                      <span className="text-[11px] text-on-surface-variant">Notificações</span>
+                      <span className="text-lg font-bold text-primary mt-1">{notifications.length}</span>
                     </div>
                     <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
-                      <span className="text-[11px] text-on-surface-variant">Respostas</span>
-                      <span className="text-lg font-bold text-secondary mt-1">48</span>
+                      <span className="text-[11px] text-on-surface-variant">Não lidas</span>
+                      <span className="text-lg font-bold text-secondary mt-1">{unreadCount}</span>
                     </div>
                   </div>
 
