@@ -26,6 +26,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
 
+  // Padrão de dimensionamento X/Twitter, Reddit e Facebook:
+  // Landscape 16:9 -> 480x270px; Portrait 9:16 -> 240x360px; Square 1:1 -> 320x320px
+  const [containerStyle, setContainerStyle] = useState<{
+    aspectRatio: string;
+    maxWidth: string;
+    maxHeight: string;
+  }>({
+    aspectRatio: '16 / 9',
+    maxWidth: '480px',
+    maxHeight: '270px',
+  });
+
   const controlsTimeoutRef = useRef<any>(null);
 
   const resetControlsTimeout = () => {
@@ -61,6 +73,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration || 0);
+      const { videoWidth, videoHeight } = videoRef.current;
+      if (videoWidth && videoHeight) {
+        const ratio = videoWidth / videoHeight;
+        if (ratio >= 1.5) {
+          // Horizontal (16:9) estilo X/Twitter e YouTube feed
+          setContainerStyle({
+            aspectRatio: '16 / 9',
+            maxWidth: '480px',
+            maxHeight: '270px',
+          });
+        } else if (ratio <= 0.75) {
+          // Vertical (9:16) estilo Reels/Shorts/TikTok
+          setContainerStyle({
+            aspectRatio: '9 / 16',
+            maxWidth: '240px',
+            maxHeight: '360px',
+          });
+        } else if (ratio >= 0.9 && ratio <= 1.1) {
+          // Quadrado (1:1) estilo Instagram/Facebook
+          setContainerStyle({
+            aspectRatio: '1 / 1',
+            maxWidth: '320px',
+            maxHeight: '320px',
+          });
+        } else {
+          const calcMaxW = ratio > 1 ? '480px' : '300px';
+          setContainerStyle({
+            aspectRatio: `${videoWidth} / ${videoHeight}`,
+            maxWidth: calcMaxW,
+            maxHeight: '300px',
+          });
+        }
+      }
     }
   };
 
@@ -139,7 +184,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ref={containerRef}
       onMouseMove={resetControlsTimeout}
       onMouseEnter={() => setShowControls(true)}
-      className={`relative w-full max-w-[600px] mx-auto aspect-video overflow-hidden rounded-xl bg-slate-950 group select-none shadow-md border border-outline-variant/30 flex items-center justify-center ${className}`}
+      style={{
+        aspectRatio: containerStyle.aspectRatio,
+        maxWidth: containerStyle.maxWidth,
+        maxHeight: containerStyle.maxHeight,
+      }}
+      className={`relative w-full mx-auto overflow-hidden rounded-xl bg-black group select-none shadow-sm border border-outline-variant/30 flex items-center justify-center ${className}`}
     >
       {/* Elemento de Vídeo */}
       <video
@@ -160,19 +210,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         className="w-full h-full object-cover cursor-pointer"
       />
 
-      {/* Top Header Badge (Estilo Stitch DNA) */}
+      {/* Top Header Badge (Estilo X / Reddit / Stitch) */}
       <div
-        className={`absolute top-3 left-3 right-3 flex items-center justify-between z-20 pointer-events-none transition-opacity duration-300 ${
+        className={`absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-20 pointer-events-none transition-opacity duration-300 ${
           showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            HD • Espectro Play
+        <div className="flex items-center gap-1.5">
+          <span className="px-2 py-0.5 rounded bg-black/65 backdrop-blur-md text-white text-[10px] font-semibold flex items-center gap-1 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+            HD
           </span>
           {title && (
-            <span className="px-2.5 py-1 rounded-md bg-black/40 backdrop-blur-md text-white/90 text-[11px] font-medium truncate max-w-xs">
+            <span className="px-2 py-0.5 rounded bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-medium truncate max-w-[200px]">
               {title}
             </span>
           )}
@@ -182,19 +232,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Spinner de Buffering */}
       {isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center z-25 pointer-events-none">
-          <div className="w-12 h-12 rounded-full border-3 border-primary/30 border-t-primary animate-spin" />
+          <div className="w-10 h-10 rounded-full border-3 border-primary/30 border-t-primary animate-spin" />
         </div>
       )}
 
-      {/* Botão Play / Pause Central */}
+      {/* Botão Play / Pause Central Compacto */}
       {(!isPlaying || showControls) && !isBuffering && (
         <button
           type="button"
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
-          className="absolute z-20 w-16 h-16 rounded-full bg-primary/90 text-on-primary flex items-center justify-center shadow-xl hover:scale-110 hover:bg-primary transition-all duration-200 cursor-pointer backdrop-blur-xs"
+          className="absolute z-20 w-12 h-12 rounded-full bg-primary/90 text-on-primary flex items-center justify-center shadow-lg hover:scale-110 hover:bg-primary transition-all duration-200 cursor-pointer backdrop-blur-xs"
         >
-          <span className="material-symbols-outlined text-[36px] ml-1">
+          <span className="material-symbols-outlined text-[28px] ml-0.5">
             {isPlaying ? 'pause' : 'play_arrow'}
           </span>
         </button>
@@ -202,7 +252,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Barra de Controles Inferior com Gradiente Espectro */}
       <div
-        className={`absolute bottom-0 inset-x-0 pt-8 pb-3 px-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 flex flex-col gap-2 transition-opacity duration-300 ${
+        className={`absolute bottom-0 inset-x-0 pt-6 pb-2 px-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 flex flex-col gap-1.5 transition-opacity duration-300 ${
           showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -210,41 +260,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div
           ref={progressBarRef}
           onClick={handleSeek}
-          className="relative w-full h-1.5 bg-white/20 hover:h-2.5 rounded-full cursor-pointer transition-all flex items-center group/progress"
+          className="relative w-full h-1 bg-white/20 hover:h-2 rounded-full cursor-pointer transition-all flex items-center group/progress"
         >
           <div
             className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-tertiary-container relative"
             style={{ width: `${progressPercent}%` }}
           >
             {/* Knob interativo no hover */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md scale-0 group-hover/progress:scale-100 transition-transform" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm scale-0 group-hover/progress:scale-100 transition-transform" />
           </div>
         </div>
 
         {/* Linha de Controles: Botões e Timers */}
-        <div className="flex items-center justify-between text-white text-xs">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between text-white text-[11px]">
+          <div className="flex items-center gap-2">
             {/* Play/Pause */}
             <button
               type="button"
               onClick={togglePlay}
-              className="p-1 rounded-lg hover:bg-white/20 transition-colors flex items-center cursor-pointer"
+              className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
               title={isPlaying ? 'Pausar (Espaço)' : 'Reproduzir (Espaço)'}
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span className="material-symbols-outlined text-[17px]">
                 {isPlaying ? 'pause' : 'play_arrow'}
               </span>
             </button>
 
             {/* Mudo / Volume */}
-            <div className="flex items-center gap-1.5 group/volume">
+            <div className="flex items-center gap-1 group/volume">
               <button
                 type="button"
                 onClick={toggleMute}
-                className="p-1 rounded-lg hover:bg-white/20 transition-colors flex items-center cursor-pointer"
+                className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
                 title={isMuted ? 'Ativar som' : 'Desativar som'}
               >
-                <span className="material-symbols-outlined text-[20px]">
+                <span className="material-symbols-outlined text-[17px]">
                   {isMuted || volume === 0 ? 'volume_off' : volume < 0.5 ? 'volume_down' : 'volume_up'}
                 </span>
               </button>
@@ -255,30 +305,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 step="0.05"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-16 h-1 bg-white/30 rounded-lg accent-primary cursor-pointer hidden group-hover/volume:block transition-all"
+                className="w-12 h-1 bg-white/30 rounded-lg accent-primary cursor-pointer hidden group-hover/volume:block transition-all"
               />
             </div>
 
             {/* Timestamp */}
-            <span className="text-[11px] font-medium tracking-wide text-white/80">
+            <span className="text-[10px] font-medium tracking-wide text-white/80">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Tag HD */}
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/20 text-white/90">
-              1080p
-            </span>
-
+          <div className="flex items-center gap-1.5">
             {/* Tela Cheia */}
             <button
               type="button"
               onClick={toggleFullscreen}
-              className="p-1 rounded-lg hover:bg-white/20 transition-colors flex items-center cursor-pointer"
+              className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
               title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
-              <span className="material-symbols-outlined text-[20px]">
+              <span className="material-symbols-outlined text-[17px]">
                 {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
               </span>
             </button>
