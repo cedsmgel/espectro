@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
+import { useSidebar } from '../context/SidebarContext';
 import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 
 export const DirectMessages: React.FC = () => {
+  const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
 
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -79,7 +81,11 @@ export const DirectMessages: React.FC = () => {
       <Header />
       <SidebarNav />
 
-      <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
+      <div
+        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        }`}
+      >
         <main className="w-full flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
           <div className="flex flex-1 w-full h-full overflow-hidden bg-surface">
             {/* COLUNA 1: Diretório Direct */}

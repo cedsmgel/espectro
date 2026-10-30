@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
+import { useSidebar } from '../context/SidebarContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
 
@@ -10,6 +11,8 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
+  const { toggleSidebar } = useSidebar();
+  const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -39,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onToggleSidebar}
+              onClick={handleToggle}
               aria-label="Abrir ou fechar menu de navegação"
               className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
             >
@@ -148,15 +151,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 </button>
 
                 {/* Botão Notificações */}
-                <button
-                  type="button"
+                <Link
+                  to="/notificacoes"
                   aria-label="Ver notificações"
                   className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[22px]">notifications</span>
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary" />
-                </button>
+                </Link>
 
                 <div className="h-6 w-px bg-outline-variant/40 mx-0.5 hidden sm:block" />
 

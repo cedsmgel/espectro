@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { postsApi, communitiesApi, Post, Community, CreatePostData, authStorage } from '../lib/api';
+import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
@@ -12,6 +13,7 @@ import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -136,8 +138,12 @@ export const Feed: React.FC = () => {
       {/* 2. Barra Lateral Compacta (72px) */}
       <SidebarNav />
 
-      {/* 3. Container Principal Expandido */}
-      <div className="pl-0 md:pl-[72px] pt-16 min-h-screen flex flex-col justify-between">
+      {/* 3. Container Principal Expandido com transição suave */}
+      <div
+        className={`pt-16 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        }`}
+      >
         <main className="w-full bg-surface py-6">
           <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

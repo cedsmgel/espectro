@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
+import { useSidebar } from '../context/SidebarContext';
 import { Post, authStorage } from '../lib/api';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { VideoSkeleton } from '../components/VideoSkeleton';
@@ -8,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 
 export const Videos: React.FC = () => {
+  const { isExpanded } = useSidebar();
   const [videos, setVideos] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -60,7 +62,11 @@ export const Videos: React.FC = () => {
       <Header />
       <SidebarNav />
 
-      <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
+      <div
+        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        }`}
+      >
         {/* Interactive Pill Filter Bar */}
         <section className="sticky top-16 z-30 bg-surface/95 backdrop-blur-md py-3 px-4 md:px-8 border-b border-outline-variant/30">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">

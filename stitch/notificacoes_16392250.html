@@ -1,0 +1,560 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"tertiary":"#00505f","on-secondary-container":"#fffbff","surface-container":"#eaedff","on-secondary-fixed-variant":"#5a00c6","primary-fixed":"#e2dfff","outline-variant":"#c7c4d8","surface-bright":"#faf8ff","tertiary-fixed":"#acedff","surface-container-low":"#f2f3ff","tertiary-container":"#006a7c","inverse-on-surface":"#eef0ff","outline":"#777587","tertiary-fixed-dim":"#4cd7f6","primary-fixed-dim":"#c3c0ff","inverse-surface":"#283044","on-primary":"#ffffff","secondary":"#712ae2","on-primary-fixed-variant":"#3323cc","error":"#ba1a1a","on-error-container":"#93000a","on-tertiary-container":"#93e8ff","on-surface-variant":"#464555","surface-variant":"#dae2fd","secondary-fixed-dim":"#d2bbff","on-secondary-fixed":"#25005a","surface-container-lowest":"#ffffff","on-tertiary":"#ffffff","on-surface":"#131b2e","on-tertiary-fixed-variant":"#004e5c","primary-container":"#4f46e5","surface-container-highest":"#dae2fd","surface":"#faf8ff","on-background":"#131b2e","secondary-container":"#8a4cfc","on-secondary":"#ffffff","on-tertiary-fixed":"#001f26","error-container":"#ffdad6","background":"#faf8ff","inverse-primary":"#c3c0ff","on-primary-fixed":"#0f0069","on-primary-container":"#dad7ff","surface-container-high":"#e2e7ff","surface-dim":"#d2d9f4","surface-tint":"#4d44e3","on-error":"#ffffff","primary":"#3525cd","secondary-fixed":"#eaddff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"gutter-desktop":"1.5rem","space-sm":"0.5rem","margin-desktop":"2rem","space-xs":"0.25rem","margin-tablet":"1.5rem","space-xl":"2rem","space-lg":"1.5rem","margin":"1rem","gutter":"1rem","space-md":"1rem"},fontFamily:{"headline-md":["Inter"],"title-sm":["Inter"],"headline-sm":["Inter"],"headline-lg":["Inter"],"label-lg":["Inter"],"body-md":["Inter"],"display-lg":["Inter"],"label-sm":["Inter"],"body-lg":["Inter"],"title-lg":["Inter"],"body-sm":["Inter"],"title-md":["Inter"],"label-md":["Inter"],"headline-lg-mobile":["Inter"]},fontSize:{"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"700"}],"title-sm":["14px",{"lineHeight":"20px","fontWeight":"600"}],"headline-sm":["20px",{"lineHeight":"28px","letterSpacing":"-0.005em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.015em","fontWeight":"700"}],"label-lg":["14px",{"lineHeight":"20px","fontWeight":"500"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-lg":["56px",{"lineHeight":"64px","letterSpacing":"-0.02em","fontWeight":"800"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.04em","fontWeight":"600"}],"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"title-lg":["18px",{"lineHeight":"24px","fontWeight":"600"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"title-md":["16px",{"lineHeight":"22px","fontWeight":"600"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"600"}],"headline-lg-mobile":["26px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"700"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 left-0 right-0 w-full z-50 bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full px-gutter-desktop flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-sm"><button aria-label="Menu" class="p-space-xs rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors flex items-center justify-center"><span class="material-symbols-outlined text-[24px]">menu</span></button><a class="flex items-center gap-space-xs text-primary" data-path="inicio" href="#"><span class="material-symbols-outlined text-[28px]">grain</span><span class="font-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Espectro</span></a></div><div class="flex-1 max-w-xl mx-auto px-space-md"><div class="relative flex items-center w-full"><span class="material-symbols-outlined absolute left-space-md text-on-surface-variant pointer-events-none text-[20px]">search</span><input class="w-full h-10 pl-10 pr-space-md bg-surface-container-low text-on-surface placeholder:text-outline rounded-full outline-none text-body-md font-body-md focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Pesquisar tópicos, pessoas ou comunidades..." type="search"></div></div><div class="flex items-center gap-space-sm"><button class="h-9 px-space-md rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-space-xs hover:bg-primary-container transition-colors shadow-[0_1px_4px_rgba(53,37,205,0.2)]"><span class="material-symbols-outlined text-[18px]">add</span><span class="hidden sm:inline">Criar</span></button><a aria-label="Notificações" class="relative p-space-xs rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors flex items-center justify-center" data-path="notificacoes" href="#"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span></a><a aria-label="Mensagens" class="p-space-xs rounded-full text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors flex items-center justify-center" data-path="mensagens" href="#"><span class="material-symbols-outlined text-[22px]">chat_bubble</span></a><div class="flex items-center gap-space-xs pl-space-xs"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><span class="hidden md:inline font-title-sm text-title-sm text-on-surface">Gabriel</span></div></div></div></header><aside class="fixed left-0 top-16 bottom-0 w-16 bg-surface-container-lowest z-40 flex flex-col items-center py-space-md gap-space-sm shadow-[1px_0_8px_rgba(0,0,0,0.02)]"><div class="w-10 h-10 mb-space-xs"><button aria-label="Nova Publicação" class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm"><span class="material-symbols-outlined text-[20px]">edit</span></button></div><nav class="flex-1 flex flex-col items-center gap-space-xs w-full px-space-xs" data-active-classes="bg-primary-container text-on-primary-container rounded-lg"><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="em-alta" href="#" title="Em Alta"><span class="material-symbols-outlined text-[22px]">trending_up</span></a><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="comunidades" href="#" title="Comunidades"><span class="material-symbols-outlined text-[22px]">groups</span></a><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="videos" href="#" title="Vídeos"><span class="material-symbols-outlined text-[22px]">smart_display</span></a><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="salvos" href="#" title="Salvos"><span class="material-symbols-outlined text-[22px]">bookmark</span></a><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="perfil" href="#" title="Perfil"><span class="material-symbols-outlined text-[22px]">account_circle</span></a></nav><div class="pt-space-xs"><a class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="configuracoes" href="#" title="Configurações"><span class="material-symbols-outlined text-[20px]">settings</span></a></div></aside><div class="pl-16"><main class="w-full pt-16 bg-surface min-h-[calc(100vh-4rem)]"><div class="flex flex-col w-full">
+<div class="w-full max-w-7xl mx-auto px-margin sm:px-margin-tablet lg:px-margin-desktop py-space-lg">
+<!-- Top Bar: Title & Global Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md mb-space-lg">
+<div class="flex items-center gap-space-sm">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Notificações</h1>
+<span class="inline-flex items-center px-space-sm py-0.5 rounded-full bg-primary-container text-on-primary font-label-md text-label-md shadow-sm">
+          8 novas
+        </span>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="h-9 px-space-md rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md flex items-center gap-space-xs transition-colors shadow-sm" id="mark-all-read-btn">
+<span class="material-symbols-outlined text-[18px] text-primary">done_all</span>
+<span class="">Marcar todas como lidas</span>
+</button>
+<button class="w-9 h-9 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors shadow-sm" title="Configurações de alerta">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</div>
+<!-- Filter Pills Navigation -->
+<div class="flex items-center gap-space-xs overflow-x-auto pb-space-sm mb-space-lg no-scrollbar">
+<button class="filter-chip h-8 px-space-md rounded-full bg-primary text-on-primary font-label-md text-label-md flex items-center gap-space-xs whitespace-nowrap shadow-sm transition-all" data-filter="all">
+<span class="">Todas</span>
+<span class="px-1.5 py-0.2 rounded-full bg-primary-container text-on-primary-container text-label-sm font-label-sm">8</span>
+</button>
+<button class="filter-chip h-8 px-space-md rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface font-label-md text-label-md flex items-center gap-space-xs whitespace-nowrap transition-all" data-filter="mentions">
+<span class="material-symbols-outlined text-[16px]">alternate_email</span>
+<span class="">Menções &amp; Respostas</span>
+</button>
+<button class="filter-chip h-8 px-space-md rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface font-label-md text-label-md flex items-center gap-space-xs whitespace-nowrap transition-all" data-filter="communities">
+<span class="material-symbols-outlined text-[16px]">groups</span>
+<span class="">Comunidades e/</span>
+</button>
+<button class="filter-chip h-8 px-space-md rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface font-label-md text-label-md flex items-center gap-space-xs whitespace-nowrap transition-all" data-filter="reactions">
+<span class="material-symbols-outlined text-[16px]">favorite</span>
+<span class="">Reações &amp; Votos</span>
+</button>
+<button class="filter-chip h-8 px-space-md rounded-full bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface font-label-md text-label-md flex items-center gap-space-xs whitespace-nowrap transition-all" data-filter="videos">
+<span class="material-symbols-outlined text-[16px]">smart_display</span>
+<span class="">Transmissões &amp; Vídeos</span>
+</button>
+</div>
+<!-- Main Layout: Notification Feed (Left) + Contextual Rail (Right) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Primary Notifications Stream (8 cols) -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<!-- GROUP: HOJE -->
+<section class="flex flex-col gap-space-md">
+<div class="flex items-center justify-between px-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="font-title-sm text-title-sm text-on-surface uppercase tracking-wider">Hoje</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">5 novas</span>
+</div>
+<!-- Notification 1: Mention in Community (UNREAD) -->
+<article class="notification-item unread group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm">
+<div class="absolute left-3 top-5 w-2 h-2 rounded-full bg-primary unread-dot"></div>
+<div class="pl-4 flex items-start gap-space-md">
+<!-- Avatar with Sub-badge -->
+<div class="relative shrink-0">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm" data-alt="Close-up portrait of Camila, a Brazilian female digital designer with shoulder-length curly dark hair and modern glasses, warm ambient studio light with subtle purple highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCD47js_YwuKhewszC6lUZR8pbWHoZ_nzp8UqCjIf4L7-rfgbu-WXdjj58yeeGDAmplnsUr0QFvByj-TGK9cgd2TiMiKFeOx3bzeOGgUMI_4n2JAoWuPCH5dSEXHqw26wjVw4PxHEr0S2vAJL7dWkXd7LYz-LJj3B-d2ARyI9VGR03zrQ3VVbS2uyxeb2tFnI3LAiQY4iX5UoiVjewLzk51cH_o79svWxsVB36cWRI">
+<div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shadow">
+<span class="material-symbols-outlined text-[12px]">alternate_email</span>
+</div>
+</div>
+<!-- Content Body -->
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+<strong class="font-title-sm text-title-sm text-on-surface">Camila Brandão</strong> 
+                    mencionou você em 
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm">e/DesignSystem &amp; UI</span>
+</p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">há 12 min</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors" title="Opções">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Comment Quote Box -->
+<div class="mt-space-xs p-space-sm rounded-lg bg-surface-container-low text-on-surface-variant font-body-sm text-body-sm">
+                  “Gabriel, dá uma olhada na nova documentação de tokens com o tom espectral ultravioleta! Ficou excelente a hierarquia das bordas suaves.”
+                </div>
+<!-- Quick Actions -->
+<div class="mt-space-sm flex items-center gap-space-sm">
+<button class="h-8 px-space-md rounded-lg bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-space-xs hover:bg-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">reply</span>
+<span class="">Responder</span>
+</button>
+<button class="h-8 px-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high font-label-sm text-label-sm flex items-center gap-space-xs transition-colors">
+<span class="material-symbols-outlined text-[16px]">bookmark_add</span>
+<span class="">Salvar discussão</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Notification 2: Milestone / Upvotes (UNREAD) -->
+<article class="notification-item unread group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm">
+<div class="absolute left-3 top-5 w-2 h-2 rounded-full bg-primary unread-dot"></div>
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<div class="w-11 h-11 rounded-full bg-tertiary-fixed flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[24px]">local_fire_department</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+                    Sua publicação em 
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm">e/programacao</span> 
+                    atingiu <strong class="text-primary font-title-sm">500 upvotes! 🔥</strong>
+</p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">há 1 hora</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Mini Embedded Card -->
+<div class="mt-space-xs p-space-sm rounded-lg bg-surface-container-low flex items-center justify-between gap-space-md">
+<div class="min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface truncate block">Arquitetura de microsserviços com filas orientadas a eventos</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant block mt-0.5">512 votos • 89 comentários na discussão</span>
+</div>
+<div class="shrink-0 flex items-center gap-1 px-space-sm py-1 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+<span class="">+500</span>
+</div>
+</div>
+</div>
+</div>
+</article>
+<!-- Notification 3: Video Publish (UNREAD) -->
+<article class="notification-item unread group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm">
+<div class="absolute left-3 top-5 w-2 h-2 rounded-full bg-primary unread-dot"></div>
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm" data-alt="Avatar icon badge for the technology community Sintaxe Livre, circular minimal geometric monogram in vibrant indigo with white typographic ligature." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgZzKfigJD57CGZCJVvbe7-H9Mi_aQ4mnpO2fmhCTLIRMKVLeQ--GQMzd3pQu8T_nIajccNr_aK6mw0c_boVhcfkvC74sYOtGVzeJHQk4z78AgTeRHz6kEQRqA6jcL0bUSqA-mYrxP0DE_3Qi69kmZpXJH_lBHiSV4VMuwukif6UeYmLFdLs4AOaUCrVAWMr_Ex7nGwwALFmk-atg2UWhAEJhLiP92NIySNJv0muk">
+<div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shadow">
+<span class="material-symbols-outlined text-[12px]">smart_display</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+                    O canal <strong class="font-title-sm text-title-sm text-on-surface">Sintaxe Livre</strong> publicou um novo clipe no Espectro Play
+                  </p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">há 2 horas</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Video Thumbnail Preview -->
+<div class="mt-space-xs flex flex-col sm:flex-row gap-space-sm p-space-sm rounded-lg bg-surface-container-low">
+<div class="relative w-full sm:w-44 aspect-video rounded-lg overflow-hidden shrink-0 shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Computer screen displaying colorful neon GLSL code inside a dark code editor with a real-time glowing 3D shader preview rendered beside it." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGZEhvfoa5pS4KBXxBu5mmJ8YUuEemdIgEbOWw7bc59wdPWND_p8sNsOa_ZGZAp4f21851pUALigXkIBRYEvKAVuQXne8C-lOeIH-JSIS6HXe9FNspqzUIsu4xdFjC_2lGJKcN_KBDe-JuOEdsKp9h_fhKiAxpqjok0-nzkwNeUn3QAuTAYYArZQV98q6rT3oVyJxycsZr_XX6BWOPIZU_MVm-lz4qxG6q0DJFzwA">
+<div class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-on-surface/80 text-surface text-label-sm font-label-sm">
+                      04:22
+                    </div>
+</div>
+<div class="flex flex-col justify-between py-1">
+<div>
+<h4 class="font-title-sm text-title-sm text-on-surface leading-snug">Shader com Three.js em 45 linhas sem boilerplate</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1 line-clamp-2">Aprenda a orquestrar fragment shaders dinâmicos reagindo a ponteiros no navegador.</p>
+</div>
+<div class="mt-2 flex items-center gap-space-sm">
+<button class="h-7 px-space-sm rounded bg-primary text-on-primary font-label-sm text-label-sm flex items-center gap-1 hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+<span class="">Assistir agora</span>
+</button>
+<button class="h-7 px-space-sm rounded text-on-surface-variant hover:bg-surface-container-high font-label-sm text-label-sm flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[16px]">watch_later</span>
+<span class="">Mais tarde</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</article>
+<!-- Notification 4: New Follower (UNREAD) -->
+<article class="notification-item unread group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm">
+<div class="absolute left-3 top-5 w-2 h-2 rounded-full bg-primary unread-dot"></div>
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm" data-alt="Headshot of Lucas, an enthusiastic young developer smiling outdoors with modern architectural glass structures softly blurred in the background, cool lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwyHFXWdCaWyhun8qFjIOvlsf_s2Vh0suL7yN6jADk9Am6EGXKpzktCJ8M5HCl3MHoqPdsKUYOGMb7aJEjrI8zAqcMpbb-5ZUJvgRZ9Nuo0BAZrnv85MN2WKNLEnmYq5meMUiklYqbIUkA76vCnA7LGjlcydKXgdnrje3WElGJ6Ce4pOhDvd1jOknONQ3NFpzE0oyVWuTNDvsbgyqGx8QAWBZhH37cyYlK1ySiHzU">
+<div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary text-on-primary flex items-center justify-center shadow">
+<span class="material-symbols-outlined text-[12px]">person_add</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<div>
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+<strong class="font-title-sm text-title-sm text-on-surface">Lucas Silveira</strong> 
+                      começou a seguir você e seu canal de clipes.
+                    </p>
+<span class="font-body-sm text-body-sm text-outline">@lucassilv • 1.4k seguidores</span>
+</div>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">há 3 horas</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<div class="mt-space-sm flex items-center gap-space-sm">
+<button class="h-8 px-space-md rounded-lg bg-surface text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm flex items-center gap-space-xs shadow-sm transition-colors">
+<span class="material-symbols-outlined text-[16px] text-primary">person_add</span>
+<span class="">Seguir de volta</span>
+</button>
+<button class="h-8 px-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high font-label-sm text-label-sm flex items-center gap-space-xs transition-colors">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+<span class="">Mensagem</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Notification 5: Direct Message Reaction (UNREAD) -->
+<article class="notification-item unread group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm">
+<div class="absolute left-3 top-5 w-2 h-2 rounded-full bg-primary unread-dot"></div>
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm" data-alt="Portrait of Mariana Costa smiling gently, natural daylight, minimalist modern indoor workspace with indoor plants and soft bokeh." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3mzDBRBJlu1pNqpptwh_vI9Vj_ffIeHpX5QoccYlYEhGJYIdWYhCZRtRqXEsGbRGCiGBu89sDYr6x3Okf2rZMDXBwR1r0Jgim8knw-tGtFNHDeEO9Zldfm5pVYn3lFX4uMM1EvjtPuaHf1KXIA38E-PHkYRXt-bWnkBlt4oBw5gUi8bszwkt_1ff5PyFyNYVhieu8BRRrmeWYPInu2MSBZ9MZcTsszX_D3SlX1iM">
+<div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-error text-on-error flex items-center justify-center shadow">
+<span class="material-symbols-outlined text-[12px]">favorite</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+<strong class="font-title-sm text-title-sm text-on-surface">Mariana Costa</strong> 
+                    reagiu com ❤️ à sua mensagem de áudio no Direct.
+                  </p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">há 5 horas</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<div class="mt-space-xs p-space-sm rounded-lg bg-surface-container-low flex items-center gap-space-sm w-fit">
+<span class="material-symbols-outlined text-primary text-[20px]">mic</span>
+<span class="font-label-sm text-label-sm text-on-surface">Mensagem de voz (0:48)</span>
+</div>
+</div>
+</div>
+</article>
+</section>
+<!-- GROUP: ONTEM -->
+<section class="flex flex-col gap-space-md mt-space-sm">
+<div class="flex items-center justify-between px-space-xs">
+<span class="font-title-sm text-title-sm text-on-surface uppercase tracking-wider">Ontem</span>
+<span class="font-label-sm text-label-sm text-outline">2 notificações</span>
+</div>
+<!-- Notification 6: Community Promotion (READ) -->
+<article class="notification-item read group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm opacity-90 hover:opacity-100">
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<div class="w-11 h-11 rounded-full bg-secondary-fixed flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-on-secondary-fixed text-[24px]">verified_user</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+                    Você foi promovido a <strong>Moderador Colaborador</strong> na comunidade 
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm">e/tecnologia</span>.
+                  </p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">Ontem às 18:32</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+                  Agora você pode aprovar novos tópicos, organizar tags temáticas e moderar respostas na feed da comunidade.
+                </p>
+<div class="mt-space-sm flex items-center gap-space-sm">
+<button class="h-8 px-space-md rounded-lg bg-secondary text-on-secondary font-label-sm text-label-sm flex items-center gap-1 hover:bg-secondary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shield_person</span>
+<span class="">Painel de Moderação</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Notification 7: Discussion Thread Reply (READ) -->
+<article class="notification-item read group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm opacity-90 hover:opacity-100">
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<img class="w-11 h-11 rounded-full object-cover shadow-sm" data-alt="Portrait of Thiago, a modern systems engineer in a comfortable casual black sweater looking thoughtfully at screen reflections." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7hDHhaqzMYStXcW9AGFn_snKoxSFaJ0y3tjG_v58ggXwjWrgFh6jv3Dvfw0bbOvMdIPDoHHc1KUBI83M5jklF6W6mq-3MoxE7l6GDjhQVUOe2igxVLulNvEqsFxmI3vY80c5lLQHcaAWrl9jdLTKOFfIkYSa3agcyfmhzdNYqf7By44frBEZpmwQyLvO2iqkO9PB4Kd0dbN3TABlOtlXr1jaMEy4XUKXdraSMpmI">
+<div class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center shadow">
+<span class="material-symbols-outlined text-[12px]">forum</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+<strong class="font-title-sm text-title-sm text-on-surface">Thiago Mendes</strong> 
+                    respondeu ao seu tópico em 
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface font-label-sm text-label-sm">e/devops</span>
+</p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">Ontem às 11:15</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<div class="mt-space-xs p-space-sm rounded-lg bg-surface-container-low text-on-surface-variant font-body-sm text-body-sm">
+                  “Consegui reproduzir a esteira CI/CD usando sua dica de cache granular. Reduziu o tempo de build em 62%!”
+                </div>
+</div>
+</div>
+</article>
+</section>
+<!-- GROUP: ESTA SEMANA -->
+<section class="flex flex-col gap-space-md mt-space-sm">
+<div class="flex items-center justify-between px-space-xs">
+<span class="font-title-sm text-title-sm text-on-surface uppercase tracking-wider">Esta Semana</span>
+<span class="font-label-sm text-label-sm text-outline">1 notificação</span>
+</div>
+<!-- Notification 8: Community Broadcast (READ) -->
+<article class="notification-item read group relative bg-surface-container-lowest hover:bg-surface-container-low transition-all duration-200 rounded-xl p-space-md shadow-sm opacity-90 hover:opacity-100">
+<div class="pl-4 flex items-start gap-space-md">
+<div class="relative shrink-0">
+<div class="w-11 h-11 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[24px]">campaign</span>
+</div>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-start justify-between gap-space-sm mb-1">
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+                    Transmissão agendada na comunidade <strong>e/DesignSystem &amp; UI</strong>: <em>Workshop de Design Tokens 2.0</em>.
+                  </p>
+<div class="flex items-center gap-space-xs shrink-0">
+<span class="font-body-sm text-body-sm text-outline">Terça-feira</span>
+<button class="w-7 h-7 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container-high flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                  O evento ao vivo começa nesta quinta às 19h00 (Horário de Brasília).
+                </p>
+</div>
+</div>
+</article>
+</section>
+<!-- End of list / Load More -->
+<div class="py-space-md text-center">
+<button class="h-10 px-space-xl rounded-full bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-label-md text-label-md transition-colors inline-flex items-center gap-space-xs shadow-sm">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span class="">Carregar notificações anteriores</span>
+</button>
+</div>
+</div>
+<!-- Right Contextual Rail: Widgets & Controls (4 cols) -->
+<aside class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Widget 1: Notification Preferences Toggles -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
+<h2 class="font-title-md text-title-md text-on-surface">Preferências Rápidas</h2>
+</div>
+<a class="text-primary hover:underline font-label-sm text-label-sm" href="#">Mais</a>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Push Desktop -->
+<label class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-on-surface">Push no Desktop</span>
+<span class="font-body-sm text-body-sm text-outline">Avisos imediatos no navegador</span>
+</div>
+<input checked="" class="w-5 h-5 accent-primary cursor-pointer" type="checkbox">
+</label>
+<!-- Sound Alerts -->
+<label class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-on-surface">Sons de Alerta</span>
+<span class="font-body-sm text-body-sm text-outline">Reproduzir bipe suave em menções</span>
+</div>
+<input checked="" class="w-5 h-5 accent-primary cursor-pointer" type="checkbox">
+</label>
+<!-- Email Digest -->
+<label class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex flex-col">
+<span class="font-title-sm text-title-sm text-on-surface">Resumo por E-mail</span>
+<span class="font-body-sm text-body-sm text-outline">Digest semanal aos domingos</span>
+</div>
+<input class="w-5 h-5 accent-primary cursor-pointer" type="checkbox">
+</label>
+</div>
+</div>
+<!-- Widget 2: Weekly Engagement Summary (SVG Infographic) -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-secondary text-[20px]">insights</span>
+<h2 class="font-title-md text-title-md text-on-surface">Resumo Semanal</h2>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-bold">+24% vs. anterior</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Upvotes totais</span>
+<span class="font-headline-sm text-headline-sm text-primary mt-1 font-bold">+1.240</span>
+</div>
+<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Respostas</span>
+<span class="font-headline-sm text-headline-sm text-secondary mt-1 font-bold">48</span>
+</div>
+</div>
+<!-- Inline SVG Activity Mini Sparkline -->
+<div class="flex flex-col gap-1 pt-space-xs">
+<span class="font-label-sm text-label-sm text-outline">Ritmo de Interações diárias</span>
+<div class="w-full h-16 bg-surface-container-low rounded-lg p-2 flex items-center justify-center">
+<svg class="w-full h-full text-primary" fill="none" viewBox="0 0 280 48">
+<path d="M5 38 L45 28 L90 32 L135 12 L180 22 L225 6 L275 14" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<circle cx="225" cy="6" fill="currentColor" r="3.5"></circle>
+<path d="M5 38 L45 28 L90 32 L135 12 L180 22 L225 6 L275 14 L275 48 L5 48 Z" fill="currentColor" fill-opacity="0.08"></path>
+</svg>
+</div>
+<div class="flex justify-between text-label-sm text-outline px-1">
+<span class="">Seg</span>
+<span class="">Ter</span>
+<span class="">Qua</span>
+<span class="">Qui</span>
+<span class="">Sex</span>
+<span class="">Sáb</span>
+<span class="">Dom</span>
+</div>
+</div>
+</div>
+<!-- Widget 3: Most Active Communities User Follows -->
+<div class="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary-container text-[20px]">forum</span>
+<h2 class="font-title-md text-title-md text-on-surface">Comunidades Ativas</h2>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Hoje</span>
+</div>
+<div class="flex flex-col divide-y-0 gap-space-xs">
+<a class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0 font-label-md text-label-md">
+                  e/
+                </div>
+<div class="min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface block truncate group-hover:text-primary transition-colors">e/DesignSystem &amp; UI</span>
+<span class="font-body-sm text-body-sm text-outline block">14.8k membros</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold shrink-0">
+                +12 tópicos
+              </span>
+</a>
+<a class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center shrink-0 font-label-md text-label-md">
+                  e/
+                </div>
+<div class="min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface block truncate group-hover:text-primary transition-colors">e/programacao</span>
+<span class="font-body-sm text-body-sm text-outline block">32.1k membros</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold shrink-0">
+                +28 tópicos
+              </span>
+</a>
+<a class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center shrink-0 font-label-md text-label-md">
+                  e/
+                </div>
+<div class="min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface block truncate group-hover:text-primary transition-colors">e/tecnologia</span>
+<span class="font-body-sm text-body-sm text-outline block">58.4k membros</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold shrink-0">
+                +9 tópicos
+              </span>
+</a>
+<a class="flex items-center justify-between p-space-sm rounded-lg hover:bg-surface-container-low transition-colors group" href="#">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center shrink-0 font-label-md text-label-md">
+                  e/
+                </div>
+<div class="min-w-0">
+<span class="font-title-sm text-title-sm text-on-surface block truncate group-hover:text-primary transition-colors">e/devops</span>
+<span class="font-body-sm text-body-sm text-outline block">8.9k membros</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-semibold shrink-0">
+                +5 tópicos
+              </span>
+</a>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    // Interactivity: Mark all as read
+    const markAllBtn = document.getElementById('mark-all-read-btn');
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', function() {
+        const unreadItems = document.querySelectorAll('.notification-item.unread');
+        unreadItems.forEach(item => {
+          item.classList.remove('unread');
+          item.classList.add('read', 'opacity-90');
+          const dot = item.querySelector('.unread-dot');
+          if (dot) dot.remove();
+        });
+        
+        // Update unread count indicator
+        const badge = document.querySelector('h1 + span');
+        if (badge) {
+          badge.textContent = '0 novas';
+          badge.classList.remove('bg-primary-container', 'text-on-primary');
+          badge.classList.add('bg-surface-container-high', 'text-outline');
+        }
+      });
+    }
+
+    // Interactivity: Filter chips styling toggle
+    const chips = document.querySelectorAll('.filter-chip');
+    chips.forEach(chip => {
+      chip.addEventListener('click', function() {
+        chips.forEach(c => {
+          c.classList.remove('bg-primary', 'text-on-primary');
+          c.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+        });
+        this.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+        this.classList.add('bg-primary', 'text-on-primary');
+      });
+    });
+  })();
+</script></main></div>
+
+</body></html>

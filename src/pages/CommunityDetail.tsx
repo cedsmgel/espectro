@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { communitiesApi, postsApi, Community, Post, CreatePostData, authStorage } from '../lib/api';
+import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreatePostForm } from '../components/CreatePostForm';
@@ -19,6 +20,7 @@ interface CommunityMember {
 
 export const CommunityDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
 
   const [community, setCommunity] = useState<Community | null>(null);
@@ -231,7 +233,11 @@ export const CommunityDetail: React.FC = () => {
         </div>
       )}
 
-      <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
+      <div
+        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        }`}
+      >
         <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
           <section className="flex flex-col gap-6 max-w-4xl mx-auto min-w-0">
             {loading ? (

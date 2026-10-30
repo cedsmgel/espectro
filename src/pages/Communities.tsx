@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { communitiesApi, Community, authStorage } from '../lib/api';
+import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
@@ -9,6 +10,7 @@ import { ErrorState } from '../components/ErrorState';
 
 export const Communities: React.FC = () => {
   const navigate = useNavigate();
+  const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
 
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -51,7 +53,11 @@ export const Communities: React.FC = () => {
       <Header />
       <SidebarNav />
 
-      <div className="pl-0 md:pl-[72px] pt-16 flex-1 flex flex-col">
+      <div
+        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        }`}
+      >
         <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
           <section className="flex flex-col gap-6 max-w-5xl mx-auto min-w-0">
             {/* Header Banner */}
