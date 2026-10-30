@@ -232,16 +232,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete }) =>
           </p>
         )}
 
-        {/* Mídia Principal: Player de Vídeo Widescreen 16:9 ou Imagem */}
+        {/* Mídia Principal: Player de Vídeo Compacto 16:9 ou Imagem (limite max-w-[600px] estilo Reddit/X) */}
         {post.media_url && (
           post.media_type === 'video' ||
           /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
           post.media_url.includes('/videos/') ? (
-            <div className="mt-1">
+            <div className="mt-1 w-full max-w-[600px] mx-auto">
               <VideoPlayer src={post.media_url} title={post.title || undefined} />
             </div>
           ) : (
-            <div className="relative w-full rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-96 mt-1">
+            <div className="relative w-full max-w-[600px] mx-auto rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-96 mt-1">
               <img
                 src={post.media_url}
                 alt="Mídia da postagem"

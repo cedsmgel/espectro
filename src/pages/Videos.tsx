@@ -209,7 +209,7 @@ export const Videos: React.FC = () => {
               </span>
             </div>
 
-            <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col">
+            <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden flex flex-col w-full max-w-[600px] mx-auto">
               {/* 16:9 Custom Widescreen Player */}
               <div className="relative w-full aspect-video bg-inverse-surface overflow-hidden group select-none">
                 <div className="absolute inset-0 bg-gradient-to-tr from-indigo-950 via-slate-900 to-purple-950 flex items-center justify-center">
@@ -338,7 +338,7 @@ export const Videos: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recommendedVideos.map((video) => (
-                <div key={video.id} className="flex flex-col gap-2.5 group cursor-pointer">
+                <div key={video.id} className="flex flex-col gap-2.5 group cursor-pointer w-full max-w-[600px] mx-auto">
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-surface-container shadow-xs group-hover:shadow-md transition-all">
                     <div className={`w-full h-full bg-gradient-to-tr ${video.bgGradient} flex items-center justify-center text-white/40 group-hover:scale-105 transition-transform duration-500`}>
                       <span className="material-symbols-outlined text-[48px]">play_circle</span>

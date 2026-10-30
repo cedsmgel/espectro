@@ -241,9 +241,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             </div>
 
             {mediaType === 'video' || /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(mediaUrl) || mediaUrl.includes('/videos/') ? (
-              <VideoPlayer src={mediaUrl} title="Prévia da publicação" />
+              <div className="w-full max-w-[600px] mx-auto">
+                <VideoPlayer src={mediaUrl} title="Prévia da publicação" />
+              </div>
             ) : (
-              <div className="relative rounded-xl overflow-hidden bg-surface-container aspect-video max-h-60 border border-outline-variant/30">
+              <div className="relative w-full max-w-[600px] mx-auto rounded-xl overflow-hidden bg-surface-container aspect-video max-h-60 border border-outline-variant/30">
                 <img
                   src={mediaUrl}
                   alt="Prévia de imagem"
