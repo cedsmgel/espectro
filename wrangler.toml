@@ -1,0 +1,11 @@
+name = "espectro"
+compatibility_date = "2026-10-30"
+pages_build_output_dir = "dist"
+
+[vars]
+JWT_SECRET = "troque-este-segredo"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "espectro-db"
+database_id = "SUBSTITUIR_PELO_ID_REAL"
