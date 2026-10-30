@@ -5,12 +5,13 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-// GET: lista os 50 posts mais recentes com autor, comunidade, mídia, votos e tipo
+// GET: lista os posts com filtros opcionais (community_id, community_slug, post_type)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
     const url = new URL(request.url);
     const communityId = url.searchParams.get("community_id");
+    const communitySlug = url.searchParams.get("community_slug");
     const postType = url.searchParams.get("post_type");
 
     let query = `
@@ -29,7 +30,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         u.avatar_url AS author_avatar,
         p.community_id,
         c.name AS community_name,
-        c.slug AS community_slug
+        c.slug AS community_slug,
+        (SELECT COUNT(1) FROM comments WHERE comments.post_id = p.id) AS comments_count
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN communities c ON p.community_id = c.id
@@ -41,6 +43,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (communityId) {
       query += ` AND p.community_id = ?`;
       params.push(Number(communityId));
+    }
+
+    if (communitySlug) {
+      query += ` AND c.slug = ?`;
+      params.push(communitySlug);
     }
 
     if (postType) {
@@ -60,7 +67,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 };
 
-// POST: cria um novo post autenticado (scrap ou discussion)
+// POST: cria um novo post autenticado ou computa voto (upvote / downvote)
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -73,9 +80,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     let body: {
+      action?: "create" | "vote";
+      post_id?: number;
+      vote_type?: "up" | "down";
       content?: string;
       title?: string;
       community_id?: number | null;
+      community_slug?: string | null;
       media_url?: string;
       media_type?: "image" | "video" | "gif" | null;
       post_type?: "discussion" | "scrap";
@@ -87,7 +98,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Corpo da requisição inválido. Esperado JSON.", 400);
     }
 
-    const { content, title, community_id, media_url, media_type, post_type } = body;
+    // Ação de Voto (Upvote / Downvote)
+    if (body.action === "vote" && body.post_id) {
+      const postId = Number(body.post_id);
+      const isUp = body.vote_type === "up";
+      const column = isUp ? "upvotes" : "downvotes";
+
+      await env.DB.prepare(`UPDATE posts SET ${column} = ${column} + 1 WHERE id = ?`)
+        .bind(postId)
+        .run();
+
+      const updated = await env.DB.prepare(
+        "SELECT id, upvotes, downvotes FROM posts WHERE id = ?"
+      )
+        .bind(postId)
+        .first();
+
+      return jsonResponse(updated || { id: postId });
+    }
+
+    // Criação de Post
+    const { content, title, community_id, community_slug, media_url, media_type, post_type } = body;
 
     if (!content || typeof content !== "string" || content.trim().length === 0) {
       return errorResponse("O conteúdo da postagem não pode ser vazio.", 400);
@@ -98,7 +129,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const cleanMediaUrl = media_url ? media_url.trim() : null;
     const cleanMediaType = media_type && ["image", "video", "gif"].includes(media_type) ? media_type : null;
     const cleanPostType = post_type === "discussion" ? "discussion" : "scrap";
-    const commId = community_id ? Number(community_id) : null;
+
+    let commId = community_id ? Number(community_id) : null;
+
+    // Se forneceu slug em vez de ID, resolve o community_id
+    if (!commId && community_slug) {
+      const commBySlug = await env.DB.prepare("SELECT id FROM communities WHERE slug = ?")
+        .bind(community_slug)
+        .first<{ id: number }>();
+      if (commBySlug) {
+        commId = commBySlug.id;
+      }
+    }
 
     // Se informou comunidade, valida se ela existe
     if (commId) {
@@ -149,12 +191,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         post_type: cleanPostType,
         upvotes: 0,
         downvotes: 0,
+        comments_count: 0,
         created_at: new Date().toISOString(),
       },
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao criar post.";
+    const message = err instanceof Error ? err.message : "Erro ao processar post.";
     return errorResponse(message, 500);
   }
 };

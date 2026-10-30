@@ -19,6 +19,7 @@ export interface Post {
   author_avatar?: string | null;
   community_name: string | null;
   community_slug?: string | null;
+  comments_count?: number;
 }
 
 export interface Community {
@@ -166,9 +167,10 @@ export const api = {
     authStorage.clear();
   },
 
-  async getPosts(filters?: { community_id?: number; post_type?: string }): Promise<Post[]> {
+  async getPosts(filters?: { community_id?: number; community_slug?: string; post_type?: string }): Promise<Post[]> {
     const params = new URLSearchParams();
     if (filters?.community_id) params.set('community_id', String(filters.community_id));
+    if (filters?.community_slug) params.set('community_slug', filters.community_slug);
     if (filters?.post_type) params.set('post_type', filters.post_type);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
@@ -178,6 +180,7 @@ export const api = {
     content: string;
     title?: string;
     community_id?: number | null;
+    community_slug?: string | null;
     media_url?: string;
     media_type?: 'image' | 'video' | 'gif' | null;
     post_type?: 'discussion' | 'scrap';
@@ -188,14 +191,39 @@ export const api = {
     });
   },
 
+  async votePost(postId: number, voteType: 'up' | 'down'): Promise<{ upvotes: number; downvotes: number }> {
+    return apiRequest<{ upvotes: number; downvotes: number }>('/api/posts', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'vote',
+        post_id: postId,
+        vote_type: voteType,
+      }),
+    });
+  },
+
   async getCommunities(): Promise<Community[]> {
     return apiRequest<Community[]>('/api/communities', { method: 'GET' });
+  },
+
+  async getCommunityBySlug(slug: string): Promise<Community> {
+    return apiRequest<Community>(`/api/communities?slug=${encodeURIComponent(slug)}`, { method: 'GET' });
   },
 
   async createCommunity(params: { name: string; slug?: string; description?: string }): Promise<Community> {
     return apiRequest<Community>('/api/communities', {
       method: 'POST',
       body: JSON.stringify(params),
+    });
+  },
+
+  async joinCommunity(params: { community_id?: number; community_slug?: string }): Promise<{ message: string }> {
+    return apiRequest<{ message: string }>('/api/communities', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'join',
+        ...params,
+      }),
     });
   },
 

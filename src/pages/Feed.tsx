@@ -1,46 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { api, authStorage, Post, Community, Comment } from '../lib/api';
+import { SidebarNav } from '../components/SidebarNav';
+import { ContactsWidget } from '../components/ContactsWidget';
+import { PostCard } from '../components/PostCard';
+import { CreatePostForm } from '../components/CreatePostForm';
+import { api, Community, Post } from '../lib/api';
 
 export const Feed: React.FC = () => {
-  const navigate = useNavigate();
-  const user = authStorage.getUser();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const typeFilter = searchParams.get('type'); // 'scrap' ou undefined
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingCommunities, setLoadingCommunities] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // New post form state
-  const [postType, setPostType] = useState<'scrap' | 'discussion'>('scrap');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [selectedCommunity, setSelectedCommunity] = useState<number | ''>('');
-  const [mediaUrl, setMediaUrl] = useState('');
-  const [mediaType, setMediaType] = useState<'image' | 'video' | 'gif' | ''>('');
-  const [showMediaInput, setShowMediaInput] = useState(false);
-  const [posting, setPosting] = useState(false);
-
-  // Comments state per post
-  const [activeCommentsPostId, setActiveCommentsPostId] = useState<number | null>(null);
-  const [commentsMap, setCommentsMap] = useState<Record<number, Comment[]>>({});
-  const [loadingComments, setLoadingComments] = useState<boolean>(false);
-  const [commentContent, setCommentContent] = useState('');
-  const [replyParentId, setReplyParentId] = useState<number | null>(null);
-  const [submittingComment, setSubmittingComment] = useState(false);
 
   const fetchPosts = async () => {
     try {
       setLoadingPosts(true);
-      setError(null);
-      const data = await api.getPosts();
+      const filters = typeFilter ? { post_type: typeFilter } : undefined;
+      const data = await api.getPosts(filters);
       setPosts(data);
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Falha ao carregar recados');
     } finally {
       setLoadingPosts(false);
     }
@@ -60,834 +44,78 @@ export const Feed: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
+  }, [typeFilter]);
+
+  useEffect(() => {
     fetchCommunities();
   }, []);
-
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
-
-    if (!user) {
-      setError('Você precisa estar logado para enviar recados!');
-      return;
-    }
-
-    try {
-      setPosting(true);
-      setError(null);
-      setSuccessMsg(null);
-
-      await api.createPost({
-        content: content.trim(),
-        title: title.trim() || undefined,
-        community_id: selectedCommunity ? Number(selectedCommunity) : null,
-        media_url: mediaUrl.trim() || undefined,
-        media_type: mediaType ? mediaType : undefined,
-        post_type: postType,
-      });
-
-      setContent('');
-      setTitle('');
-      setMediaUrl('');
-      setMediaType('');
-      setShowMediaInput(false);
-      setSuccessMsg(postType === 'discussion' ? 'Tópico de discussão criado com sucesso!' : 'Recado enviado com sucesso!');
-      await fetchPosts();
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erro ao publicar');
-    } finally {
-      setPosting(false);
-    }
-  };
-
-  const addEmoticon = (emo: string) => {
-    setContent((prev) => prev + (prev.length > 0 && !prev.endsWith(' ') ? ' ' : '') + emo + ' ');
-  };
-
-  const toggleComments = async (postId: number) => {
-    if (activeCommentsPostId === postId) {
-      setActiveCommentsPostId(null);
-      return;
-    }
-
-    setActiveCommentsPostId(postId);
-    setReplyParentId(null);
-    setCommentContent('');
-
-    try {
-      setLoadingComments(true);
-      const data = await api.getComments(postId);
-      setCommentsMap((prev) => ({ ...prev, [postId]: data }));
-    } catch (err) {
-      console.error('Erro ao carregar comentários:', err);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleCreateComment = async (e: React.FormEvent, postId: number) => {
-    e.preventDefault();
-    if (!commentContent.trim()) return;
-
-    if (!user) {
-      alert('Você precisa estar conectado para comentar!');
-      return;
-    }
-
-    try {
-      setSubmittingComment(true);
-      await api.createComment({
-        post_id: postId,
-        content: commentContent.trim(),
-        parent_id: replyParentId,
-      });
-
-      setCommentContent('');
-      setReplyParentId(null);
-      const updated = await api.getComments(postId);
-      setCommentsMap((prev) => ({ ...prev, [postId]: updated }));
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Erro ao enviar comentário');
-    } finally {
-      setSubmittingComment(false);
-    }
-  };
-
-  const userScrapCount = user ? posts.filter((p) => p.author_id === user.id).length : 0;
 
   return (
     <div className="bg-surface-variant text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-secondary-container selection:text-primary">
       <Header />
 
-      {/* Main 3-Column Layout Container */}
+      {/* 3-Column Layout: Esquerda (Navegação) | Centro (Feed) | Direita (Contatos) */}
       <main className="flex-1 w-full max-w-[1180px] mx-auto px-space-md sm:px-space-lg py-space-md">
-        {/* Top Breadcrumb Bar */}
-        <div className="mb-space-sm bg-surface-container border border-outline-variant rounded p-space-sm flex items-center justify-between text-body-sm font-body-sm shadow-sm">
-          <div className="flex items-center gap-1.5 text-primary">
-            <span className="material-symbols-outlined text-primary text-[16px]">home</span>
-            <Link to="/" className="hover:underline">Início</Link>
-            <span className="text-secondary">&gt;</span>
-            <span className="font-bold text-on-surface">
-              {user ? `@${user.username}` : 'Perfil Padrão (Visitante)'}
-            </span>
-            <span className="text-secondary">&gt;</span>
-            <span className="font-bold text-on-surface">Página de Recados e Amigos</span>
-          </div>
-          <div className="hidden md:flex items-center gap-2 text-label-sm font-label-sm text-secondary">
-            <span className="material-symbols-outlined text-[14px]">lock_open</span>
-            {user ? 'Perfil ativo e conectado' : 'Modo visitante (somente leitura)'}
-          </div>
-        </div>
-
-        {/* 3-Column Grid */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-space-md items-start">
-          {/* ================= LEFT COLUMN: PERFIL ================= */}
-          <aside className="md:col-span-3 lg:col-span-3 space-y-space-md">
-            {/* Profile Card */}
-            <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
-              <div className="retro-header-strip px-space-sm py-1.5 flex items-center justify-between">
-                <span className="text-label-sm font-label-sm text-primary uppercase tracking-wide">
-                  {user ? 'meu perfil' : 'perfil padrão'}
-                </span>
-                <span className="material-symbols-outlined text-primary text-[14px]">account_box</span>
-              </div>
-
-              <div className="p-space-md text-center">
-                {/* Photo Frame */}
-                <div className="relative inline-block mx-auto mb-space-sm">
-                  <div className="p-1 bg-surface-container-lowest border-2 border-outline-variant shadow-sm rounded-sm">
-                    {user ? (
-                      <div className="w-32 h-36 bg-gradient-to-b from-[#3B65BE] to-[#1F3D7A] flex flex-col items-center justify-center text-on-primary font-bold shadow-inner">
-                        <span className="text-4xl uppercase tracking-wider">{user.username.charAt(0)}</span>
-                        <span className="text-[11px] font-normal opacity-90 mt-1">membro espectro</span>
-                      </div>
-                    ) : (
-                      <div className="w-32 h-36 bg-surface-container-high flex flex-col items-center justify-center text-secondary border border-dashed border-outline-variant">
-                        <span className="material-symbols-outlined text-5xl">person</span>
-                        <span className="text-[10px] uppercase font-bold mt-1">visitante</span>
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className={`absolute bottom-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded shadow ${
-                      user ? 'bg-[#62B33C] text-white' : 'bg-secondary text-white'
-                    }`}
-                  >
-                    {user ? 'ONLINE' : 'OFFLINE'}
-                  </span>
-                </div>
-
-                <h1 className="text-headline-sm font-headline-sm text-primary leading-tight">
-                  {user ? user.username : 'Visitante'}
-                </h1>
-
-                {user ? (
-                  <>
-                    <p className="text-body-sm font-body-sm text-secondary italic mt-1 bg-surface-container-low p-1.5 rounded border border-outline-variant">
-                      &ldquo;ouvindo CPM 22 no Winamp... 🎵&rdquo;
-                    </p>
-                    <p className="text-label-sm font-label-sm text-secondary mt-1">
-                      São Paulo, SP • Brasil • Conectado
-                    </p>
-
-                    {/* Medidores de Karma */}
-                    <div className="mt-space-md pt-space-sm border-t border-dashed border-outline-variant text-left space-y-1.5 bg-surface-bright p-space-sm rounded">
-                      <div className="flex items-center justify-between text-body-sm font-body-sm">
-                        <span className="text-secondary font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[#E9A825] text-[15px]">star</span>
-                          Confiável:
-                        </span>
-                        <span className="text-[#E9A825] text-label-md">★★★</span>
-                      </div>
-                      <div className="flex items-center justify-between text-body-sm font-body-sm">
-                        <span className="text-secondary font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[#62B33C] text-[15px]">thumb_up</span>
-                          Legal:
-                        </span>
-                        <span className="text-[#62B33C] text-label-md">★★★</span>
-                      </div>
-                      <div className="flex items-center justify-between text-body-sm font-body-sm">
-                        <span className="text-secondary font-medium flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[#D94343] text-[15px]">favorite</span>
-                          Sexy:
-                        </span>
-                        <span className="text-[#D94343] text-label-md">★★★</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-space-sm pt-space-xs text-left">
-                      <div className="flex items-center justify-between text-label-sm font-label-sm text-secondary">
-                        <span>Meus Recados: <strong className="text-primary">{userScrapCount}</strong></span>
-                        <span>ID do Perfil: <strong className="text-primary">#{user.id}</strong></span>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-space-sm bg-surface-container p-space-sm rounded border border-outline-variant text-left">
-                    <p className="text-body-sm text-secondary">
-                      Você ainda não está conectado. Crie sua conta ou faça login para ter seu próprio perfil e scraps.
-                    </p>
-                    <div className="mt-2 flex flex-col gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => navigate('/login')}
-                        className="retro-btn-primary text-white text-label-md py-1 px-space-sm rounded font-bold text-center cursor-pointer"
-                      >
-                        Fazer Login
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => navigate('/login?tab=cadastro')}
-                        className="retro-btn text-primary text-label-md py-1 px-space-sm rounded font-bold text-center cursor-pointer"
-                      >
-                        Criar Conta
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Menu Lateral */}
-              <div className="border-t border-outline-variant bg-surface-container-low px-space-sm py-space-sm">
-                <ul className="space-y-1 text-body-sm font-body-sm">
-                  <li className="bg-surface-container-highest rounded border border-outline-variant">
-                    <Link to="/" className="flex items-center justify-between py-1 px-1.5 text-primary font-bold">
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[15px] text-primary">chat</span>
-                        <span className="underline">Recados &amp; Fórum</span>
-                      </span>
-                      <span className="bg-primary text-on-primary text-[10px] px-1.5 py-0.5 rounded font-bold">
-                        {posts.length}
-                      </span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/comunidades"
-                      className="flex items-center justify-between py-1 px-1.5 text-secondary hover:bg-surface-container rounded transition-colors group"
-                    >
-                      <span className="flex items-center gap-1.5 group-hover:text-primary">
-                        <span className="material-symbols-outlined text-[15px] text-secondary">groups</span>
-                        <span className="custom-dotted-link">Comunidades</span>
-                      </span>
-                      <span className="text-label-sm text-secondary font-medium">({communities.length})</span>
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Tocando no Perfil */}
-            <div className="bg-surface-container-lowest rounded classic-bevel-border p-space-sm text-body-sm font-body-sm">
-              <div className="flex items-center gap-1.5 text-primary font-bold text-label-sm uppercase mb-1">
-                <span className="material-symbols-outlined text-[14px]">headphones</span>
-                Tocando no Perfil
-              </div>
-              <p className="text-on-surface font-semibold truncate">CPM 22 - Um Minuto Para o Fim do Mundo</p>
-              <div className="w-full bg-surface-container h-1.5 rounded-full mt-1.5 overflow-hidden">
-                <div className="bg-primary h-full w-2/3"></div>
-              </div>
-              <div className="flex justify-between text-[9px] text-secondary mt-0.5">
-                <span>02:14</span>
-                <span>03:20</span>
-              </div>
-            </div>
+          {/* ================= COLUNA ESQUERDA (3 COLS) ================= */}
+          <aside className="md:col-span-3 lg:col-span-3">
+            <SidebarNav communities={communities} />
           </aside>
 
-          {/* ================= CENTER COLUMN: RECADOS E DISCUSSÕES ================= */}
+          {/* ================= COLUNA CENTRAL: FEED (6 COLS) ================= */}
           <section className="md:col-span-9 lg:col-span-6 space-y-space-md">
-            <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
-              {/* Header com Abas: Recados vs Discussões */}
-              <div className="retro-header-strip px-space-md py-space-sm flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[18px]">forum</span>
-                  <h2 className="text-headline-sm font-headline-sm text-primary">Página de Recados e Amigos</h2>
-                </div>
-                <div className="flex items-center gap-1 text-label-sm">
-                  <button
-                    type="button"
-                    onClick={() => setPostType('scrap')}
-                    className={`px-2 py-0.5 rounded border ${
-                      postType === 'scrap'
-                        ? 'bg-primary text-white border-primary font-bold'
-                        : 'bg-surface-container text-secondary border-outline-variant'
-                    }`}
-                  >
-                    Scrap
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPostType('discussion')}
-                    className={`px-2 py-0.5 rounded border ${
-                      postType === 'discussion'
-                        ? 'bg-primary text-white border-primary font-bold'
-                        : 'bg-surface-container text-secondary border-outline-variant'
-                    }`}
-                  >
-                    Discussão
-                  </button>
-                </div>
-              </div>
+            {/* Formulário de Criação de Post (Alterna entre Discussão e Scrap) */}
+            <CreatePostForm
+              communities={communities}
+              onPostCreated={fetchPosts}
+            />
 
-              {/* Caixa de Criação */}
-              <div className="p-space-md bg-surface-container-low border-b border-outline-variant">
-                <h3 className="text-label-md font-label-md font-bold text-primary mb-space-xs flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[15px]">edit_note</span>
-                  {postType === 'discussion' ? 'Iniciar nova discussão / tópico' : 'Deixe um recado para seus amigos'}
-                </h3>
-
-                {successMsg && (
-                  <div className="mb-2 p-2 rounded bg-[#e7f7ed] text-[#1e6f3b] text-body-sm border border-[#a3dfb4] flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                    {successMsg}
-                  </div>
-                )}
-
-                {error && (
-                  <div className="mb-2 p-2 rounded bg-error-container text-on-error-container text-body-sm border border-error flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[16px]">error</span>
-                    {error}
-                  </div>
-                )}
-
-                {user ? (
-                  <form onSubmit={handleCreatePost} className="space-y-2">
-                    {/* Se for discussão, exibe campo de Título e seleção de Comunidade */}
-                    {postType === 'discussion' && (
-                      <div className="space-y-1">
-                        <input
-                          type="text"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          placeholder="Título do Tópico..."
-                          className="w-full bg-white border border-outline-variant rounded px-space-sm py-1 text-body-md font-bold focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                        />
-
-                        {communities.length > 0 && (
-                          <div className="flex items-center gap-2 pt-1 text-body-sm">
-                            <span className="text-secondary">Comunidade:</span>
-                            <select
-                              value={selectedCommunity}
-                              onChange={(e) => setSelectedCommunity(e.target.value ? Number(e.target.value) : '')}
-                              className="bg-white border border-outline-variant rounded px-2 py-0.5 text-body-sm text-primary outline-none"
-                            >
-                              <option value="">Geral (Sem comunidade)</option>
-                              {communities.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Toolbar Retrô */}
-                    <div className="flex items-center flex-wrap gap-1 p-1 bg-surface-container-highest border border-outline-variant rounded-t text-body-sm font-body-sm">
-                      <button
-                        type="button"
-                        onClick={() => addEmoticon(':-)')}
-                        className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded"
-                        title="Sorriso"
-                      >
-                        :-)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addEmoticon(';-)')}
-                        className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded"
-                        title="Piscadela"
-                      >
-                        ;-)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addEmoticon('s2')}
-                        className="px-1.5 py-0.5 retro-btn-secondary text-[11px] text-error font-bold rounded"
-                        title="Coração"
-                      >
-                        s2
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => addEmoticon(':-P')}
-                        className="px-1.5 py-0.5 retro-btn-secondary text-[11px] rounded"
-                        title="Língua"
-                      >
-                        :-P
-                      </button>
-                      <div className="h-4 w-px bg-outline-variant mx-1"></div>
-                      <button
-                        type="button"
-                        onClick={() => setShowMediaInput(!showMediaInput)}
-                        className={`px-2 py-0.5 rounded text-[11px] flex items-center gap-1 border ${
-                          showMediaInput
-                            ? 'bg-primary text-white border-primary'
-                            : 'retro-btn-secondary text-primary'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[13px]">add_photo_alternate</span>
-                        Mídia (GIF/Foto/Vídeo)
-                      </button>
-                    </div>
-
-                    {/* Inputs de Mídia Opcionais */}
-                    {showMediaInput && (
-                      <div className="p-2 bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row gap-2">
-                        <input
-                          type="url"
-                          value={mediaUrl}
-                          onChange={(e) => setMediaUrl(e.target.value)}
-                          placeholder="https://exemplo.com/imagem.gif"
-                          className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none font-mono"
-                        />
-                        <select
-                          value={mediaType}
-                          onChange={(e) => setMediaType(e.target.value as any)}
-                          className="bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none text-primary"
-                        >
-                          <option value="">Tipo automático</option>
-                          <option value="image">Imagem</option>
-                          <option value="gif">GIF</option>
-                          <option value="video">Vídeo</option>
-                        </select>
-                      </div>
-                    )}
-
-                    <textarea
-                      rows={3}
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder={
-                        postType === 'discussion'
-                          ? 'Escreva os detalhes da discussão ou dúvida...'
-                          : 'Escreva seu recado ou novidade aqui...'
-                      }
-                      disabled={posting}
-                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-b p-space-sm text-body-sm font-body-sm focus:border-primary-container focus:ring-1 focus:ring-secondary-container outline-none transition-all resize-y shadow-inner text-on-surface"
-                    />
-
-                    <div className="mt-space-sm flex items-center justify-between">
-                      <label className="flex items-center gap-1.5 text-body-sm font-body-sm text-secondary cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          defaultChecked
-                          className="rounded border-outline-variant text-primary focus:ring-0"
-                        />
-                        Visível para toda a rede
-                      </label>
-
-                      <button
-                        type="submit"
-                        disabled={posting || !content.trim()}
-                        className="px-4 py-1.5 retro-btn-primary text-on-primary rounded text-label-md font-label-md font-bold tracking-wide flex items-center gap-1 shadow active:translate-y-px disabled:opacity-50 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">send</span>
-                        {posting ? 'Publicando...' : postType === 'discussion' ? 'Criar Tópico' : 'Enviar Recado'}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="p-space-md bg-surface-container rounded border border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-space-sm">
-                    <div className="flex items-center gap-2 text-secondary">
-                      <span className="material-symbols-outlined text-primary text-[20px]">lock</span>
-                      <span className="text-body-sm">
-                        Faça login no Espectro para enviar scraps, criar discussões e comentar.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/login')}
-                      className="retro-btn-primary text-white text-label-md px-space-md py-1 rounded font-bold whitespace-nowrap cursor-pointer shadow"
-                    >
-                      Entrar no Espectro
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Header da Lista de Posts */}
-              <div className="bg-surface-container-high px-space-md py-1.5 border-b border-outline-variant flex items-center justify-between text-body-sm font-body-sm">
-                <span className="text-primary font-bold text-label-sm uppercase">
-                  Feed e Atualizações ({posts.length} no total)
+            {/* Cabeçalho da Lista de Posts */}
+            <div className="bg-surface-container-high px-space-md py-1.5 border border-outline-variant rounded flex items-center justify-between text-body-sm font-body-sm">
+              <span className="text-primary font-bold text-label-sm uppercase">
+                {typeFilter === 'scrap' ? 'Scraps Recentes' : 'Feed de Atualizações e Discussões'} ({posts.length})
+              </span>
+              <button
+                type="button"
+                onClick={fetchPosts}
+                disabled={loadingPosts}
+                className="text-[11px] text-primary underline hover:text-primary-container flex items-center gap-1 cursor-pointer"
+              >
+                <span className={`material-symbols-outlined text-[12px] ${loadingPosts ? 'animate-spin' : ''}`}>
+                  refresh
                 </span>
-                <button
-                  type="button"
-                  onClick={fetchPosts}
-                  disabled={loadingPosts}
-                  className="text-[11px] text-primary underline hover:text-primary-container flex items-center gap-1 cursor-pointer"
-                >
-                  <span className={`material-symbols-outlined text-[12px] ${loadingPosts ? 'animate-spin' : ''}`}>
-                    refresh
-                  </span>
-                  atualizar
-                </button>
-              </div>
+                atualizar
+              </button>
+            </div>
 
-              {/* LISTA DE POSTS */}
-              <div className="divide-y divide-outline-variant">
-                {loadingPosts && (
-                  <div className="p-space-lg text-center text-secondary flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined animate-spin text-primary">sync</span>
-                    Carregando recados e discussões...
-                  </div>
-                )}
+            {/* Lista de Post Cards */}
+            <div className="space-y-space-md">
+              {loadingPosts && (
+                <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined animate-spin text-primary">sync</span>
+                  Carregando publicações...
+                </div>
+              )}
 
-                {!loadingPosts && posts.length === 0 && (
-                  <div className="p-space-lg text-center text-secondary">
-                    <p className="font-semibold text-primary mb-1">Nenhum recado ou discussão encontrada.</p>
-                    <p className="text-body-sm">Seja o primeiro a publicar algo legal!</p>
-                  </div>
-                )}
+              {!loadingPosts && posts.length === 0 && (
+                <div className="p-space-lg bg-surface-container-lowest rounded classic-bevel-border text-center text-secondary">
+                  <p className="font-semibold text-primary mb-1">Nenhum post encontrado.</p>
+                  <p className="text-body-sm">Seja o primeiro a enviar um scrap ou iniciar uma discussão!</p>
+                </div>
+              )}
 
-                {posts.map((post, idx) => {
-                  const comments = commentsMap[post.id] || [];
-                  const isCommentsOpen = activeCommentsPostId === post.id;
-
-                  return (
-                    <article
-                      key={post.id}
-                      className={`p-space-md ${
-                        idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low'
-                      } hover:bg-surface-bright transition-colors`}
-                    >
-                      <div className="flex items-start gap-space-md">
-                        {/* Avatar */}
-                        <div className="flex-shrink-0 text-center">
-                          <div className="w-12 h-12 bg-primary-container text-white border border-outline-variant rounded shadow-sm flex items-center justify-center font-bold text-headline-sm uppercase">
-                            {post.author_name ? post.author_name.charAt(0) : 'U'}
-                          </div>
-                          <span className="text-[9px] text-secondary font-bold block mt-1">membro</span>
-                        </div>
-
-                        {/* Conteúdo */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-baseline justify-between gap-1 border-b border-dashed border-outline-variant pb-1 mb-1.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-primary text-body-md">
-                                @{post.author_name || `usuario_${post.author_id}`}
-                              </span>
-                              {post.post_type === 'discussion' && (
-                                <span className="bg-primary text-white text-[10px] px-1.5 py-0.2 rounded font-bold uppercase">
-                                  tópico
-                                </span>
-                              )}
-                              {post.community_name && (
-                                <span className="text-[11px] text-secondary">
-                                  em{' '}
-                                  <Link
-                                    to="/comunidades"
-                                    className="bg-surface-container-highest px-1 py-0.5 rounded text-primary font-semibold hover:underline"
-                                  >
-                                    {post.community_name}
-                                  </Link>
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-1 text-[11px] text-secondary">
-                              <span className="material-symbols-outlined text-[13px]">schedule</span>
-                              {new Date(post.created_at).toLocaleString('pt-BR')}
-                            </div>
-                          </div>
-
-                          {/* Título de Discussão */}
-                          {post.title && (
-                            <h4 className="text-primary font-bold text-headline-sm mb-1">
-                              {post.title}
-                            </h4>
-                          )}
-
-                          {/* Texto do Post */}
-                          <p className="text-body-md font-body-md text-on-surface leading-relaxed whitespace-pre-wrap">
-                            {post.content}
-                          </p>
-
-                          {/* Mídia Anexada (Imagem, GIF, Vídeo) */}
-                          {post.media_url && (
-                            <div className="mt-2 rounded overflow-hidden border border-outline-variant inline-block max-w-full">
-                              {post.media_type === 'video' ? (
-                                <video controls src={post.media_url} className="max-h-80 w-auto rounded" />
-                              ) : (
-                                <img
-                                  src={post.media_url}
-                                  alt="Mídia da postagem"
-                                  className="max-h-72 w-auto object-contain rounded bg-black/5"
-                                  loading="lazy"
-                                />
-                              )}
-                            </div>
-                          )}
-
-                          {/* Rodapé de Ações: Votos, Comentários, Responder */}
-                          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-dotted border-outline-variant text-label-sm">
-                            <div className="flex items-center gap-2">
-                              {/* Votos Retrô */}
-                              <div className="flex items-center bg-surface-container rounded border border-outline-variant px-1.5 py-0.5 gap-1">
-                                <span className="material-symbols-outlined text-[14px] text-primary">thumb_up</span>
-                                <span className="font-bold text-primary">{post.upvotes || 0}</span>
-                              </div>
-
-                              {/* Botão de Comentários em Thread */}
-                              <button
-                                type="button"
-                                onClick={() => toggleComments(post.id)}
-                                className={`px-2 py-0.5 rounded border flex items-center gap-1 transition-colors cursor-pointer ${
-                                  isCommentsOpen
-                                    ? 'bg-primary text-white border-primary font-bold'
-                                    : 'bg-surface-container text-primary border-outline-variant hover:bg-surface-container-high'
-                                }`}
-                              >
-                                <span className="material-symbols-outlined text-[12px]">comment</span>
-                                [Comentários]
-                              </button>
-
-                              {user && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setContent(`@${post.author_name} `);
-                                    window.scrollTo({ top: 200, behavior: 'smooth' });
-                                  }}
-                                  className="text-secondary hover:text-primary transition-colors cursor-pointer"
-                                >
-                                  [Citar]
-                                </button>
-                              )}
-                            </div>
-
-                            <span className="text-[10px] text-secondary">via Espectro 2004</span>
-                          </div>
-
-                          {/* SEÇÃO EXPANSÍVEL DE COMENTÁRIOS / THREADS */}
-                          {isCommentsOpen && (
-                            <div className="mt-3 p-3 bg-surface-container-low rounded border border-[#b2ccf7] space-y-3">
-                              <div className="flex items-center justify-between border-b border-outline-variant pb-1">
-                                <span className="font-bold text-primary text-label-md flex items-center gap-1">
-                                  <span className="material-symbols-outlined text-[14px]">forum</span>
-                                  Comentários e Respostas do Tópico
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleComments(post.id)}
-                                  className="text-[11px] text-secondary hover:underline"
-                                >
-                                  Fechar
-                                </button>
-                              </div>
-
-                              {loadingComments && (
-                                <p className="text-center text-body-sm text-secondary py-2">
-                                  Carregando comentários...
-                                </p>
-                              )}
-
-                              {!loadingComments && comments.length === 0 && (
-                                <p className="text-body-sm text-secondary text-center py-2 italic">
-                                  Nenhum comentário ainda. Deixe a sua resposta!
-                                </p>
-                              )}
-
-                              {/* Lista de Comentários Aninhados */}
-                              <div className="space-y-2">
-                                {comments.map((comm) => (
-                                  <div
-                                    key={comm.id}
-                                    className={`p-2 bg-white rounded border border-outline-variant text-body-sm ${
-                                      comm.parent_id ? 'ml-6 border-l-4 border-l-primary-container' : ''
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between text-[11px] text-secondary mb-1">
-                                      <span className="font-bold text-primary">
-                                        @{comm.author_name}
-                                        {comm.parent_id && <span className="font-normal text-secondary ml-1">(em resposta)</span>}
-                                      </span>
-                                      <span>{new Date(comm.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                    <p className="text-on-surface whitespace-pre-wrap">{comm.content}</p>
-
-                                    {user && (
-                                      <div className="mt-1 text-right">
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            setReplyParentId(comm.id);
-                                            setCommentContent(`@${comm.author_name} `);
-                                          }}
-                                          className="text-[10px] text-primary hover:underline font-bold"
-                                        >
-                                          Responder a este comentário »
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Formulário de Novo Comentário */}
-                              {user ? (
-                                <form onSubmit={(e) => handleCreateComment(e, post.id)} className="space-y-1.5 pt-2 border-t border-outline-variant">
-                                  {replyParentId && (
-                                    <div className="flex items-center justify-between text-[11px] text-primary bg-surface-container px-2 py-0.5 rounded">
-                                      <span>Respondendo ao comentário #{replyParentId}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => setReplyParentId(null)}
-                                        className="text-error font-bold"
-                                      >
-                                        ✕ Cancelar resposta
-                                      </button>
-                                    </div>
-                                  )}
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="text"
-                                      value={commentContent}
-                                      onChange={(e) => setCommentContent(e.target.value)}
-                                      placeholder="Escreva sua resposta..."
-                                      disabled={submittingComment}
-                                      className="flex-1 bg-white border border-outline-variant rounded px-2 py-1 text-body-sm outline-none focus:border-primary"
-                                    />
-                                    <button
-                                      type="submit"
-                                      disabled={submittingComment || !commentContent.trim()}
-                                      className="retro-btn-primary text-white text-label-sm px-3 py-1 rounded font-bold disabled:opacity-50 cursor-pointer"
-                                    >
-                                      {submittingComment ? '...' : 'Comentar'}
-                                    </button>
-                                  </div>
-                                </form>
-                              ) : (
-                                <p className="text-body-sm text-secondary text-center pt-1">
-                                  <Link to="/login" className="text-primary font-bold underline">
-                                    Faça login
-                                  </Link>{' '}
-                                  para responder a este post.
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                />
+              ))}
             </div>
           </section>
 
-          {/* ================= RIGHT COLUMN: COMUNIDADES DO BANCO ================= */}
-          <aside className="md:col-span-12 lg:col-span-3 space-y-space-md">
-            {/* Bloco de Comunidades Reais do D1 */}
-            <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
-              <div className="retro-header-strip px-space-sm py-1.5 flex items-center justify-between">
-                <span className="text-label-sm font-label-sm text-primary uppercase font-bold tracking-wide">
-                  comunidades ({communities.length})
-                </span>
-                <Link to="/comunidades" className="text-label-sm font-label-sm text-primary hover:underline font-bold">
-                  ver catálogo
-                </Link>
-              </div>
-
-              <div className="p-space-sm">
-                {loadingCommunities ? (
-                  <p className="text-body-sm text-secondary text-center py-2">Carregando...</p>
-                ) : communities.length === 0 ? (
-                  <div className="text-center py-2 text-body-sm text-secondary">
-                    <p>Nenhuma comunidade criada.</p>
-                    <Link to="/comunidades" className="text-primary font-bold underline mt-1 block">
-                      Criar a primeira
-                    </Link>
-                  </div>
-                ) : (
-                  <ul className="space-y-1 text-body-sm">
-                    {communities.slice(0, 6).map((c) => {
-                      const count = (c.members_count ?? (c as any).member_count ?? 1);
-                      return (
-                        <li key={c.id}>
-                          <Link
-                            to="/comunidades"
-                            className="flex items-center justify-between p-1 rounded hover:bg-surface-container transition-colors group"
-                          >
-                            <span className="flex items-center gap-1.5 truncate group-hover:text-primary">
-                              <span className="material-symbols-outlined text-secondary text-[14px]">groups</span>
-                              <span className="truncate">{c.name}</span>
-                            </span>
-                            <span className="text-[10px] text-secondary font-medium shrink-0">
-                              {count} {count === 1 ? 'm' : 'm'}
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            {/* Amigos Nostálgicos */}
-            <div className="bg-surface-container-lowest rounded classic-bevel-border overflow-hidden">
-              <div className="retro-header-strip px-space-sm py-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <span className="text-label-sm font-label-sm text-primary uppercase font-bold tracking-wide">amigos</span>
-                  <span className="text-label-sm font-label-sm text-secondary">(6)</span>
-                </div>
-              </div>
-              <div className="p-space-sm">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  {['Bia', 'Felipe', 'Carol', 'Lucas', 'Mari', 'Diego'].map((name) => (
-                    <div key={name} className="p-1 rounded hover:bg-surface-container transition-colors">
-                      <div className="w-12 h-12 mx-auto bg-primary-container text-white border border-outline-variant shadow-sm flex items-center justify-center font-bold text-sm uppercase">
-                        {name[0]}
-                      </div>
-                      <span className="text-body-sm font-body-sm text-primary truncate block mt-1">{name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          {/* ================= COLUNA DIREITA (3 COLS): WIDGET DE CONTATOS ================= */}
+          <aside className="md:col-span-12 lg:col-span-3">
+            <ContactsWidget />
           </aside>
         </div>
       </main>

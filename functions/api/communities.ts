@@ -17,10 +17,37 @@ function generateSlug(text: string): string {
   );
 }
 
-// GET: lista todas as comunidades com contagem de membros e slug
+// GET: lista todas as comunidades ou busca uma única por slug
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
-    const { env } = context;
+    const { request, env } = context;
+    const url = new URL(request.url);
+    const slug = url.searchParams.get("slug");
+
+    if (slug) {
+      const singleQuery = `
+        SELECT 
+          c.id,
+          c.name,
+          c.slug,
+          c.description,
+          c.owner_id,
+          c.created_at,
+          u.username AS owner_name,
+          COUNT(cm.user_id) AS members_count
+        FROM communities c
+        JOIN users u ON c.owner_id = u.id
+        LEFT JOIN community_members cm ON c.id = cm.community_id
+        WHERE c.slug = ?
+        GROUP BY c.id, c.name, c.slug, c.description, c.owner_id, c.created_at, u.username
+      `;
+
+      const community = await env.DB.prepare(singleQuery).bind(slug).first();
+      if (!community) {
+        return errorResponse("Comunidade não encontrada.", 404);
+      }
+      return jsonResponse(community);
+    }
 
     const query = `
       SELECT 
@@ -66,6 +93,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       slug?: string;
       description?: string;
       community_id?: number;
+      community_slug?: string;
     };
     try {
       body = await request.json();
@@ -74,10 +102,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     // Ação: Entrar em comunidade existente
-    if (body.action === "join" || (body.community_id && !body.name)) {
-      const commId = Number(body.community_id);
+    if (body.action === "join" || (body.community_id && !body.name) || body.community_slug) {
+      let commId = body.community_id ? Number(body.community_id) : null;
+
+      if (!commId && body.community_slug) {
+        const comm = await env.DB.prepare("SELECT id FROM communities WHERE slug = ?")
+          .bind(body.community_slug)
+          .first<{ id: number }>();
+        if (comm) commId = comm.id;
+      }
+
       if (!commId) {
-        return errorResponse("ID da comunidade é obrigatório para entrar.", 400);
+        return errorResponse("ID ou slug da comunidade é obrigatório para entrar.", 400);
       }
 
       const community = await env.DB.prepare("SELECT id, name FROM communities WHERE id = ?")
