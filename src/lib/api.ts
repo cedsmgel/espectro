@@ -45,6 +45,25 @@ export interface Comment {
   author_avatar?: string | null;
 }
 
+export interface Friend {
+  friendship_id?: number;
+  friend_id: number;
+  username: string;
+  avatar_url?: string | null;
+  status: string;
+  online?: boolean;
+  mood?: string;
+}
+
+export interface DirectMessage {
+  id: number;
+  sender_id: number;
+  receiver_id: number;
+  sender_name: string;
+  content: string;
+  created_at: string;
+}
+
 export interface CreatePostData {
   title?: string;
   content: string;
@@ -267,4 +286,28 @@ export const commentsApi = {
   list: (postId: number) => api.getComments(postId),
   create: (postId: number, content: string, parentId?: number | null) =>
     api.createComment({ post_id: postId, content, parent_id: parentId }),
+};
+
+export const friendsApi = {
+  list: () => apiRequest<Friend[]>('/api/friendships', { method: 'GET' }),
+  search: (query: string) => apiRequest<Array<{ id: number; username: string; friendship_status: string | null }>>(`/api/friendships?search=${encodeURIComponent(query)}`, { method: 'GET' }),
+  add: (friendId: number, username?: string) =>
+    apiRequest<{ message: string; friend: any }>('/api/friendships', {
+      method: 'POST',
+      body: JSON.stringify({ friend_id: friendId, friend_username: username }),
+    }),
+  remove: (friendId: number) =>
+    apiRequest<{ message: string }>(`/api/friendships?friend_id=${friendId}`, {
+      method: 'DELETE',
+    }),
+};
+
+export const directMessagesApi = {
+  list: (friendId: number) =>
+    apiRequest<DirectMessage[]>(`/api/direct_messages?friend_id=${friendId}`, { method: 'GET' }),
+  send: (params: { receiver_id: number; content: string }) =>
+    apiRequest<DirectMessage>('/api/direct_messages', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
 };

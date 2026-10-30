@@ -1,15 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-interface Contact {
-  id: number;
-  name: string;
-  username: string;
-  online: boolean;
-  time: string;
-  mood: string;
-  avatarColor: string;
-}
+import { authStorage, friendsApi, directMessagesApi, Friend, DirectMessage } from '../lib/api';
 
 interface ContactsDrawerProps {
   isOpen: boolean;
@@ -18,75 +9,160 @@ interface ContactsDrawerProps {
 
 export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const [search, setSearch] = useState('');
-  const [chatContact, setChatContact] = useState<Contact | null>(null);
-  const [messageText, setMessageText] = useState('');
-  const [sentSuccess, setSentSuccess] = useState<string | null>(null);
+  const user = authStorage.getUser();
 
-  const defaultContacts: Contact[] = [
+  const [activeTab, setActiveTab] = useState<'friends' | 'search'>('friends');
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: number; username: string; friendship_status: string | null }>>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Conversa ativa dentro da gaveta lateral
+  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Carrega lista de amigos reais do D1
+  const loadFriends = async () => {
+    if (!user) return;
+    setLoadingFriends(true);
+    try {
+      const data = await friendsApi.list();
+      setFriends(data);
+    } catch (err) {
+      console.error('Erro ao carregar amigos:', err);
+    } finally {
+      setLoadingFriends(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && user) {
+      loadFriends();
+    }
+  }, [isOpen, user]);
+
+  // Carrega histórico de mensagens privadas ao selecionar um amigo
+  useEffect(() => {
+    if (selectedFriend && user) {
+      const loadChat = async () => {
+        setLoadingMessages(true);
+        try {
+          const history = await directMessagesApi.list(selectedFriend.friend_id);
+          setMessages(history);
+        } catch (err) {
+          console.error('Erro ao carregar mensagens privadas:', err);
+        } finally {
+          setLoadingMessages(false);
+        }
+      };
+      loadChat();
+    }
+  }, [selectedFriend, user]);
+
+  // Auto-scroll para última mensagem
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Pesquisa de novos usuários para adicionar
+  useEffect(() => {
+    if (!searchQuery.trim() || activeTab !== 'search') {
+      setSearchResults([]);
+      return;
+    }
+
+    const delay = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const results = await friendsApi.search(searchQuery.trim());
+        setSearchResults(results);
+      } catch (err) {
+        console.error('Erro ao pesquisar usuários:', err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delay);
+  }, [searchQuery, activeTab]);
+
+  // Enviar mensagem direta privada
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedFriend || !user) return;
+
+    const content = newMessage.trim();
+    setNewMessage('');
+    setSending(true);
+
+    try {
+      const created = await directMessagesApi.send({
+        receiver_id: selectedFriend.friend_id,
+        content,
+      });
+      setMessages((prev) => [...prev, created]);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao enviar mensagem.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Adicionar amigo
+  const handleAddFriend = async (friendId: number, username: string) => {
+    try {
+      await friendsApi.add(friendId, username);
+      showToast(`@${username} adicionado aos seus amigos!`);
+      loadFriends();
+      setActiveTab('friends');
+      setSearchQuery('');
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao adicionar amigo.');
+    }
+  };
+
+  // Amigos mockados de sugestão caso ainda não tenha nenhum no D1
+  const suggestedFriends: Friend[] = [
     {
-      id: 1,
-      name: 'Camila Brandão',
-      username: 'camila_designer',
+      friend_id: 101,
+      username: 'clarice_lis',
+      status: 'accepted',
       online: true,
-      time: 'agora',
-      mood: '🎨 Focando no design',
-      avatarColor: 'from-secondary to-primary',
+      mood: '🎵 Ouvindo rock 2000s',
     },
     {
-      id: 2,
-      name: 'Lucas Silveira',
-      username: 'lucas_s',
-      online: true,
-      time: '5m',
-      mood: '☕ Café & Código',
-      avatarColor: 'from-blue-500 to-indigo-600',
-    },
-    {
-      id: 3,
-      name: 'Beatriz Rocha',
-      username: 'biarocha',
-      online: true,
-      time: '12m',
-      mood: '🚀 Sprint final',
-      avatarColor: 'from-amber-400 to-rose-500',
-    },
-    {
-      id: 4,
-      name: 'Thiago Silveira',
+      friend_id: 102,
       username: 'thiago_dev',
+      status: 'accepted',
       online: true,
-      time: '28m',
-      mood: '💻 Compilando kernel',
-      avatarColor: 'from-emerald-400 to-teal-500',
+      mood: '💻 Compilando kernel Rust',
     },
     {
-      id: 5,
-      name: 'Marina Silva',
-      username: 'marina_s',
-      online: false,
-      time: '3h',
-      mood: 'Visto há 3h',
-      avatarColor: 'from-slate-600 to-slate-500',
+      friend_id: 103,
+      username: 'biarocha',
+      status: 'accepted',
+      online: true,
+      mood: '✨ No flow do Figma',
     },
   ];
 
-  const filteredContacts = defaultContacts.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.mood.toLowerCase().includes(search.toLowerCase())
+  const displayFriends = friends.length > 0 ? friends : suggestedFriends;
+
+  const filteredFriends = displayFriends.filter((f) =>
+    f.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!messageText.trim() || !chatContact) return;
-
-    setSentSuccess(`Mensagem direta enviada para @${chatContact.username}!`);
-    setMessageText('');
-    setTimeout(() => {
-      setSentSuccess(null);
-    }, 3000);
-  };
 
   return (
     <>
@@ -98,28 +174,63 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
         }`}
       />
 
-      {/* Drawer Panel */}
+      {/* Drawer Lateral */}
       <aside
         className={`fixed top-0 right-0 z-50 h-full w-full max-w-sm sm:max-w-md bg-surface-container-lowest border-l border-outline-variant/30 shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Drawer Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-outline-variant/20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary-container text-on-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">chat</span>
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
-                <span>Mensagens Rápidas</span>
-                <span className="text-[10px] font-semibold bg-secondary-container text-on-secondary-container px-2 py-0.2 rounded-full">
-                  Direct
-                </span>
-              </h2>
-              <p className="text-[11px] text-on-surface-variant">Contatos e conversas ativas</p>
-            </div>
+        {/* Toast Notifier */}
+        {toast && (
+          <div className="absolute top-4 left-4 right-4 z-50 p-2.5 rounded-xl bg-on-surface text-surface text-xs font-semibold shadow-lg flex items-center gap-2 animate-in fade-in">
+            <span className="material-symbols-outlined text-[16px] text-emerald-400">info</span>
+            <span>{toast}</span>
           </div>
+        )}
+
+        {/* 1. Topo da Gaveta: Identidade ou Chat Header */}
+        <div className="flex items-center justify-between p-4 border-b border-outline-variant/20 bg-surface-container-lowest">
+          {selectedFriend ? (
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSelectedFriend(null)}
+                className="p-1 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer"
+                title="Voltar para amigos"
+              >
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              </button>
+              <div className="relative flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs">
+                  {selectedFriend.username.charAt(0)}
+                </div>
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+              </div>
+              <div className="min-w-0 flex flex-col">
+                <span className="text-xs font-bold text-on-surface truncate">
+                  @{selectedFriend.username}
+                </span>
+                <span className="text-[10px] text-emerald-600 font-medium">
+                  {selectedFriend.mood || 'Online no Espectro'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-primary-container text-on-primary flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">chat</span>
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-on-surface flex items-center gap-2">
+                  <span>Espectro Direct</span>
+                  <span className="text-[10px] font-semibold bg-secondary-container text-on-secondary-container px-2 py-0.2 rounded-full">
+                    Privado
+                  </span>
+                </h2>
+                <p className="text-[11px] text-on-surface-variant">Mensagens privadas e amigos</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-1">
             <button
@@ -132,7 +243,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
               title="Abrir tela cheia"
             >
               <span className="material-symbols-outlined text-[18px]">open_in_new</span>
-              <span className="hidden sm:inline">Expandir</span>
+              <span className="hidden sm:inline">Tela Cheia</span>
             </button>
             <button
               type="button"
@@ -145,166 +256,296 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
           </div>
         </div>
 
-        {/* Search input */}
-        <div className="p-4 border-b border-outline-variant/20">
-          <div className="relative flex items-center">
-            <span className="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar amigos ou status..."
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container transition-all"
-            />
+        {/* Se usuário não estiver logado */}
+        {!user ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-[28px]">lock</span>
+            </div>
+            <h3 className="font-bold text-sm text-on-surface">Acesse seu Espectro Direct</h3>
+            <p className="text-xs text-on-surface-variant max-w-xs">
+              Conecte-se com sua conta para conversar em tempo real com seus amigos e gerenciar suas amizades.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                navigate('/login');
+              }}
+              className="mt-2 px-5 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs cursor-pointer"
+            >
+              Entrar ou Criar Conta
+            </button>
           </div>
-        </div>
+        ) : selectedFriend ? (
+          /* ========================================================================= */
+          /* 2. CHAT PRIVADO ATIVO COM AMIGO SELECIONADO                                */
+          /* ========================================================================= */
+          <div className="flex-1 flex flex-col min-h-0 bg-surface">
+            {/* Histórico de Mensagens */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="text-center py-2">
+                <span className="text-[10px] text-on-surface-variant bg-surface-container-low px-2.5 py-1 rounded-full uppercase tracking-wider font-medium">
+                  Conversa privada com @{selectedFriend.username}
+                </span>
+              </div>
 
-        {/* Success Alert */}
-        {sentSuccess && (
-          <div className="mx-4 mt-3 p-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs flex items-center gap-2 border border-emerald-300">
-            <span className="material-symbols-outlined text-[16px]">check_circle</span>
-            <span>{sentSuccess}</span>
-          </div>
-        )}
-
-        {/* Contacts List / Active Chat */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {chatContact ? (
-            /* Direct Chat Box with Selected Friend */
-            <div className="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3.5 border border-outline-variant/30 shadow-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className={`w-9 h-9 rounded-full bg-gradient-to-tr ${chatContact.avatarColor} flex items-center justify-center text-white text-xs font-bold uppercase shadow-xs`}
-                  >
-                    {chatContact.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-on-surface">
-                      {chatContact.name}
-                    </h4>
-                    <span className="text-[10px] text-on-surface-variant">@{chatContact.username}</span>
-                  </div>
+              {loadingMessages ? (
+                <div className="text-center py-8 text-xs text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[22px] text-primary animate-spin">
+                    progress_activity
+                  </span>
+                  <p className="mt-1">Carregando histórico do Direct...</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setChatContact(null)}
-                  className="text-xs text-primary hover:underline cursor-pointer"
-                >
-                  Voltar à lista
-                </button>
-              </div>
+              ) : messages.length === 0 ? (
+                <div className="text-center py-8 text-xs text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[36px] text-on-surface-variant/40 mb-1">
+                    waving_hand
+                  </span>
+                  <p className="font-semibold text-on-surface">Diga olá para @{selectedFriend.username}!</p>
+                  <p className="text-[11px] mt-0.5">Envie a primeira mensagem privada.</p>
+                </div>
+              ) : (
+                messages.map((m) => {
+                  const isMe = m.sender_id === user.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                          isMe
+                            ? 'bg-primary-container text-on-primary rounded-br-xs'
+                            : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
+                        }`}
+                      >
+                        {m.content}
+                      </div>
+                      <span className="text-[9px] text-on-surface-variant mt-0.5 px-1">
+                        {new Date(m.created_at).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-              {/* Status info */}
-              <div className="px-3 py-2 rounded-xl bg-surface-container text-[11px] text-on-surface">
-                <p className="font-semibold text-primary">{chatContact.mood}</p>
-                <p className="text-[10px] text-on-surface-variant mt-0.5">
-                  {chatContact.online ? 'Online agora no Espectro' : 'Offline'}
-                </p>
-              </div>
-
-              {/* Chat Message Form */}
-              <form onSubmit={handleSendMessage} className="space-y-2 pt-1">
-                <textarea
-                  rows={3}
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  placeholder={`Escreva uma mensagem direta para @${chatContact.username}...`}
-                  className="w-full p-2.5 text-xs rounded-xl bg-surface-container-lowest border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary-container transition-all resize-none"
+            {/* Input para envio de Mensagem */}
+            <div className="p-3 bg-surface-container-lowest border-t border-outline-variant/20">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder={`Mensagem para @${selectedFriend.username}...`}
+                  className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container focus:ring-1 focus:ring-primary-container transition-all"
                 />
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setChatContact(null)}
-                    className="px-3 py-1.5 rounded-full text-xs text-on-surface-variant hover:bg-surface-container cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!messageText.trim()}
-                    className="px-4 py-1.5 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-primary shadow-xs transition-all disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Enviar</span>
-                    <span className="material-symbols-outlined text-[14px]">send</span>
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={sending || !newMessage.trim()}
+                  className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center disabled:opacity-40 hover:bg-primary shadow-xs transition-all cursor-pointer flex-shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[16px]">send</span>
+                </button>
               </form>
             </div>
-          ) : (
-            /* Friend List */
-            <>
-              <div className="flex items-center justify-between pb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-                  Amigos Conectados ({defaultContacts.filter((c) => c.online).length})
+          </div>
+        ) : (
+          /* ========================================================================= */
+          /* 3. LISTA DE AMIGOS E BUSCA DE NOVAS AMIZADES                             */
+          /* ========================================================================= */
+          <div className="flex-1 flex flex-col min-h-0 bg-surface">
+            {/* Tabs: Meus Amigos vs Encontrar Pessoas */}
+            <div className="flex border-b border-outline-variant/20 bg-surface-container-lowest">
+              <button
+                type="button"
+                onClick={() => setActiveTab('friends')}
+                className={`flex-1 py-2.5 text-xs font-semibold text-center transition-colors cursor-pointer relative ${
+                  activeTab === 'friends'
+                    ? 'text-primary'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Amigos ({displayFriends.length})
+                {activeTab === 'friends' && (
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('search')}
+                className={`flex-1 py-2.5 text-xs font-semibold text-center transition-colors cursor-pointer relative flex items-center justify-center gap-1 ${
+                  activeTab === 'search'
+                    ? 'text-primary'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <span>Buscar Pessoas</span>
+                {activeTab === 'search' && (
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary rounded-full" />
+                )}
+              </button>
+            </div>
+
+            {/* Input de Busca */}
+            <div className="p-3 bg-surface-container-lowest border-b border-outline-variant/20">
+              <div className="relative flex items-center">
+                <span className="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">
+                  search
                 </span>
-                <span className="text-[10px] text-primary font-medium">Tempo Real</span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={
+                    activeTab === 'friends'
+                      ? 'Filtrar meus amigos...'
+                      : 'Digitar nome de usuário para adicionar...'
+                  }
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
+                />
               </div>
+            </div>
 
-              {filteredContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  onClick={() => setChatContact(contact)}
-                  className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer border border-transparent hover:border-outline-variant/20 group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative">
-                      <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-tr ${contact.avatarColor} flex items-center justify-center text-white text-xs font-bold uppercase shadow-xs`}
-                      >
-                        {contact.name.charAt(0)}
-                      </div>
-                      <span
-                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-surface-container-lowest ${
-                          contact.online ? 'bg-emerald-500' : 'bg-slate-400'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors truncate">
-                          {contact.name}
-                        </span>
-                        <span className="text-[10px] text-on-surface-variant truncate">
-                          @{contact.username}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-on-surface-variant truncate font-normal">
-                        {contact.mood}
-                      </p>
-                    </div>
+            {/* Conteúdo da Aba Ativa */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {activeTab === 'friends' ? (
+                /* Lista de Amigos */
+                loadingFriends ? (
+                  <div className="text-center py-8 text-xs text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[24px] text-primary animate-spin">
+                      progress_activity
+                    </span>
+                    <p className="mt-1">Carregando lista de amigos...</p>
                   </div>
+                ) : filteredFriends.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-on-surface-variant">
+                    <p>Nenhum amigo encontrado.</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('search')}
+                      className="mt-2 text-primary font-semibold hover:underline"
+                    >
+                      Encontrar pessoas no Espectro
+                    </button>
+                  </div>
+                ) : (
+                  filteredFriends.map((friend) => (
+                    <div
+                      key={friend.friend_id}
+                      onClick={() => setSelectedFriend(friend)}
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer border border-transparent hover:border-outline-variant/30 group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs">
+                            {friend.username.charAt(0)}
+                          </div>
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors truncate">
+                            @{friend.username}
+                          </span>
+                          <span className="text-[11px] text-on-surface-variant truncate">
+                            {friend.mood || 'Online no Direct'}
+                          </span>
+                        </div>
+                      </div>
 
-                  <button
-                    type="button"
-                    className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Conversar"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chat</span>
-                  </button>
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-lg text-primary hover:bg-surface-container opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Abrir chat"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chat</span>
+                      </button>
+                    </div>
+                  ))
+                )
+              ) : (
+                /* Busca de Novos Usuários */
+                <div>
+                  {searching ? (
+                    <div className="text-center py-6 text-xs text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[20px] text-primary animate-spin">
+                        progress_activity
+                      </span>
+                      <p className="mt-1">Procurando no Espectro...</p>
+                    </div>
+                  ) : !searchQuery.trim() ? (
+                    <div className="text-center py-6 text-xs text-on-surface-variant">
+                      <p>Digite o nome de um usuário para buscar e adicionar como amigo.</p>
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-on-surface-variant">
+                      <p>Nenhum usuário encontrado com "{searchQuery}".</p>
+                    </div>
+                  ) : (
+                    searchResults.map((usr) => {
+                      const isAlreadyFriend =
+                        usr.friendship_status === 'accepted' ||
+                        friends.some((f) => f.friend_id === usr.id);
+
+                      return (
+                        <div
+                          key={usr.id}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 mb-2"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase">
+                              {usr.username.charAt(0)}
+                            </div>
+                            <span className="text-xs font-bold text-on-surface truncate">
+                              @{usr.username}
+                            </span>
+                          </div>
+
+                          {isAlreadyFriend ? (
+                            <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">check</span>
+                              <span>Amigo</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddFriend(usr.id, usr.username)}
+                              className="px-3 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[10px] hover:bg-primary shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">person_add</span>
+                              <span>Adicionar</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
-              ))}
-            </>
-          )}
-        </div>
+              )}
+            </div>
 
-        {/* Footer Shortcut to Full Direct Screen */}
-        <div className="p-4 border-t border-outline-variant/20 bg-surface-container-low/50">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              navigate('/mensagens');
-            }}
-            className="w-full py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">forum</span>
-            <span>Abrir Espectro Direct Completo</span>
-          </button>
-        </div>
+            {/* Atalho Rodapé para Tela Completa */}
+            <div className="p-3 border-t border-outline-variant/20 bg-surface-container-lowest">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate('/mensagens');
+                }}
+                className="w-full py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">forum</span>
+                <span>Abrir Direct Completo</span>
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
     </>
   );
