@@ -139,7 +139,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ref={containerRef}
       onMouseMove={resetControlsTimeout}
       onMouseEnter={() => setShowControls(true)}
-      className={`relative w-full aspect-video rounded-xl overflow-hidden bg-slate-950 group select-none shadow-md border border-outline-variant/30 flex items-center justify-center ${className}`}
+      className={`relative w-full max-w-3xl mx-auto aspect-video overflow-hidden rounded-lg bg-slate-950 group select-none shadow-md border border-outline-variant/30 flex items-center justify-center ${className}`}
     >
       {/* Elemento de Vídeo */}
       <video
@@ -157,7 +157,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           setIsPlaying(true);
         }}
         onPause={() => setIsPlaying(false)}
-        className="w-full h-full object-cover cursor-pointer"
+        className="w-full h-full object-contain cursor-pointer"
       />
 
       {/* Top Header Badge (Estilo Stitch DNA) */}
