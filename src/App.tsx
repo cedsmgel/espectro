@@ -9,6 +9,7 @@ import { DirectMessages } from './pages/DirectMessages';
 import { Videos } from './pages/Videos';
 import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
+import { ProfileSettings } from './pages/ProfileSettings';
 
 export const App: React.FC = () => {
   return (
@@ -19,6 +20,8 @@ export const App: React.FC = () => {
           <Route path="/perfil" element={<Profile />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/u/:username" element={<Profile />} />
+          <Route path="/settings/profile" element={<ProfileSettings />} />
+          <Route path="/configuracoes/perfil" element={<ProfileSettings />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
           <Route path="/c/:slug" element={<CommunityDetail />} />
           <Route path="/comunidade/:slug" element={<CommunityDetail />} />

@@ -192,6 +192,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   </Link>
 
                   <Link
+                    to="/settings/profile"
+                    onClick={() => setShowUserMenu(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-secondary">manage_accounts</span>
+                    <span>Configurações do Perfil</span>
+                  </Link>
+
+                  <Link
                     to="/mensagens"
                     onClick={() => setShowUserMenu(false)}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { authStorage, Post, postsApi } from '../lib/api';
+import { authStorage, Post, postsApi, profileApi, UserProfile } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
@@ -19,9 +19,29 @@ export const Profile: React.FC = () => {
   const targetUsername = paramUsername || (loggedUser ? loggedUser.username : null);
 
   const [posts, setPosts] = useState<Post[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [hasError, setHasError] = useState(false);
 
+  // Carrega informações públicas reais do perfil no D1
+  const loadProfile = async () => {
+    if (!targetUsername) {
+      setLoadingProfile(false);
+      return;
+    }
+    setLoadingProfile(true);
+    try {
+      const data = await profileApi.get(targetUsername);
+      setUserProfile(data);
+    } catch (err) {
+      console.warn('Erro ao carregar dados do perfil:', err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // Carrega as publicações do usuário
   const loadUserPosts = async () => {
     if (!targetUsername) {
       setLoading(false);
@@ -51,6 +71,7 @@ export const Profile: React.FC = () => {
   };
 
   useEffect(() => {
+    loadProfile();
     loadUserPosts();
   }, [targetUsername]);
 
@@ -89,7 +110,9 @@ export const Profile: React.FC = () => {
     );
   }
 
-  const displayName = targetUsername || 'Usuário';
+  const usernameHandle = userProfile?.username || targetUsername || 'usuario';
+  const fullName = userProfile?.name || null;
+  const initialLetter = (fullName || usernameHandle).charAt(0).toUpperCase();
   const totalUpvotes = posts.reduce((acc, p) => acc + (p.upvotes || 0), 0);
 
   return (
@@ -104,28 +127,64 @@ export const Profile: React.FC = () => {
       >
         <main className="w-full bg-surface py-6">
           <div className="w-full max-w-5xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col gap-8">
-            {/* 1. Header do Perfil (Totalmente Conectado ao D1) */}
+            {/* 1. Header do Perfil (Totalmente Conectado aos Dados Reais do D1) */}
             <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div className="flex items-center gap-5 min-w-0">
                 <div className="relative shrink-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-3xl sm:text-4xl uppercase shadow-md">
-                    {displayName.charAt(0)}
-                  </div>
+                  {userProfile?.avatar_url ? (
+                    <img
+                      src={userProfile.avatar_url}
+                      alt={usernameHandle}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-surface-container-low"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-3xl sm:text-4xl uppercase shadow-md ring-4 ring-surface-container-low">
+                      {initialLetter}
+                    </div>
+                  )}
                   <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full ring-4 ring-surface-container-lowest" />
                 </div>
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl sm:text-2xl font-bold text-on-surface truncate">
-                      @{displayName}
-                    </h1>
+                    {fullName ? (
+                      <div>
+                        <h1 className="text-xl sm:text-2xl font-bold text-on-surface truncate">
+                          {fullName}
+                        </h1>
+                        <span className="text-xs text-primary font-medium">
+                          @{usernameHandle}
+                        </span>
+                      </div>
+                    ) : (
+                      <h1 className="text-xl sm:text-2xl font-bold text-on-surface truncate">
+                        @{usernameHandle}
+                      </h1>
+                    )}
+
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
                       Membro do Espectro
                     </span>
                   </div>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    Espaço pessoal no Visible Spectrum Social
-                  </p>
+
+                  {/* Biografia Real */}
+                  {userProfile?.bio ? (
+                    <p className="text-xs text-on-surface mt-2 max-w-xl whitespace-pre-line leading-relaxed">
+                      {userProfile.bio}
+                    </p>
+                  ) : isSelf ? (
+                    <Link
+                      to="/settings/profile"
+                      className="text-xs text-primary hover:underline mt-1.5 flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">add_circle</span>
+                      <span>Adicionar uma biografia ao seu perfil</span>
+                    </Link>
+                  ) : (
+                    <p className="text-xs text-on-surface-variant mt-1 italic">
+                      Nenhuma biografia informada ainda.
+                    </p>
+                  )}
 
                   <div className="flex items-center gap-4 mt-3 text-xs text-on-surface-variant">
                     <div>
@@ -139,22 +198,32 @@ export const Profile: React.FC = () => {
                 </div>
               </div>
 
+              {/* Ações do Perfil */}
               {isSelf ? (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                  <Link
+                    to="/settings/profile"
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                    <span>Editar Perfil</span>
+                  </Link>
+
                   <Link
                     to="/"
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit_note</span>
                     <span>Novo Post</span>
                   </Link>
+
                   <button
                     type="button"
                     onClick={() => {
                       authStorage.clear();
                       navigate('/login');
                     }}
-                    className="px-4 py-2.5 rounded-full bg-surface-container-high text-on-surface hover:text-error hover:bg-error-container/20 font-semibold text-xs transition-colors cursor-pointer"
+                    className="px-3.5 py-2.5 rounded-full bg-surface-container-high text-on-surface hover:text-error hover:bg-error-container/20 font-semibold text-xs transition-colors cursor-pointer"
                   >
                     Sair
                   </button>

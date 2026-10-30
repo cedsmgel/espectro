@@ -1,6 +1,9 @@
 export interface User {
   id: number;
   username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  bio?: string | null;
 }
 
 export interface Post {
@@ -353,5 +356,34 @@ export const uploadApi = {
     }
 
     return response.json();
+  },
+};
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email?: string;
+  name?: string | null;
+  bio?: string | null;
+  avatar_url?: string | null;
+  created_at?: string;
+}
+
+export const profileApi = {
+  get: async (username?: string): Promise<UserProfile> => {
+    const url = username ? `/api/profile?username=${encodeURIComponent(username)}` : '/api/profile';
+    const res = await apiRequest<{ user: UserProfile }>(url, { method: 'GET' });
+    return res.user;
+  },
+  update: async (data: {
+    name?: string | null;
+    username?: string;
+    bio?: string | null;
+    avatar_url?: string | null;
+  }): Promise<{ user: UserProfile; token?: string; message: string }> => {
+    return apiRequest<{ user: UserProfile; token?: string; message: string }>('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 };
