@@ -22,6 +22,7 @@ export interface ChatMessage {
   message_type?: ChatMessageType;
   media_url?: string | null;
   reply_to_id?: number | null;
+  reactions?: Array<{ user_id: number; emoji: string }>;
   status?: MessageStatus;
   created_at: string;
 }
@@ -79,6 +80,7 @@ function toChatMessage(m: DirectMessage): ChatMessage {
     message_type: m.message_type,
     media_url: m.media_url,
     reply_to_id: m.reply_to_id,
+    reactions: m.reactions || [],
     status: m.status,
     created_at: m.created_at,
   };
@@ -232,6 +234,22 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
                 )
               );
             }
+          } else if (data.type === 'reaction') {
+            const messageId = Number(data.message_id);
+            const reactorId = Number(data.user_id);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId
+                  ? {
+                      ...m,
+                      reactions: [
+                        ...(m.reactions || []).filter((r) => r.user_id !== reactorId),
+                        ...(data.emoji ? [{ user_id: reactorId, emoji: String(data.emoji) }] : []),
+                      ],
+                    }
+                  : m
+              )
+            );
           } else if (data.type === 'status') {
             const messageId = Number(data.message_id);
             setMessages((prev) =>
@@ -486,6 +504,32 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     [enqueue]
   );
 
+  // Reage a uma mensagem (emoji = null remove a reação). Atualiza na hora e desfaz se falhar.
+  const reactToMessage = useCallback(
+    (messageId: number, emoji: string | null) => {
+      if (!userId || messageId <= 0) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                reactions: [
+                  ...(m.reactions || []).filter((r) => r.user_id !== userId),
+                  ...(emoji ? [{ user_id: userId, emoji }] : []),
+                ],
+              }
+            : m
+        )
+      );
+      directMessagesApi.react(messageId, emoji).catch((err: any) => {
+        setError(err?.message || 'Não foi possível reagir.');
+        const friendId = activeFriendRef.current;
+        if (friendId) void syncLatest(friendId, false);
+      });
+    },
+    [userId, syncLatest]
+  );
+
   const retrySend = useCallback(
     (clientId: string) => {
       void dispatchSend(clientId);
@@ -532,6 +576,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     sendMediaMessage,
     deleteMessage,
     retrySend,
+    reactToMessage,
     loadOlder,
     reloadHistory,
     hasMore,
