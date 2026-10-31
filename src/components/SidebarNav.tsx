@@ -205,33 +205,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                     <span>Privacidade & Conta</span>
                   </Link>
 
-                  <Link
-                    to="/mensagens"
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-secondary">chat_bubble</span>
-                    <span>Direct Mensagens</span>
-                  </Link>
-
-                  <Link
-                    to="/videos"
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-indigo-500">play_circle</span>
-                    <span>Espectro Play</span>
-                  </Link>
-
-                  <Link
-                    to="/comunidades"
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-tertiary">groups</span>
-                    <span>Comunidades</span>
-                  </Link>
-
                   <button
                     type="button"
                     onClick={handleLogout}
