@@ -107,6 +107,14 @@ const formatMessageDateSeparator = (dateString: string): string => {
   return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
+const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\s){1,12}$/u;
+
+const isBareMessage = (m: ChatMessage): boolean => {
+  const type = m.message_type || 'text';
+  if (m.media_url && ['image', 'video', 'gif', 'sticker'].includes(type)) return true;
+  return !m.media_url && type === 'text' && EMOJI_ONLY.test(m.content || '');
+};
+
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded, setHideBottomNav } = useSidebar();
@@ -974,7 +982,7 @@ export const DirectMessages: React.FC = () => {
 
       if (msgType === 'gif' || msgType === 'sticker') {
         return (
-          <div className="max-w-[200px] rounded-lg overflow-hidden shadow-xs border border-outline-variant/30 bg-surface-container">
+          <div className="max-w-[240px] rounded-lg overflow-hidden">
             <img
               src={m.media_url}
               alt="GIF Animado"
@@ -1010,6 +1018,9 @@ export const DirectMessages: React.FC = () => {
     }
 
     // Mensagem de texto normal
+    if (isBareMessage(m)) {
+      return <p className="text-4xl leading-tight whitespace-pre-wrap">{m.content}</p>;
+    }
     return <p className="chat-text text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
   };
 
@@ -1375,10 +1386,7 @@ export const DirectMessages: React.FC = () => {
                           <div className="flex items-center gap-2 text-[11px]">
                             {presence?.visible ? (
                               presence.online ? (
-                                <span className="text-on-surface-variant font-medium flex items-center gap-1">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                  Online
-                                </span>
+                                <span className="text-on-surface-variant font-medium">Online</span>
                               ) : presence.last_seen_at ? (
                                 <span className="text-on-surface-variant">{lastSeenLabel(presence.last_seen_at)}</span>
                               ) : null
@@ -1586,6 +1594,7 @@ export const DirectMessages: React.FC = () => {
                             : null;
 
                           const isKebabOpen = activeKebabMessage?.id === m.id;
+                          const bare = isBareMessage(m);
 
                           return (
                             <React.Fragment key={m.id || `${m.created_at}-${idx}`}>
@@ -1763,7 +1772,7 @@ export const DirectMessages: React.FC = () => {
 
                                   {/* Balão de Mensagem */}
                                   <div
-                                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${
+                                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${bare ? '!bg-transparent !shadow-none !p-0 !border-0 ' : ''}${
                                       isMe
                                         ? `bg-primary-container text-on-primary rounded-2xl ${
                                             isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'
