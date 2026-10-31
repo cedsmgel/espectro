@@ -7,6 +7,8 @@ export type ChatMessageType =
   | 'gif'
   | 'sticker';
 
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
 export interface ChatMessage {
   id?: number;
   sender_id: number;
@@ -15,6 +17,7 @@ export interface ChatMessage {
   message_type: ChatMessageType;
   media_url?: string | null;
   reply_to_id?: number | null;
+  status?: MessageStatus;
   created_at: string;
 }
 
@@ -39,6 +42,7 @@ export class ChatRoom implements DurableObject {
               message_type TEXT DEFAULT 'text',
               media_url TEXT,
               reply_to_id INTEGER,
+              status TEXT DEFAULT 'sent',
               created_at TEXT NOT NULL
             );
           `);
@@ -52,6 +56,9 @@ export class ChatRoom implements DurableObject {
           } catch {}
           try {
             this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN reply_to_id INTEGER;`);
+          } catch {}
+          try {
+            this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent';`);
           } catch {}
         }
       } catch (err) {
@@ -67,9 +74,11 @@ export class ChatRoom implements DurableObject {
         const cursor = this.ctx.storage.sql.exec<Record<string, SqlStorageValue>>(`
           SELECT id, sender_id, sender_username, content, 
                  COALESCE(message_type, 'text') AS message_type, 
-                 media_url, reply_to_id, created_at 
+                 media_url, reply_to_id, 
+                 COALESCE(status, 'sent') AS status,
+                 created_at 
           FROM (
-            SELECT id, sender_id, sender_username, content, message_type, media_url, reply_to_id, created_at 
+            SELECT id, sender_id, sender_username, content, message_type, media_url, reply_to_id, status, created_at 
             FROM messages 
             ORDER BY id DESC 
             LIMIT 50
@@ -89,13 +98,14 @@ export class ChatRoom implements DurableObject {
     try {
       if (this.ctx.storage.sql) {
         const cursor = this.ctx.storage.sql.exec<Record<string, SqlStorageValue>>(
-          `INSERT INTO messages (sender_id, sender_username, content, message_type, media_url, reply_to_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+          `INSERT INTO messages (sender_id, sender_username, content, message_type, media_url, reply_to_id, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
           msg.sender_id,
           msg.sender_username,
           msg.content,
           msg.message_type || 'text',
           msg.media_url || null,
           msg.reply_to_id || null,
+          msg.status || 'sent',
           msg.created_at
         );
         const rows = cursor.toArray();
@@ -166,7 +176,35 @@ export class ChatRoom implements DurableObject {
       const raw = typeof message === "string" ? message : new TextDecoder().decode(message);
       const data = JSON.parse(raw);
 
-      // Tarefa 4: Exclusão de mensagens
+      // Evento de Leitura de Mensagens (Ticks Azuis - Tarefa 3)
+      if (data.type === "read") {
+        const readerId = Number(data.reader_id || data.sender_id || 0);
+        if (readerId && this.ctx.storage.sql) {
+          try {
+            this.ctx.storage.sql.exec(
+              `UPDATE messages SET status = 'read' WHERE sender_id != ? AND status != 'read'`,
+              readerId
+            );
+          } catch (err) {
+            console.error("Erro ao atualizar status para read no SQLite:", err);
+          }
+        }
+
+        const payload = JSON.stringify({
+          type: "read",
+          reader_id: readerId,
+        });
+
+        const connectedSockets = this.ctx.getWebSockets();
+        for (const client of connectedSockets) {
+          try {
+            client.send(payload);
+          } catch {}
+        }
+        return;
+      }
+
+      // Exclusão de mensagens
       if (data.type === "delete") {
         const messageId = Number(data.message_id || data.messageId || data.id);
         if (messageId) {
@@ -224,6 +262,10 @@ export class ChatRoom implements DurableObject {
 
         // Aceita se tiver texto OU se tiver URL de mídia (ou for localização)
         if (rawContent.length > 0 || mediaUrl) {
+          const connectedSockets = this.ctx.getWebSockets();
+          // Se houver mais de 1 socket conectado na sala, o outro usuário já recebeu no seu dispositivo ('delivered')!
+          const initialStatus: MessageStatus = connectedSockets.length > 1 ? 'delivered' : 'sent';
+
           const newMsg: ChatMessage = {
             sender_id: Number(data.sender_id || 0),
             sender_username: String(data.sender_username || "Usuário"),
@@ -231,6 +273,7 @@ export class ChatRoom implements DurableObject {
             message_type: messageType,
             media_url: mediaUrl,
             reply_to_id: replyToId,
+            status: initialStatus,
             created_at: data.created_at || new Date().toISOString(),
           };
 
@@ -242,13 +285,13 @@ export class ChatRoom implements DurableObject {
             type: "message",
             message: newMsg,
             // Campos no nível raiz para máxima compatibilidade
+            status: newMsg.status,
             media_url: newMsg.media_url,
             message_type: newMsg.message_type,
             content: newMsg.content,
             reply_to_id: newMsg.reply_to_id,
           });
 
-          const connectedSockets = this.ctx.getWebSockets();
           for (const client of connectedSockets) {
             try {
               client.send(payload);

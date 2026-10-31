@@ -10,6 +10,8 @@ export type ChatMessageType =
   | 'gif'
   | 'sticker';
 
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
 export interface ChatMessage {
   id?: number;
   sender_id: number;
@@ -18,6 +20,7 @@ export interface ChatMessage {
   message_type?: ChatMessageType;
   media_url?: string | null;
   reply_to_id?: number | null;
+  status?: MessageStatus;
   created_at: string;
 }
 
@@ -35,7 +38,7 @@ export interface UseChatOptions {
   activeFriendUsername?: string;
 }
 
-export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions) {
+export function useChat({ activeFriendId }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
@@ -70,6 +73,21 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     }
     return url;
   }, []);
+
+  // Envia evento avisando que as mensagens foram lidas (Tarefa 3)
+  const markAsRead = useCallback(() => {
+    if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    try {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'read',
+          reader_id: userId,
+        })
+      );
+    } catch {}
+  }, [userId]);
 
   const connect = useCallback(() => {
     if (!userId || !activeFriendId || !token) {
@@ -107,6 +125,11 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
         setConnectionStatus('connected');
         setError(null);
 
+        // Ao abrir a conversa, avisa que as mensagens anteriores foram lidas
+        try {
+          ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
+        } catch {}
+
         // Ping periódico a cada 25 segundos para manter a conexão ativa
         if (pingIntervalRef.current) window.clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = window.setInterval(() => {
@@ -123,20 +146,42 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
           const data = JSON.parse(event.data);
 
           if (data.type === 'history') {
-            // Histórico das últimas 50 mensagens salvas no SQLite interno
-            setMessages(Array.isArray(data.messages) ? data.messages : []);
+            // Histórico das últimas 50 mensagens salvas no SQLite interno com status
+            const list: ChatMessage[] = Array.isArray(data.messages) ? data.messages : [];
+            setMessages(list);
             setLoadingHistory(false);
+
+            // Se houver mensagens não lidas de outro remetente, avisa que lemos
+            if (list.some((m) => m.sender_id !== userId && m.status !== 'read')) {
+              try {
+                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
+              } catch {}
+            }
+          } else if (data.type === 'read') {
+            // O outro usuário leu nossas mensagens: atualiza ticks para 'read' (Azul)
+            const readerId = Number(data.reader_id || 0);
+            if (readerId && readerId !== userId) {
+              setMessages((prev) =>
+                prev.map((m) => (m.sender_id === userId ? { ...m, status: 'read' } : m))
+              );
+            }
           } else if (data.type === 'message' && data.message) {
             // Nova mensagem recebida em tempo real
+            const newMsg: ChatMessage = data.message;
             setMessages((prev) => {
-              // Evita duplicatas se já existir por ID
-              if (data.message.id && prev.some((m) => m.id === data.message.id)) {
-                return prev;
+              if (newMsg.id && prev.some((m) => m.id === newMsg.id)) {
+                return prev.map((m) => (m.id === newMsg.id ? newMsg : m));
               }
-              return [...prev, data.message];
+              return [...prev, newMsg];
             });
-            // Quando uma mensagem chega, o amigo para de digitar
-            setIsOtherUserTyping(false);
+
+            // Se a mensagem for do outro usuário e estamos com a sala aberta, marca como lida imediatamente
+            if (newMsg.sender_id !== userId) {
+              setIsOtherUserTyping(false);
+              try {
+                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
+              } catch {}
+            }
           } else if (data.type === 'media' || data.media_url) {
             // Suporte para quando a mensagem chega com type: 'media'
             const mediaMsg: ChatMessage = {
@@ -146,17 +191,25 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
               content: data.content || data.filename || (data.message && data.message.content) || '',
               message_type: data.message_type || (data.message && data.message.message_type) || 'image',
               media_url: data.media_url || (data.message && data.message.media_url) || null,
+              reply_to_id: data.reply_to_id || (data.message && data.message.reply_to_id) || null,
+              status: data.status || (data.message && data.message.status) || 'sent',
               created_at: data.created_at || (data.message && data.message.created_at) || new Date().toISOString(),
             };
             setMessages((prev) => {
               if (mediaMsg.id && prev.some((m) => m.id === mediaMsg.id)) {
-                return prev;
+                return prev.map((m) => (m.id === mediaMsg.id ? mediaMsg : m));
               }
               return [...prev, mediaMsg];
             });
-            setIsOtherUserTyping(false);
+
+            if (mediaMsg.sender_id !== userId) {
+              setIsOtherUserTyping(false);
+              try {
+                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
+              } catch {}
+            }
           } else if (data.type === 'delete') {
-            // Remoção de mensagem deletada em tempo real (Tarefa 4)
+            // Remoção de mensagem deletada em tempo real
             const deletedId = Number(data.message_id || data.messageId || data.id);
             if (deletedId) {
               setMessages((prev) => prev.filter((m) => m.id !== deletedId));
@@ -270,7 +323,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId]
   );
 
-  // Função para enviar nova mensagem (suporta texto puro, mídias e citação/resposta - Tarefa 4)
+  // Função para enviar nova mensagem
   const sendMessage = useCallback(
     (
       textOrOptions: string | SendMessageOptions,
@@ -312,7 +365,6 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
 
       try {
         socketRef.current.send(JSON.stringify(payload));
-        // Notifica que parou de digitar
         sendTyping(false);
         return true;
       } catch (err) {
@@ -359,7 +411,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId, username, sendTyping]
   );
 
-  // Deletar mensagem no Durable Object (Tarefa 4)
+  // Deletar mensagem no Durable Object
   const deleteMessage = useCallback((messageId: number) => {
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       return false;
@@ -387,6 +439,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     sendMediaMessage,
     deleteMessage,
     sendTyping,
+    markAsRead,
     isOtherUserTyping,
     connectionStatus,
     loadingHistory,

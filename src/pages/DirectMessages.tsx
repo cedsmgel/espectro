@@ -102,6 +102,34 @@ export const DirectMessages: React.FC = () => {
   const [infoModalMessage, setInfoModalMessage] = useState<ChatMessage | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Estado para o Menu Kebab (três pontinhos) com overlay de foco
+  const [activeKebabMessage, setActiveKebabMessage] = useState<ChatMessage | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleTouchStart = (m: ChatMessage) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setActiveKebabMessage(m);
+    }, 450);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Fecha o menu de foco ao pressionar Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveKebabMessage(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Auto-limpeza do toast
   useEffect(() => {
     if (!toastMessage) return;
@@ -120,10 +148,20 @@ export const DirectMessages: React.FC = () => {
     connectionStatus,
     loadingHistory,
     reconnect,
+    markAsRead,
   } = useChat({
     activeFriendId: activeFriend?.friend_id,
     activeFriendUsername: activeFriend?.username,
   });
+
+  // Marca como lido quando o usuário foca na janela/aba
+  useEffect(() => {
+    const onFocus = () => {
+      markAsRead();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [markAsRead]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<number | null>(null);
@@ -1023,6 +1061,14 @@ export const DirectMessages: React.FC = () => {
                       </div>
                     )}
 
+                    {/* Overlay de Foco no Menu Kebab da Mensagem */}
+                    {activeKebabMessage && (
+                      <div
+                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200 cursor-pointer"
+                        onClick={() => setActiveKebabMessage(null)}
+                      />
+                    )}
+
                     {/* Histórico de Mensagens */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
                       <div className="flex items-center justify-center">
@@ -1075,6 +1121,8 @@ export const DirectMessages: React.FC = () => {
                             ? messages.find((item) => item.id === m.reply_to_id)
                             : null;
 
+                          const isKebabOpen = activeKebabMessage?.id === m.id;
+
                           return (
                             <React.Fragment key={m.id || `${m.created_at}-${idx}`}>
                               {/* Separador de Data Visual */}
@@ -1090,7 +1138,7 @@ export const DirectMessages: React.FC = () => {
                                 id={`msg-${m.id}`}
                                 className={`group relative flex items-end gap-2 max-w-xl ${marginTopClass} ${
                                   isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
-                                }`}
+                                } ${isKebabOpen ? 'z-50' : 'z-10'}`}
                               >
                                 {/* Avatar do contato apenas na última mensagem do bloco consecutivo */}
                                 {!isMe && (
@@ -1103,60 +1151,109 @@ export const DirectMessages: React.FC = () => {
                                   )
                                 )}
 
-                                <div className="relative flex flex-col max-w-[85%] sm:max-w-md">
-                                  {/* Menu Flutuante de Ações no Hover (Tarefa 3) */}
+                                <div
+                                  className="relative flex flex-col max-w-[85%] sm:max-w-md select-text"
+                                  onTouchStart={() => handleTouchStart(m)}
+                                  onTouchEnd={handleTouchEnd}
+                                  onTouchCancel={handleTouchEnd}
+                                >
+                                  {/* Botão de Três Pontos (Kebab) visível no hover ou com o menu aberto */}
                                   <div
-                                    className={`absolute -top-3.5 z-20 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-surface-container-high/95 backdrop-blur-md border border-outline-variant/40 rounded-full shadow-lg px-1 py-0.5 flex items-center gap-0.5 scale-95 group-hover:scale-100 ${
-                                      isMe ? 'right-2' : 'left-2'
+                                    className={`absolute top-1 z-30 ${
+                                      isMe ? '-left-8' : '-right-8'
+                                    } transition-all duration-150 ${
+                                      isKebabOpen
+                                        ? 'opacity-100 scale-100'
+                                        : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
                                     }`}
                                   >
                                     <button
                                       type="button"
-                                      onClick={() => handleStartReply(m)}
-                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-                                      title="Responder"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveKebabMessage(isKebabOpen ? null : m);
+                                      }}
+                                      className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-outline-variant flex items-center justify-center shadow-md transition-all cursor-pointer"
+                                      title="Opções da mensagem"
                                     >
-                                      <span className="material-symbols-outlined text-[15px]">reply</span>
+                                      <span className="material-symbols-outlined text-[16px]">more_vert</span>
                                     </button>
+                                  </div>
 
-                                    <button
-                                      type="button"
-                                      onClick={() => setForwardModalMessage(m)}
-                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-                                      title="Encaminhar"
+                                  {/* Submenu Dropdown com Efeito de Foco */}
+                                  {isKebabOpen && (
+                                    <div
+                                      className={`absolute z-50 ${
+                                        isMe ? 'right-0 top-full mt-1.5' : 'left-0 top-full mt-1.5'
+                                      } min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
+                                      onClick={(e) => e.stopPropagation()}
                                     >
-                                      <span className="material-symbols-outlined text-[15px]">forward</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCopyMessage(m)}
-                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-                                      title="Copiar texto"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px]">content_copy</span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => setInfoModalMessage(m)}
-                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
-                                      title="Dados da Mensagem"
-                                    >
-                                      <span className="material-symbols-outlined text-[15px]">info</span>
-                                    </button>
-
-                                    {isMe && m.id && (
                                       <button
                                         type="button"
-                                        onClick={() => handleDeleteMessage(m.id!)}
-                                        className="p-1 rounded-full hover:bg-error/15 text-error transition-colors cursor-pointer"
-                                        title="Excluir Mensagem"
+                                        onClick={() => {
+                                          handleStartReply(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
                                       >
-                                        <span className="material-symbols-outlined text-[15px]">delete</span>
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">reply</span>
+                                        <span className="font-medium">Responder</span>
                                       </button>
-                                    )}
-                                  </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setForwardModalMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">forward</span>
+                                        <span className="font-medium">Encaminhar</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleCopyMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">content_copy</span>
+                                        <span className="font-medium">Copiar</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setInfoModalMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">info</span>
+                                        <span className="font-medium">Dados da Mensagem</span>
+                                      </button>
+
+                                      {isMe && m.id && (
+                                        <>
+                                          <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleDeleteMessage(m.id!);
+                                              setActiveKebabMessage(null);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                            <span className="font-medium">Excluir</span>
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* Balão de Mensagem */}
                                   <div
@@ -1200,19 +1297,43 @@ export const DirectMessages: React.FC = () => {
                                     {renderMessageContent(m, isMe)}
                                   </div>
 
-                                  {/* Timestamp visível na última mensagem do grupo */}
-                                  {isLastInBlock && (
-                                    <span
-                                      className={`text-[10px] text-on-surface-variant mt-0.5 ${
-                                        isMe ? 'text-right mr-1' : 'ml-1'
-                                      }`}
-                                    >
+                                  {/* Horário e Ticks de Confirmação (Tarefa 3) */}
+                                  <div
+                                    className={`text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-1 ${
+                                      isMe ? 'justify-end mr-1' : 'ml-1'
+                                    }`}
+                                  >
+                                    <span>
                                       {new Date(m.created_at).toLocaleTimeString('pt-BR', {
                                         hour: '2-digit',
                                         minute: '2-digit',
                                       })}
                                     </span>
-                                  )}
+                                    {isMe && (
+                                      m.status === 'read' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[15px] text-blue-500 font-bold select-none inline-flex items-center"
+                                          title="Lida"
+                                        >
+                                          done_all
+                                        </span>
+                                      ) : m.status === 'delivered' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[15px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Entregue"
+                                        >
+                                          done_all
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Enviada"
+                                        >
+                                          check
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </React.Fragment>
@@ -1808,10 +1929,22 @@ export const DirectMessages: React.FC = () => {
 
               <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
                 <span className="text-on-surface-variant">Status de Entrega:</span>
-                <span className="text-emerald-500 font-semibold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[15px]">done_all</span>
-                  Entregue em tempo real
-                </span>
+                {infoModalMessage.status === 'read' ? (
+                  <span className="text-blue-500 font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px] font-bold">done_all</span>
+                    Lido pelo destinatário
+                  </span>
+                ) : infoModalMessage.status === 'delivered' ? (
+                  <span className="text-zinc-400 font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[15px]">done_all</span>
+                    Entregue ao dispositivo
+                  </span>
+                ) : (
+                  <span className="text-zinc-400 font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">check</span>
+                    Enviado ao servidor
+                  </span>
+                )}
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
