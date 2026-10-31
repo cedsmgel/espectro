@@ -48,12 +48,12 @@ export default {
         "error-container": "#ffdad6",
         "on-error": "#ffffff",
 
-        // Dark compatibility tokens
+        // Dark compatibility tokens (All Black / Vercel style)
         dark: {
-          bg: "#0b0d14",
-          surface: "#121520",
-          card: "rgba(20, 24, 36, 0.7)",
-          border: "rgba(255, 255, 255, 0.08)",
+          bg: "#000000",
+          surface: "#121212",
+          card: "#18181b",
+          border: "#27272a",
         },
         brand: {
           blue: "#4f46e5",

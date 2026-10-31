@@ -1242,10 +1242,10 @@ export const DirectMessages: React.FC = () => {
                         ref={emojiPickerRef}
                         className="absolute bottom-20 left-4 sm:left-12 z-30 shadow-2xl rounded-3xl overflow-hidden border border-outline-variant/30 animate-in fade-in slide-in-from-bottom-2 max-h-[300px] flex flex-col bg-surface-container-lowest"
                         style={{
-                          ['--rgb-background' as any]: '20, 18, 24',
-                          ['--rgb-input' as any]: '30, 27, 36',
+                          ['--rgb-background' as any]: '18, 18, 18',
+                          ['--rgb-input' as any]: '24, 24, 27',
                           ['--rgb-accent' as any]: '168, 85, 247',
-                          ['--rgb-color' as any]: '238, 235, 244',
+                          ['--rgb-color' as any]: '244, 244, 245',
                         }}
                       >
                         <div className="flex items-center justify-between px-3.5 py-1.5 bg-surface-container-lowest border-b border-outline-variant/20">

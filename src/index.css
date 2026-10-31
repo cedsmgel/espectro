@@ -39,36 +39,36 @@
   }
 
   html.dark {
-    /* MODO ESCURO (Dark Mode) - Fundos escuros profundos, textos claros e roxo elétrico */
-    --color-surface: 15 17 23; /* #0f1117 - Fundo noturno suave */
-    --color-surface-dim: 10 12 18; /* #0a0c12 */
-    --color-surface-bright: 26 30 42; /* #1a1e2a */
-    --color-surface-tint: 99 102 241;
+    /* MODO ESCURO (All Black / Vercel Style) - Preto Puro (#000000), cards cinza escuro (#121212/#18181b), bordas (#27272a), zero tom azulado */
+    --color-surface: 0 0 0; /* #000000 - Fundo Preto Puro absoluto */
+    --color-surface-dim: 5 5 5; /* #050505 */
+    --color-surface-bright: 24 24 27; /* #18181b (zinc-900) */
+    --color-surface-tint: 168 85 247;
 
-    --color-surface-container-lowest: 20 24 35; /* #141823 - Cards, modais e containers */
-    --color-surface-container-low: 26 31 46; /* #1a1f2e - Inputs e containers baixos */
-    --color-surface-container: 34 40 59; /* #22283b - Hover e seleções */
-    --color-surface-container-high: 44 52 75; /* #2c344b - Badges */
-    --color-surface-container-highest: 55 65 92; /* #37415c */
+    --color-surface-container-lowest: 18 18 18; /* #121212 - Cards, painéis e modais */
+    --color-surface-container-low: 24 24 27; /* #18181b - Inputs, barras e containers secundários */
+    --color-surface-container: 39 39 42; /* #27272a - Hover, divisores e seleções */
+    --color-surface-container-high: 57 57 63; /* #39393f - Badges e destaques neutros */
+    --color-surface-container-highest: 82 82 91; /* #52525b */
 
-    --color-on-surface: 241 245 249; /* #f1f5f9 (slate-100) - Texto primário claro */
-    --color-on-surface-variant: 148 163 184; /* #94a3b8 (slate-400) - Texto secundário */
-    --color-outline: 100 116 139; /* #64748b */
-    --color-outline-variant: 51 65 85; /* #334155 (slate-700) - Bordas sutis */
+    --color-on-surface: 244 244 245; /* #f4f4f5 (zinc-100) - Texto branco puro nítido */
+    --color-on-surface-variant: 161 161 170; /* #a1a1aa (zinc-400) - Texto secundário neutro */
+    --color-outline: 82 82 91; /* #52525b (zinc-600) */
+    --color-outline-variant: 39 39 42; /* #27272a (zinc-800) - Bordas neutras sem azul */
 
-    --color-primary: 99 102 241; /* #6366f1 (roxo elétrico) */
-    --color-primary-container: 79 70 229; /* #4f46e5 */
+    --color-primary: 168 85 247; /* #a855f7 (roxo neon vibrante) */
+    --color-primary-container: 147 51 234; /* #9333ea */
     --color-on-primary: 255 255 255;
-    --color-on-primary-container: 224 231 255;
+    --color-on-primary-container: 243 232 255;
 
-    --color-secondary: 168 85 247; /* #a855f7 */
-    --color-secondary-container: 147 51 234; /* #9333ea */
+    --color-secondary: 192 132 252; /* #c084fc */
+    --color-secondary-container: 168 85 247; /* #a855f7 */
     --color-on-secondary: 255 255 255;
 
-    --color-tertiary: 6 182 212; /* #06b6d4 */
-    --color-tertiary-container: 8 145 178; /* #0891b2 */
+    --color-tertiary: 45 212 191; /* #2dd4bf (teal neon) */
+    --color-tertiary-container: 20 184 166; /* #14b8a6 */
 
-    --color-error: 239 68 68;
+    --color-error: 248 113 113; /* #f87171 */
     --color-error-container: 69 10 10;
     --color-on-error: 255 255 255;
   }
