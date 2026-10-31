@@ -40,12 +40,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
 
   const navItems = [
     {
-      to: '/',
-      title: 'Início',
-      icon: 'home',
-      active: isActive('/'),
-    },
-    {
       to: '/?filter=trending',
       title: 'Explorar & Em Alta',
       icon: 'trending_up',
@@ -88,9 +82,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
         />
       )}
 
+      {/* Espaçador: reserva 80px no fluxo apenas em layouts flex-row (Feed/PostDetail); em flex-col não ocupa altura */}
+      <div aria-hidden="true" className="hidden md:block w-20 h-0 shrink-0" />
+
       {/* Sidebar Principal (Compacta estilo Instagram: w-20 fixa no Desktop com Tooltips Flutuantes no Hover) */}
       <aside
-        className={`fixed md:sticky top-0 h-screen z-50 md:z-30 flex flex-col justify-between py-4 border-r border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.02)] bg-surface-container-lowest transition-all duration-300 ease-in-out shrink-0 ${
+        className={`fixed left-0 top-0 h-screen z-50 md:z-30 flex flex-col justify-between py-4 border-r border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.02)] bg-surface-container-lowest transition-all duration-300 ease-in-out shrink-0 ${
           isExpanded
             ? 'translate-x-0 w-64 px-3.5 md:w-20 md:px-2'
             : '-translate-x-full md:translate-x-0 w-20 px-2'
@@ -113,13 +110,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   Espectro
                 </span>
               )}
-              {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
-              <span
-                role="tooltip"
-                className="hidden md:block absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-neutral-900/95 dark:bg-zinc-800/95 text-white dark:text-zinc-100 text-xs font-medium rounded-lg shadow-lg border border-white/10 dark:border-white/5 pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
-              >
-                Início
-              </span>
             </Link>
           </div>
 

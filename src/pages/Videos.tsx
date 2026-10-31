@@ -63,12 +63,12 @@ export const Videos: React.FC = () => {
       <SidebarNav />
 
       <div
-        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        className={`pt-16 md:pt-0 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
         {/* Interactive Pill Filter Bar */}
-        <section className="sticky top-16 z-30 bg-surface/95 backdrop-blur-md py-3 px-4 md:px-8 border-b border-outline-variant/30">
+        <section className="sticky top-16 md:top-0 z-30 bg-surface/95 backdrop-blur-md py-3 px-4 md:px-8 border-b border-outline-variant/30">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
               {categories.map((cat) => (

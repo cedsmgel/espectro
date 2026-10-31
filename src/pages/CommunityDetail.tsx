@@ -239,8 +239,8 @@ export const CommunityDetail: React.FC = () => {
       )}
 
       <div
-        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        className={`pt-16 md:pt-0 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
         <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 flex-1">

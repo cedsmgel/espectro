@@ -96,8 +96,8 @@ export const Notifications: React.FC = () => {
 
       {/* Container Principal que empurra o feed suavemente */}
       <div
-        className={`pt-16 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        className={`pt-16 md:pt-0 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
+          isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8 flex-1">
