@@ -3,6 +3,7 @@ import { authStorage, directMessagesApi, DirectMessage } from '../lib/api';
 import { notifyUnreadChanged } from './useUnreadDms';
 
 export type ChatMessageType =
+  | 'audio'
   | 'text'
   | 'image'
   | 'video'
@@ -497,7 +498,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
   const sendMediaMessage = useCallback(
     (options: {
       media_url: string;
-      message_type: 'image' | 'video' | 'file';
+      message_type: 'image' | 'video' | 'file' | 'audio';
       filename?: string;
       reply_to_id?: number | null;
     }) => enqueue(options.filename || '', options.message_type, options.media_url, options.reply_to_id ?? null),

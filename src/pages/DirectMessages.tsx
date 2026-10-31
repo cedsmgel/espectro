@@ -27,6 +27,7 @@ import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { useTheme } from '../context/ThemeContext';
+import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
@@ -289,6 +290,8 @@ export const DirectMessages: React.FC = () => {
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const voice = useVoiceRecorder();
 
   // Fechar popover de emoji ao clicar fora
   useEffect(() => {
@@ -330,7 +333,7 @@ export const DirectMessages: React.FC = () => {
 
   // Estados do Giphy
   const [gifSearchQuery, setGifSearchQuery] = useState('');
-  const [gifResults, setGifResults] = useState<Array<{ id: string; url: string; title: string }>>(FALLBACK_GIFS);
+  const [gifResults, setGifResults] = useState<Array<{ id: string; url: string; title: string; preview?: string }>>(FALLBACK_GIFS);
   const [loadingGifs, setLoadingGifs] = useState(false);
 
   // Visualizador de Imagem Ampliada (Lightbox)
@@ -670,29 +673,20 @@ export const DirectMessages: React.FC = () => {
     const fetchGifs = async () => {
       setLoadingGifs(true);
       const query = gifSearchQuery.trim();
-      const apiKey = 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0P4W3'; // Chave pública de teste do Giphy
-
       try {
-        const endpoint = query
-          ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=16&rating=g`
-          : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=16&rating=g`;
-
-        const res = await fetch(endpoint);
+        const res = await fetch(`/api/gifs?q=${encodeURIComponent(query)}`, {
+          headers: { Authorization: `Bearer ${authStorage.getToken() || ''}` },
+        });
         if (res.ok) {
           const data: any = await res.json();
-          if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
-            const formatted = data.data.map((g: any) => ({
-              id: g.id,
-              title: g.title || 'GIF',
-              url: g.images?.fixed_height?.url || g.images?.downsized_medium?.url || g.images?.original?.url,
-            }));
-            setGifResults(formatted);
+          if (Array.isArray(data.results) && data.results.length > 0) {
+            setGifResults(data.results.map((g: any) => ({ id: g.id, title: g.title, url: g.url, preview: g.preview })));
             setLoadingGifs(false);
             return;
           }
         }
       } catch (err) {
-        console.warn('Erro ao conectar na API do Giphy, usando fallback:', err);
+        console.warn('Falha ao buscar GIFs, usando biblioteca local:', err);
       }
 
       // Fallback
@@ -795,6 +789,35 @@ export const DirectMessages: React.FC = () => {
     }
   };
 
+  const toggleArchive = async (c: Friend) => {
+    const archived = !conversations[c.friend_id]?.archived;
+    try {
+      await conversationSettingsApi.update(c.friend_id, { archived } as any);
+      refreshConversations();
+      setToastMessage(archived ? 'Conversa arquivada.' : 'Conversa desarquivada.');
+    } catch {
+      setToastMessage('Não foi possível arquivar a conversa.');
+    }
+  };
+
+  const handleSendVoice = async () => {
+    const blob = await voice.stop();
+    if (!blob || !activeFriend) return;
+    try {
+      const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      const file = new File([blob], `voz-${Date.now()}.${ext}`, { type: blob.type || 'audio/webm' });
+      const res = await uploadApi.upload(file, { context: 'audio' });
+      sendMediaMessage({ media_url: res.url, message_type: 'audio', filename: 'Mensagem de voz' });
+    } catch (err: any) {
+      setUploadError(err?.message || 'Não foi possível enviar o áudio.');
+    }
+  };
+
+  const handleStartVoice = async () => {
+    const error = await voice.start();
+    if (error) setUploadError(error);
+  };
+
   const handleBlockUser = async () => {
     if (!activeFriend) return;
     if (
@@ -835,6 +858,7 @@ export const DirectMessages: React.FC = () => {
       const term = searchConv.trim().toLowerCase();
       return !term || c.username.toLowerCase().includes(term) || nickname.toLowerCase().includes(term);
     })
+    .filter((c) => !!conversations[c.friend_id]?.archived === showArchived)
     .filter((c) => !unreadOnly || (conversations[c.friend_id]?.unread_count ?? 0) > 0)
     .sort((a, b) => {
       const pa = conversations[a.friend_id]?.pinned ? 1 : 0;
@@ -859,6 +883,8 @@ export const DirectMessages: React.FC = () => {
         return `${prefix}📍 Localização`;
       case 'gif':
         return `${prefix}GIF`;
+      case 'audio':
+        return `${prefix}🎤 Áudio`;
       case 'sticker':
         return `${prefix}Figurinha`;
       default:
@@ -978,6 +1004,10 @@ export const DirectMessages: React.FC = () => {
             </a>
           </div>
         );
+      }
+
+      if (msgType === 'audio') {
+        return <audio controls preload="metadata" src={m.media_url} className="max-w-[240px] h-10" />;
       }
 
       if (msgType === 'gif' || msgType === 'sticker') {
@@ -1185,6 +1215,16 @@ export const DirectMessages: React.FC = () => {
 
                 {/* Lista de Conversas / Amigos */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-2">
+                  {(showArchived || Object.values(conversations).some((c) => c.archived)) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowArchived((v) => !v)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl text-xs font-semibold text-on-surface hover:bg-surface-container-low/60 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">{showArchived ? 'arrow_back' : 'archive'}</span>
+                      <span>{showArchived ? 'Voltar às conversas' : 'Arquivadas'}</span>
+                    </button>
+                  )}
                   {filteredConversations.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
@@ -1308,6 +1348,12 @@ export const DirectMessages: React.FC = () => {
                                 label: conversations[c.friend_id]?.muted ? 'Reativar notificações' : 'Silenciar',
                                 icon: conversations[c.friend_id]?.muted ? 'notifications_active' : 'notifications_off',
                                 onSelect: () => toggleListFlag(c, 'muted'),
+                              },
+                              {
+                                key: 'archive',
+                                label: conversations[c.friend_id]?.archived ? 'Desarquivar' : 'Arquivar',
+                                icon: 'archive',
+                                onSelect: () => toggleArchive(c),
                               },
                               {
                                 key: 'delete',
@@ -2045,7 +2091,7 @@ export const DirectMessages: React.FC = () => {
                                 className="relative rounded-xl overflow-hidden aspect-video bg-surface-container cursor-pointer hover:opacity-80 transition-opacity border border-outline-variant/20 shadow-2xs group"
                               >
                                 <img
-                                  src={gif.url}
+                                  src={gif.preview || gif.url}
                                   alt={gif.title}
                                   className="w-full h-full object-cover"
                                   loading="lazy"
@@ -2054,6 +2100,31 @@ export const DirectMessages: React.FC = () => {
                             ))
                           )}
                         </div>
+                        <p className="text-[10px] text-on-surface-variant text-right pt-1">Powered by GIPHY</p>
+                      </div>
+                    )}
+
+                    {voice.recording && (
+                      <div className="absolute bottom-20 left-3 right-3 sm:left-12 sm:right-12 z-30 flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xl">
+                        <span className="w-2.5 h-2.5 rounded-full bg-error animate-pulse" />
+                        <span className="text-xs font-semibold text-on-surface tabular-nums">
+                          {String(Math.floor(voice.seconds / 60)).padStart(2, '0')}:{String(voice.seconds % 60).padStart(2, '0')}
+                        </span>
+                        <span className="flex-1 text-[11px] text-on-surface-variant">Gravando áudio...</span>
+                        <button
+                          type="button"
+                          onClick={voice.cancel}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold text-on-surface bg-surface-container hover:bg-surface-container-high cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendVoice}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary hover:bg-primary cursor-pointer"
+                        >
+                          Enviar
+                        </button>
                       </div>
                     )}
 
@@ -2097,6 +2168,19 @@ export const DirectMessages: React.FC = () => {
                         >
                           <span className="material-symbols-outlined text-[20px] text-indigo-500">description</span>
                           <span>Documento</span>
+                        </button>
+
+                        {/* Mensagem de voz */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAttachMenu(false);
+                            handleStartVoice();
+                          }}
+                          className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
+                        >
+                          <span className="material-symbols-outlined text-[20px] text-emerald-600">mic</span>
+                          <span>Mensagem de voz</span>
                         </button>
 
                         {/* Localização (somente celular) */}

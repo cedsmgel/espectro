@@ -68,7 +68,7 @@ export interface DirectMessage {
   receiver_id: number;
   sender_username: string;
   content: string;
-  message_type: 'text' | 'image' | 'video' | 'file' | 'location' | 'gif' | 'sticker';
+  message_type: 'text' | 'image' | 'video' | 'file' | 'location' | 'gif' | 'sticker' | 'audio';
   media_url: string | null;
   reply_to_id: number | null;
   client_id: string | null;
@@ -89,6 +89,7 @@ export interface Conversation {
   unread_count: number;
   pinned: boolean;
   manual_unread: boolean;
+  archived: boolean;
   peer_last_seen_at: string | null;
   muted: boolean;
   theme: string;
@@ -100,6 +101,7 @@ export interface ConversationSettings {
   friend_id: number;
   pinned: boolean;
   manual_unread: boolean;
+  archived: boolean;
   muted: boolean;
   theme: string;
   wallpaper: string;
@@ -422,7 +424,7 @@ export const conversationSettingsApi = {
     apiRequest<ConversationSettings>(`/api/conversation_settings?friend_id=${friendId}`, { method: 'GET' }),
   update: (
     friendId: number,
-    patch: Partial<Pick<ConversationSettings, 'muted' | 'theme' | 'wallpaper' | 'nickname' | 'pinned' | 'manual_unread'>> & { clear?: boolean }
+    patch: Partial<Pick<ConversationSettings, 'muted' | 'theme' | 'wallpaper' | 'nickname' | 'pinned' | 'manual_unread' | 'archived'>> & { clear?: boolean }
   ) =>
     apiRequest<ConversationSettings>('/api/conversation_settings', {
       method: 'PUT',

@@ -17,7 +17,7 @@ export interface Env extends ChatEnv, PushEnv {
   JWT_SECRET: string;
 }
 
-const MESSAGE_TYPES = ["text", "image", "video", "file", "location", "gif", "sticker"];
+const MESSAGE_TYPES = ["text", "image", "video", "file", "location", "gif", "sticker", "audio"];
 const CLIENT_ID_PATTERN = /^[\w-]{8,64}$/;
 
 async function fetchMessage(db: D1Database, id: number): Promise<DirectMessageRow | null> {

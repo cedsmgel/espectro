@@ -47,6 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          cs.nickname AS nickname,
          COALESCE(cs.pinned, 0) AS pinned,
          COALESCE(cs.manual_unread, 0) AS manual_unread,
+         COALESCE(cs.archived, 0) AS archived,
          CASE WHEN me.show_last_seen = 1 AND u.show_last_seen = 1
            THEN strftime('%Y-%m-%dT%H:%M:%SZ', u.last_seen_at) END AS peer_last_seen_at
        FROM pairs p
@@ -66,6 +67,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         muted: Boolean(row.muted),
         pinned: Boolean(row.pinned),
         manual_unread: Boolean(row.manual_unread),
+        archived: Boolean(row.archived),
       }))
     );
   } catch (err: unknown) {

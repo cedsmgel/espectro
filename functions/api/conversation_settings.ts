@@ -14,9 +14,10 @@ interface SettingsRow {
   cleared_before_id: number;
   pinned: number;
   manual_unread: number;
+  archived: number;
 }
 
-const SELECT_COLUMNS = "muted, theme, wallpaper, nickname, cleared_before_id, pinned, manual_unread";
+const SELECT_COLUMNS = "muted, theme, wallpaper, nickname, cleared_before_id, pinned, manual_unread, archived";
 const DEFAULTS: SettingsRow = {
   muted: 0,
   theme: "default",
@@ -25,6 +26,7 @@ const DEFAULTS: SettingsRow = {
   cleared_before_id: 0,
   pinned: 0,
   manual_unread: 0,
+  archived: 0,
 };
 
 function present(friendId: number, row: SettingsRow | null) {
@@ -38,6 +40,7 @@ function present(friendId: number, row: SettingsRow | null) {
     cleared_before_id: s.cleared_before_id,
     pinned: Boolean(s.pinned),
     manual_unread: Boolean(s.manual_unread),
+    archived: Boolean(s.archived),
   };
 }
 
@@ -80,6 +83,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       nickname?: string | null;
       pinned?: boolean;
       manual_unread?: boolean;
+      archived?: boolean;
       clear?: boolean;
     } | null;
 
@@ -103,6 +107,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if (body.muted !== undefined) next.muted = body.muted ? 1 : 0;
     if (body.pinned !== undefined) next.pinned = body.pinned ? 1 : 0;
     if (body.manual_unread !== undefined) next.manual_unread = body.manual_unread ? 1 : 0;
+    if (body.archived !== undefined) next.archived = body.archived ? 1 : 0;
 
     if (body.theme !== undefined) {
       if (!CONVERSATION_THEMES.includes(body.theme)) return errorResponse("Tema inválido.", 400);
@@ -138,8 +143,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     await env.DB.prepare(
-      `INSERT INTO conversation_settings (user_id, friend_id, muted, theme, wallpaper, nickname, cleared_before_id, pinned, manual_unread, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `INSERT INTO conversation_settings (user_id, friend_id, muted, theme, wallpaper, nickname, cleared_before_id, pinned, manual_unread, archived, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT(user_id, friend_id) DO UPDATE SET
          muted = excluded.muted,
          theme = excluded.theme,
@@ -148,6 +153,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
          cleared_before_id = excluded.cleared_before_id,
          pinned = excluded.pinned,
          manual_unread = excluded.manual_unread,
+         archived = excluded.archived,
          updated_at = CURRENT_TIMESTAMP`
     )
       .bind(
@@ -159,7 +165,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         next.nickname,
         next.cleared_before_id,
         next.pinned,
-        next.manual_unread
+        next.manual_unread,
+        next.archived
       )
       .run();
 
