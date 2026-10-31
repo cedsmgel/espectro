@@ -1,100 +1,258 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
-import { authStorage, communitiesApi, Community } from '../lib/api';
+import {
+  AppNotification,
+  authStorage,
+  Community,
+  communitiesApi,
+  FriendRequest,
+  friendsApi,
+  FriendSuggestion,
+  notificationsApi,
+  NotificationSummary,
+  suggestionsApi,
+} from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
+import { usePush } from '../hooks/usePush';
+import { notifyNotificationsChanged } from '../hooks/useNotificationCount';
+import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 
-export interface NotificationItem {
-  id: string;
-  type: 'mention' | 'upvote' | 'video' | 'follow' | 'reaction' | 'community';
-  authorName: string;
-  authorUsername: string;
-  authorAvatar?: string;
-  communityName?: string;
-  communitySlug?: string;
-  title: string;
-  content?: string;
-  timestamp: string;
-  group: 'hoje' | 'ontem' | 'esta_semana';
-  read: boolean;
-  actionUrl?: string;
-  videoDuration?: string;
+type Tab = 'todas' | 'amigos' | 'respostas' | 'votos';
+
+const TABS: Array<{ id: Tab; label: string; icon: string }> = [
+  { id: 'todas', label: 'Todas', icon: 'notifications' },
+  { id: 'amigos', label: 'Amigos', icon: 'group' },
+  { id: 'respostas', label: 'Respostas', icon: 'forum' },
+  { id: 'votos', label: 'Votos', icon: 'favorite' },
+];
+
+const EMPTY_SUMMARY: NotificationSummary = { unread: 0, pending_requests: 0, unread_messages: 0, total_badge: 0 };
+
+function relativeTime(iso: string): string {
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime());
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'agora';
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `há ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `há ${days} d`;
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+function dayGroup(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 86400000;
+  if (date.getTime() >= startOfToday) return 'Hoje';
+  if (date.getTime() >= startOfToday - day) return 'Ontem';
+  if (date.getTime() >= startOfToday - 6 * day) return 'Esta semana';
+  return 'Anteriores';
+}
+
+const GROUP_ORDER = ['Hoje', 'Ontem', 'Esta semana', 'Anteriores'];
+
+function suggestionReason(s: FriendSuggestion): string {
+  if (s.mutual_friends > 0) return `${s.mutual_friends} ${s.mutual_friends === 1 ? 'amigo' : 'amigos'} em comum`;
+  if (s.shared_communities > 0) {
+    return `${s.shared_communities} ${s.shared_communities === 1 ? 'comunidade' : 'comunidades'} em comum`;
+  }
+  return 'Novo no Espectro';
 }
 
 export const Notifications: React.FC = () => {
   const { isExpanded } = useSidebar();
   const user = authStorage.getUser();
+  const push = usePush();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeFilter, setActiveFilter] = useState<'all' | 'mentions' | 'communities' | 'reactions' | 'videos'>('all');
+  const tabParam = searchParams.get('tab');
+  const tab: Tab = (['todas', 'amigos', 'respostas', 'votos'] as Tab[]).includes(tabParam as Tab)
+    ? (tabParam as Tab)
+    : 'todas';
+
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [summary, setSummary] = useState<NotificationSummary>(EMPTY_SUMMARY);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);
+  const [sentTo, setSentTo] = useState<Set<number>>(new Set());
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // Preferências rápidas
-  const [prefDesktop, setPrefDesktop] = useState(true);
-  const [prefSound, setPrefSound] = useState(true);
-  const [prefEmail, setPrefEmail] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 3500);
   };
 
-  // Notificações dinâmicas da plataforma (carregadas limpas sem mock)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-
-  useEffect(() => {
-    // Carrega comunidades reais do D1
-    communitiesApi.list().then(setCommunities).catch(() => {});
+  const loadFeed = useCallback(async () => {
+    try {
+      const res = await notificationsApi.list();
+      setItems(res.notifications);
+      setHasMore(res.has_more);
+      setSummary(res.summary);
+    } catch {
+      showToast('Não foi possível carregar as notificações.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const loadFriends = useCallback(async () => {
+    try {
+      setRequests(await friendsApi.pending());
+    } catch {}
+    try {
+      setSuggestions(await suggestionsApi.list());
+    } catch {}
+  }, []);
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    showToast('Todas as notificações foram marcadas como lidas.');
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    void loadFeed();
+    void loadFriends();
+    communitiesApi.list().then(setCommunities).catch(() => {});
+
+    const timer = window.setInterval(() => {
+      void loadFeed();
+      void loadFriends();
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [user?.id, loadFeed, loadFriends]);
+
+  const applySummary = (next: NotificationSummary) => {
+    setSummary(next);
+    notifyNotificationsChanged();
   };
 
-  const handleToggleRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
-    );
+  const changeTab = (next: Tab) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'todas') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
   };
 
-  const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleOpen = async (item: AppNotification) => {
+    if (item.read) return;
+    setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+    try {
+      applySummary((await notificationsApi.markRead([item.id])).summary);
+    } catch {}
   };
 
-  // Filtragem dos itens
-  const filteredNotifications = notifications.filter((n) => {
-    if (activeFilter === 'mentions') return n.type === 'mention';
-    if (activeFilter === 'communities') return n.type === 'community' || Boolean(n.communityName);
-    if (activeFilter === 'reactions') return n.type === 'reaction' || n.type === 'upvote';
-    if (activeFilter === 'videos') return n.type === 'video';
-    return true;
-  });
+  const handleToggleRead = async (item: AppNotification) => {
+    setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: !item.read } : n)));
+    try {
+      const res = item.read ? await notificationsApi.markUnread([item.id]) : await notificationsApi.markRead([item.id]);
+      applySummary(res.summary);
+    } catch {}
+  };
 
-  const hojeList = filteredNotifications.filter((n) => n.group === 'hoje');
-  const ontemList = filteredNotifications.filter((n) => n.group === 'ontem');
-  const semanaList = filteredNotifications.filter((n) => n.group === 'esta_semana');
+  const handleDelete = async (item: AppNotification) => {
+    setItems((prev) => prev.filter((n) => n.id !== item.id));
+    try {
+      applySummary((await notificationsApi.remove(item.id)).summary);
+    } catch {}
+  };
+
+  const handleMarkAll = async () => {
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      applySummary((await notificationsApi.markAllRead()).summary);
+      showToast('Todas as notificações foram marcadas como lidas.');
+    } catch {
+      showToast('Não foi possível marcar como lidas.');
+    }
+  };
+
+  const handleLoadMore = async () => {
+    const last = items[items.length - 1];
+    if (!last) return;
+    setLoadingMore(true);
+    try {
+      const res = await notificationsApi.list(last.id);
+      setItems((prev) => [...prev, ...res.notifications]);
+      setHasMore(res.has_more);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const respondToRequest = async (request: FriendRequest, accept: boolean) => {
+    setBusyId(request.friend_id);
+    try {
+      if (accept) await friendsApi.add(request.friend_id, request.username);
+      else await friendsApi.remove(request.friend_id);
+      setRequests((prev) => prev.filter((r) => r.friend_id !== request.friend_id));
+      showToast(accept ? `Agora você e @${request.username} são amigos.` : 'Pedido recusado.');
+      notifyNotificationsChanged();
+      notifyUnreadChanged();
+      void loadFeed();
+    } catch (err: any) {
+      showToast(err?.message || 'Não foi possível concluir a ação.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const addSuggestion = async (person: FriendSuggestion) => {
+    setBusyId(person.id);
+    try {
+      await friendsApi.add(person.id, person.username);
+      setSentTo((prev) => new Set(prev).add(person.id));
+      showToast(`Pedido enviado para @${person.username}.`);
+    } catch (err: any) {
+      showToast(err?.message || 'Não foi possível enviar o pedido.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const dismissSuggestion = async (person: FriendSuggestion) => {
+    setSuggestions((prev) => prev.filter((s) => s.id !== person.id));
+    await suggestionsApi.dismiss(person.id).catch(() => {});
+  };
+
+  const visibleItems = useMemo(() => {
+    if (tab === 'respostas') return items.filter((n) => n.type === 'post_comment' || n.type === 'comment_reply');
+    if (tab === 'votos') return items.filter((n) => n.type === 'post_upvote');
+    if (tab === 'amigos') return items.filter((n) => n.type === 'friend_accepted');
+    return items;
+  }, [items, tab]);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, AppNotification[]>();
+    for (const item of visibleItems) {
+      const group = dayGroup(item.created_at);
+      map.set(group, [...(map.get(group) || []), item]);
+    }
+    return GROUP_ORDER.filter((g) => map.has(g)).map((g) => ({ group: g, list: map.get(g)! }));
+  }, [visibleItems]);
+
+  const unreadInTab = visibleItems.filter((n) => !n.read).length;
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
 
-      {/* Toast Notifier */}
-      {toastMessage && (
+      {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-surface px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
           <span className="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
-          <span>{toastMessage}</span>
+          <span>{toast}</span>
         </div>
       )}
 
-      {/* Container Principal que empurra o feed suavemente */}
       <div
         className={`pt-16 md:pt-0 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
           isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
@@ -102,365 +260,316 @@ export const Notifications: React.FC = () => {
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8 flex-1">
           <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            {/* Top Bar: Title & Global Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary-container text-on-primary flex items-center justify-center shadow-xs">
                   <span className="material-symbols-outlined text-[24px]">notifications</span>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">
-                    Notificações
-                  </h1>
-                  {unreadCount > 0 && (
+                  <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">Notificações</h1>
+                  {summary.total_badge > 0 && (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-primary-container text-on-primary text-xs font-semibold shadow-xs">
-                      {unreadCount} novas
+                      {summary.total_badge} {summary.total_badge === 1 ? 'nova' : 'novas'}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  disabled={unreadCount === 0}
-                  className="h-9 px-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-40 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-primary">done_all</span>
-                  <span>Marcar todas como lidas</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Chips Bar */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none">
               <button
                 type="button"
-                onClick={() => setActiveFilter('all')}
-                className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === 'all'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-                }`}
+                onClick={handleMarkAll}
+                disabled={summary.unread === 0}
+                className="h-9 px-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-40 cursor-pointer self-start sm:self-auto"
               >
-                <span>Todas</span>
-                {unreadCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-primary-container text-on-primary text-[10px] font-bold">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter('mentions')}
-                className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === 'mentions'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">alternate_email</span>
-                <span>Menções & Respostas</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter('communities')}
-                className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === 'communities'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">groups</span>
-                <span>Comunidades c/</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter('reactions')}
-                className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === 'reactions'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">favorite</span>
-                <span>Reações & Votos</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveFilter('videos')}
-                className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === 'videos'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">smart_display</span>
-                <span>Vídeos & Clipes</span>
+                <span className="material-symbols-outlined text-[18px] text-primary">done_all</span>
+                <span>Marcar todas como lidas</span>
               </button>
             </div>
 
-            {/* Grid Layout: Stream (8 cols) + Right Rail (4 cols) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Left Notifications Stream (8 colunas) */}
-              <div className="lg:col-span-8 flex flex-col gap-6 min-w-0 w-full max-w-2xl mx-auto">
-                {filteredNotifications.length === 0 ? (
-                  <EmptyState
-                    icon="notifications_off"
-                    title="Nenhuma notificação por aqui"
-                    description="Você está em dia com todas as novidades! Avisaremos assim que alguém interagir com suas publicações ou comunidade."
-                    actionLabel="Explorar o Feed"
-                    actionLink="/"
-                  />
-                ) : (
-                  <>
-                    {/* Grupo: HOJE */}
-                    {hojeList.length > 0 && (
-                      <section className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between px-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                              Hoje
-                            </span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          </div>
-                          <span className="text-[11px] text-on-surface-variant">
-                            {hojeList.filter((n) => !n.read).length} novas
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                          {hojeList.map((item) => (
-                            <NotificationCard
-                              key={item.id}
-                              item={item}
-                              onToggleRead={() => handleToggleRead(item.id)}
-                              onDelete={(e) => handleDeleteNotification(item.id, e)}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-
-                    {/* Grupo: ONTEM */}
-                    {ontemList.length > 0 && (
-                      <section className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between px-1 pt-2">
-                          <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                            Ontem
-                          </span>
-                          <span className="text-[11px] text-on-surface-variant">
-                            {ontemList.length} notificações
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                          {ontemList.map((item) => (
-                            <NotificationCard
-                              key={item.id}
-                              item={item}
-                              onToggleRead={() => handleToggleRead(item.id)}
-                              onDelete={(e) => handleDeleteNotification(item.id, e)}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-
-                    {/* Grupo: ESTA SEMANA */}
-                    {semanaList.length > 0 && (
-                      <section className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between px-1 pt-2">
-                          <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                            Esta Semana
-                          </span>
-                          <span className="text-[11px] text-on-surface-variant">
-                            {semanaList.length} notificação
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                          {semanaList.map((item) => (
-                            <NotificationCard
-                              key={item.id}
-                              item={item}
-                              onToggleRead={() => handleToggleRead(item.id)}
-                              onDelete={(e) => handleDeleteNotification(item.id, e)}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Right Contextual Rail: Controls & Insights (4 colunas) */}
-              <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
-                {/* Card 1: Preferências Rápidas de Alerta */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
-                      <h2 className="font-bold text-sm text-on-surface">Preferências Rápidas</h2>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    {/* Push no Desktop */}
-                    <label className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-on-surface">Push no Desktop</span>
-                        <span className="text-[11px] text-on-surface-variant">Avisos imediatos no navegador</span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={prefDesktop}
-                        onChange={(e) => {
-                          setPrefDesktop(e.target.checked);
-                          showToast(e.target.checked ? 'Notificações push ativadas.' : 'Notificações push desativadas.');
-                        }}
-                        className="w-4 h-4 accent-primary cursor-pointer"
-                      />
-                    </label>
-
-                    {/* Sons de Alerta */}
-                    <label className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-on-surface">Sons de Alerta</span>
-                        <span className="text-[11px] text-on-surface-variant">Bipe suave em menções</span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={prefSound}
-                        onChange={(e) => {
-                          setPrefSound(e.target.checked);
-                          showToast(e.target.checked ? 'Efeitos sonoros ativados.' : 'Efeitos sonoros silenciados.');
-                        }}
-                        className="w-4 h-4 accent-primary cursor-pointer"
-                      />
-                    </label>
-
-                    {/* Resumo por E-mail */}
-                    <label className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container transition-colors cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-on-surface">Resumo por E-mail</span>
-                        <span className="text-[11px] text-on-surface-variant">Digest semanal de interações</span>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={prefEmail}
-                        onChange={(e) => {
-                          setPrefEmail(e.target.checked);
-                          showToast(e.target.checked ? 'Inscrito no digest semanal.' : 'Digest por e-mail desativado.');
-                        }}
-                        className="w-4 h-4 accent-primary cursor-pointer"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Card 2: Resumo Semanal de Engajamento (Design Stitch) */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-secondary text-[20px]">insights</span>
-                      <h2 className="font-bold text-sm text-on-surface">Resumo de Atividade</h2>
-                    </div>
-                    <span className="text-xs text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">
-                      Tempo Real
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
-                      <span className="text-[11px] text-on-surface-variant">Notificações</span>
-                      <span className="text-lg font-bold text-primary mt-1">{notifications.length}</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
-                      <span className="text-[11px] text-on-surface-variant">Não lidas</span>
-                      <span className="text-lg font-bold text-secondary mt-1">{unreadCount}</span>
-                    </div>
-                  </div>
-
-                  {/* Sparkline SVG do Stitch */}
-                  <div className="flex flex-col gap-1.5 pt-1">
-                    <span className="text-[11px] font-medium text-on-surface-variant">
-                      Ritmo de Interações Diárias
-                    </span>
-                    <div className="w-full h-16 bg-surface-container-low rounded-xl p-2 flex items-center justify-center">
-                      <svg className="w-full h-full text-primary" fill="none" viewBox="0 0 280 48">
-                        <path
-                          d="M5 38 L45 28 L90 32 L135 12 L180 22 L225 6 L275 14"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2.5"
-                        />
-                        <circle cx="225" cy="6" fill="currentColor" r="3.5" />
-                        <path
-                          d="M5 38 L45 28 L90 32 L135 12 L180 22 L225 6 L275 14 L275 48 L5 48 Z"
-                          fill="currentColor"
-                          fillOpacity="0.08"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-on-surface-variant px-1 font-medium">
-                      <span>Seg</span>
-                      <span>Ter</span>
-                      <span>Qua</span>
-                      <span>Qui</span>
-                      <span>Sex</span>
-                      <span>Sáb</span>
-                      <span>Dom</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: Comunidades Mais Ativas do D1 */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
-                      <h2 className="font-bold text-sm text-on-surface">Comunidades Ativas</h2>
-                    </div>
-                    <Link to="/comunidades" className="text-xs text-primary font-semibold hover:underline">
-                      Ver todas
-                    </Link>
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-1">
-                    {communities.slice(0, 4).map((c) => (
-                      <Link
-                        key={c.id}
-                        to={`/c/${c.slug || c.id}`}
-                        className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container transition-colors group"
+            {!user ? (
+              <EmptyState
+                icon="notifications_off"
+                title="Entre para ver suas notificações"
+                description="Pedidos de amizade, respostas e votos aparecem aqui."
+                actionLabel="Entrar ou Cadastrar"
+                actionLink="/login"
+              />
+            ) : (
+              <>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6 scrollbar-none" role="tablist">
+                  {TABS.map((t) => {
+                    const badge = t.id === 'amigos' ? summary.pending_requests : t.id === 'todas' ? summary.unread : 0;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === t.id}
+                        onClick={() => changeTab(t.id)}
+                        className={`h-8 px-4 rounded-full text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap transition-all cursor-pointer ${
+                          tab === t.id
+                            ? 'bg-primary text-on-primary shadow-xs'
+                            : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface'
+                        }`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-                            style={{ backgroundColor: c.icon_color || '#712ae2' }}
-                          >
-                            {c.name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
-                            c/{c.name}
+                        <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+                        <span>{t.label}</span>
+                        {badge > 0 && (
+                          <span className="px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold">
+                            {badge}
                           </span>
-                        </div>
-                        <span className="text-[11px] text-on-surface-variant">
-                          {c.members_count} mem.
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-              </aside>
-            </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                  <div className="lg:col-span-8 flex flex-col gap-6 min-w-0 w-full max-w-2xl mx-auto">
+                    {tab === 'todas' && (summary.pending_requests > 0 || summary.unread_messages > 0) && (
+                      <div className="flex flex-col gap-3">
+                        {summary.pending_requests > 0 && (
+                          <SummaryCard
+                            icon="person_add"
+                            title={`${summary.pending_requests} ${
+                              summary.pending_requests === 1 ? 'pedido de amizade' : 'pedidos de amizade'
+                            }`}
+                            subtitle="Aceite ou recuse na aba Amigos."
+                            actionLabel="Ver pedidos"
+                            onAction={() => changeTab('amigos')}
+                          />
+                        )}
+                        {summary.unread_messages > 0 && (
+                          <SummaryCard
+                            icon="chat_bubble"
+                            title={`${summary.unread_messages} ${
+                              summary.unread_messages === 1 ? 'mensagem não lida' : 'mensagens não lidas'
+                            }`}
+                            subtitle="Suas conversas privadas têm novidades."
+                            actionLabel="Abrir mensagens"
+                            to="/mensagens"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {tab === 'amigos' && (
+                      <>
+                        <section className="flex flex-col gap-3" aria-label="Pedidos de amizade">
+                          <SectionTitle title="Pedidos de amizade" count={requests.length} />
+                          {requests.length === 0 ? (
+                            <p className="text-xs text-on-surface-variant px-1">Nenhum pedido pendente.</p>
+                          ) : (
+                            requests.map((r) => (
+                              <PersonRow
+                                key={r.friendship_id}
+                                username={r.username}
+                                subtitle={`quer ser seu amigo · ${relativeTime(r.created_at.replace(' ', 'T') + 'Z')}`}
+                                actions={
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={busyId === r.friend_id}
+                                      onClick={() => respondToRequest(r, true)}
+                                      className="h-8 px-4 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold hover:bg-primary disabled:opacity-60 cursor-pointer"
+                                    >
+                                      Aceitar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busyId === r.friend_id}
+                                      onClick={() => respondToRequest(r, false)}
+                                      className="h-8 px-4 rounded-full bg-surface-container text-on-surface text-[11px] font-semibold hover:bg-surface-container-high disabled:opacity-60 cursor-pointer"
+                                    >
+                                      Recusar
+                                    </button>
+                                  </>
+                                }
+                              />
+                            ))
+                          )}
+                        </section>
+
+                        <section className="flex flex-col gap-3" aria-label="Pessoas que você talvez conheça">
+                          <SectionTitle title="Pessoas que você talvez conheça" count={suggestions.length} />
+                          {suggestions.length === 0 ? (
+                            <p className="text-xs text-on-surface-variant px-1">
+                              Sem recomendações por enquanto. Participe de comunidades para encontrar mais gente.
+                            </p>
+                          ) : (
+                            suggestions.map((s) => (
+                              <PersonRow
+                                key={s.id}
+                                username={s.username}
+                                subtitle={suggestionReason(s)}
+                                actions={
+                                  <>
+                                    {sentTo.has(s.id) ? (
+                                      <span className="h-8 px-4 rounded-full bg-surface-container text-on-surface-variant text-[11px] font-semibold flex items-center">
+                                        Pedido enviado
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        disabled={busyId === s.id}
+                                        onClick={() => addSuggestion(s)}
+                                        className="h-8 px-4 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold hover:bg-primary disabled:opacity-60 cursor-pointer"
+                                      >
+                                        Adicionar
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => dismissSuggestion(s)}
+                                      title="Dispensar recomendação"
+                                      aria-label="Dispensar recomendação"
+                                      className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">close</span>
+                                    </button>
+                                  </>
+                                }
+                              />
+                            ))
+                          )}
+                        </section>
+
+                        {visibleItems.length > 0 && <SectionTitle title="Atividade" count={unreadInTab} unread />}
+                      </>
+                    )}
+
+                    {loading ? (
+                      <p className="text-center text-xs text-on-surface-variant py-8">Carregando...</p>
+                    ) : visibleItems.length === 0 ? (
+                      tab === 'amigos' ? null : (
+                        <EmptyState
+                          icon="notifications_off"
+                          title="Nenhuma notificação por aqui"
+                          description="Avisaremos assim que alguém comentar, responder ou curtir suas publicações."
+                          actionLabel="Explorar o Feed"
+                          actionLink="/"
+                        />
+                      )
+                    ) : (
+                      <>
+                        {grouped.map(({ group, list }) => (
+                          <section key={group} className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between px-1">
+                              <span className="text-xs font-bold text-on-surface uppercase tracking-wider">{group}</span>
+                              <span className="text-[11px] text-on-surface-variant">
+                                {list.filter((n) => !n.read).length} novas
+                              </span>
+                            </div>
+                            {list.map((item) => (
+                              <NotificationCard
+                                key={item.id}
+                                item={item}
+                                onOpen={() => handleOpen(item)}
+                                onToggleRead={() => handleToggleRead(item)}
+                                onDelete={() => handleDelete(item)}
+                              />
+                            ))}
+                          </section>
+                        ))}
+                        {hasMore && (
+                          <button
+                            type="button"
+                            onClick={handleLoadMore}
+                            disabled={loadingMore}
+                            className="self-center h-9 px-5 rounded-full bg-surface-container-high text-on-surface text-xs font-semibold hover:bg-surface-container-highest disabled:opacity-60 cursor-pointer"
+                          >
+                            {loadingMore ? 'Carregando...' : 'Carregar mais'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
+                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
+                        <h2 className="font-bold text-sm text-on-surface">Alertas neste aparelho</h2>
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                        {!push.supported
+                          ? 'Este navegador não suporta notificações push.'
+                          : push.permission === 'denied'
+                          ? 'Bloqueadas no navegador. Libere nas configurações do site.'
+                          : push.subscribed
+                          ? 'Você recebe mensagens, pedidos de amizade, respostas e votos mesmo com o app fechado.'
+                          : 'Ative para ser avisado de mensagens, pedidos de amizade, respostas e votos com o app fechado.'}
+                      </p>
+                      {push.iosInstallNeeded && (
+                        <p className="text-[11px] text-on-surface-variant">
+                          No iPhone, adicione o Espectro à Tela de Início para ativar.
+                        </p>
+                      )}
+                      {push.supported && push.permission !== 'denied' && (
+                        <button
+                          type="button"
+                          disabled={push.busy}
+                          onClick={push.subscribed ? push.disable : push.enable}
+                          className={`h-9 rounded-full text-xs font-semibold cursor-pointer disabled:opacity-60 ${
+                            push.subscribed
+                              ? 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+                              : 'bg-primary-container text-on-primary hover:bg-primary'
+                          }`}
+                        >
+                          {push.busy ? 'Aguarde...' : push.subscribed ? 'Desativar push' : 'Ativar push'}
+                        </button>
+                      )}
+                      {push.subscribed && (
+                        <label className="flex items-center justify-between gap-3 cursor-pointer pt-1">
+                          <span className="text-[11px] text-on-surface">Mostrar texto nas notificações</span>
+                          <input
+                            type="checkbox"
+                            checked={push.showPreview}
+                            onChange={(e) => push.changePreview(e.target.checked)}
+                            className="w-4 h-4 accent-primary cursor-pointer"
+                          />
+                        </label>
+                      )}
+                      {push.error && <p className="text-[11px] text-error">{push.error}</p>}
+                    </div>
+
+                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
+                          <h2 className="font-bold text-sm text-on-surface">Comunidades Ativas</h2>
+                        </div>
+                        <Link to="/comunidades" className="text-xs text-primary font-semibold hover:underline">
+                          Ver todas
+                        </Link>
+                      </div>
+                      <div className="flex flex-col gap-2 pt-1">
+                        {communities.slice(0, 4).map((c) => (
+                          <Link
+                            key={c.id}
+                            to={`/c/${c.slug || c.id}`}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container transition-colors group"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                                style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                              >
+                                {c.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
+                                c/{c.name}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-on-surface-variant">{c.members_count} mem.</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>
@@ -468,120 +577,185 @@ export const Notifications: React.FC = () => {
   );
 };
 
-// Componente do Card de Notificação
-interface NotificationCardProps {
-  item: NotificationItem;
-  onToggleRead: () => void;
-  onDelete: (e: React.MouseEvent) => void;
+const SectionTitle: React.FC<{ title: string; count: number; unread?: boolean }> = ({ title, count, unread }) => (
+  <div className="flex items-center justify-between px-1">
+    <h2 className="text-xs font-bold text-on-surface uppercase tracking-wider">{title}</h2>
+    {count > 0 && (
+      <span className="text-[11px] text-on-surface-variant">{unread ? `${count} novas` : count}</span>
+    )}
+  </div>
+);
+
+interface SummaryCardProps {
+  icon: string;
+  title: string;
+  subtitle: string;
+  actionLabel: string;
+  onAction?: () => void;
+  to?: string;
 }
 
-const NotificationCard: React.FC<NotificationCardProps> = ({ item, onToggleRead, onDelete }) => {
-  const getSubBadge = () => {
-    switch (item.type) {
-      case 'mention':
-        return { icon: 'alternate_email', bg: 'bg-secondary-container text-on-secondary-container' };
-      case 'upvote':
-        return { icon: 'arrow_upward', bg: 'bg-primary-container text-on-primary' };
-      case 'video':
-        return { icon: 'smart_display', bg: 'bg-indigo-600 text-white' };
-      case 'reaction':
-        return { icon: 'favorite', bg: 'bg-rose-500 text-white' };
-      case 'follow':
-        return { icon: 'person_add', bg: 'bg-primary-container text-on-primary' };
-      case 'community':
-      default:
-        return { icon: 'groups', bg: 'bg-purple-600 text-white' };
-    }
-  };
+const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, subtitle, actionLabel, onAction, to }) => {
+  const button = (
+    <span className="h-8 px-4 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold flex items-center hover:bg-primary">
+      {actionLabel}
+    </span>
+  );
+  return (
+    <div className="flex items-center gap-3 p-4 rounded-2xl bg-surface-container-lowest border border-primary/25 shadow-xs">
+      <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0">
+        <span className="material-symbols-outlined text-[20px]">{icon}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-on-surface">{title}</p>
+        <p className="text-[11px] text-on-surface-variant">{subtitle}</p>
+      </div>
+      {to ? (
+        <Link to={to}>{button}</Link>
+      ) : (
+        <button type="button" onClick={onAction} className="cursor-pointer">
+          {button}
+        </button>
+      )}
+    </div>
+  );
+};
 
-  const badge = getSubBadge();
+const PersonRow: React.FC<{ username: string; subtitle: string; actions: React.ReactNode }> = ({
+  username,
+  subtitle,
+  actions,
+}) => (
+  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/25">
+    <Link
+      to={`/perfil/${encodeURIComponent(username)}`}
+      className="w-11 h-11 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-sm uppercase flex-shrink-0"
+    >
+      {username.charAt(0)}
+    </Link>
+    <div className="flex-1 min-w-0">
+      <Link
+        to={`/perfil/${encodeURIComponent(username)}`}
+        className="block text-sm font-semibold text-on-surface truncate hover:underline"
+      >
+        @{username}
+      </Link>
+      <span className="block text-[11px] text-on-surface-variant truncate">{subtitle}</span>
+    </div>
+    <div className="flex items-center gap-1.5 flex-shrink-0">{actions}</div>
+  </div>
+);
+
+interface NotificationCardProps {
+  item: AppNotification;
+  onOpen: () => void;
+  onToggleRead: () => void;
+  onDelete: () => void;
+}
+
+const TYPE_COPY: Record<
+  AppNotification['type'],
+  { text: string; icon: string; badge: string; action: string }
+> = {
+  friend_accepted: {
+    text: 'aceitou seu pedido de amizade',
+    icon: 'how_to_reg',
+    badge: 'bg-emerald-600 text-white',
+    action: 'Ver perfil',
+  },
+  post_comment: {
+    text: 'comentou na sua publicação',
+    icon: 'forum',
+    badge: 'bg-secondary-container text-on-secondary-container',
+    action: 'Ver publicação',
+  },
+  comment_reply: {
+    text: 'respondeu ao seu comentário',
+    icon: 'reply',
+    badge: 'bg-secondary-container text-on-secondary-container',
+    action: 'Ver conversa',
+  },
+  post_upvote: {
+    text: 'curtiu sua publicação',
+    icon: 'arrow_upward',
+    badge: 'bg-primary-container text-on-primary',
+    action: 'Ver publicação',
+  },
+};
+
+const NotificationCard: React.FC<NotificationCardProps> = ({ item, onOpen, onToggleRead, onDelete }) => {
+  const copy = TYPE_COPY[item.type];
+  const username = item.actor_username || 'alguém';
+  const target =
+    item.type === 'friend_accepted' ? `/perfil/${encodeURIComponent(username)}` : item.post_id ? `/post/${item.post_id}` : null;
 
   return (
     <article
-      onClick={onToggleRead}
-      className={`group relative rounded-2xl p-4 transition-all duration-200 border cursor-pointer ${
+      className={`group relative rounded-2xl p-4 transition-all duration-200 border ${
         !item.read
           ? 'bg-surface-container-lowest border-primary/25 shadow-xs hover:shadow-md'
-          : 'bg-surface-container-lowest/80 border-outline-variant/20 hover:bg-surface-container-lowest hover:border-outline-variant/40'
+          : 'bg-surface-container-lowest/80 border-outline-variant/20 hover:border-outline-variant/40'
       }`}
     >
-      {/* Ponto indicador de não lida */}
       {!item.read && (
         <span className="absolute left-2.5 top-5 w-2 h-2 rounded-full bg-primary ring-2 ring-surface-container-lowest" />
       )}
 
       <div className={`flex items-start gap-3.5 ${!item.read ? 'pl-2' : ''}`}>
-        {/* Avatar com Sub-badge */}
         <div className="relative shrink-0">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-sm uppercase shadow-xs">
-            {item.authorName.charAt(0)}
+            {username.charAt(0)}
           </div>
           <div
-            className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-xs ${badge.bg}`}
+            className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-xs ${copy.badge}`}
           >
-            <span className="material-symbols-outlined text-[12px]">{badge.icon}</span>
+            <span className="material-symbols-outlined text-[12px]">{copy.icon}</span>
           </div>
         </div>
 
-        {/* Corpo da Notificação */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs sm:text-sm text-on-surface leading-snug">
-              <strong className="font-bold text-on-surface">@{item.authorUsername}</strong>{' '}
-              {item.title}{' '}
-              {item.communityName && (
-                <Link
-                  to={`/c/${item.communitySlug || item.communityName}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold hover:bg-primary hover:text-on-primary transition-colors ml-1"
-                >
-                  c/{item.communityName}
-                </Link>
-              )}
+              <Link to={`/perfil/${encodeURIComponent(username)}`} className="font-bold hover:underline">
+                @{username}
+              </Link>{' '}
+              {copy.text}
             </p>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[11px] text-on-surface-variant whitespace-nowrap">
-                {item.timestamp}
-              </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{relativeTime(item.created_at)}</span>
               <button
                 type="button"
                 onClick={onDelete}
                 title="Remover notificação"
-                className="opacity-0 group-hover:opacity-100 p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-surface-container transition-all cursor-pointer"
+                aria-label="Remover notificação"
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-surface-container transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             </div>
           </div>
 
-          {/* Citação / Caixa de Preview */}
           {item.content && (
-            <div className="mt-2 p-3 rounded-xl bg-surface-container-low text-on-surface-variant text-xs leading-relaxed border border-outline-variant/15">
+            <div className="mt-2 p-3 rounded-xl bg-surface-container-low text-on-surface-variant text-xs leading-relaxed border border-outline-variant/15 break-words">
               {item.content}
             </div>
           )}
 
-          {/* Ações Rápidas */}
-          <div className="mt-3 flex items-center gap-2">
-            {item.actionUrl && (
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
+            {target && (
               <Link
-                to={item.actionUrl}
-                onClick={(e) => e.stopPropagation()}
+                to={target}
+                onClick={onOpen}
                 className="h-7 px-3.5 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold flex items-center gap-1 hover:bg-primary shadow-xs transition-colors"
               >
-                <span>Ver publicação</span>
+                <span>{copy.action}</span>
                 <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </Link>
             )}
-
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleRead();
-              }}
-              className="h-7 px-3 rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-container-high text-[11px] font-medium transition-colors"
+              onClick={onToggleRead}
+              className="h-7 px-3 rounded-full bg-surface-container text-on-surface-variant hover:bg-surface-container-high text-[11px] font-medium transition-colors cursor-pointer"
             >
               {item.read ? 'Marcar não lida' : 'Marcar como lida'}
             </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, searchApi, SearchResults } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
+import { useNotificationCount } from '../hooks/useNotificationCount';
 import { useSidebar } from '../context/SidebarContext';
 import { parseScrap } from '../lib/scrapStyle';
 import { ContactsDrawer } from './ContactsDrawer';
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const unreadDms = useUnreadDms(userId);
+  const notificationCount = useNotificationCount(userId);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // Debounce de 300ms na pesquisa global para não sobrecarregar o D1
@@ -58,10 +60,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   // Fecha dropdown ao clicar fora ou apertar Esc
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        searchContainerRef.current &&
-        !searchContainerRef.current.contains(e.target as Node)
-      ) {
+      const target = e.target as Node;
+      // O overlay de pesquisa do mobile fica fora do container desktop: tocar nele não é "clicar fora"
+      if (mobileSearchRef.current?.contains(target)) return;
+      if (searchContainerRef.current && !searchContainerRef.current.contains(target)) {
         setShowSearchResults(false);
       }
     };
@@ -87,6 +89,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   const handleSelectResult = (path: string) => {
     mobileInputRef.current?.blur();
@@ -356,6 +360,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[22px]">notifications</span>
+                  {notificationCount > 0 && (
+                    <span className="absolute top-1 right-1 px-1.5 py-0.2 rounded-full bg-error text-white text-[10px] leading-tight font-bold">
+                      {notificationCount > 99 ? '99+' : notificationCount}
+                    </span>
+                  )}
                 </Link>
               </>
             ) : (
@@ -394,7 +403,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           />
 
           {/* Container Superior Fixo da Pesquisa no Mobile (w-full) */}
-          <div className="md:hidden fixed inset-x-0 top-0 z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-md pt-[env(safe-area-inset-top)] animate-in slide-in-from-top-2 duration-150">
+          <div
+            ref={mobileSearchRef}
+            className="md:hidden fixed inset-x-0 top-0 z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-md pt-[env(safe-area-inset-top)] animate-in slide-in-from-top-2 duration-150"
+          >
             {/* Barra de Input com largura total */}
             <div className="relative w-full px-3 py-2.5 flex items-center gap-2">
               <form onSubmit={handleMobileSearchSubmit} className="relative flex-1">

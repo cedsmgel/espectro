@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
+import { useNotificationCount } from '../hooks/useNotificationCount';
 import { useSidebar } from '../context/SidebarContext';
 import { useTheme } from '../context/ThemeContext';
 import { RightSidebarSearch } from './RightSidebarSearch';
@@ -19,6 +20,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const unreadDms = useUnreadDms(user?.id);
+  const notificationCount = useNotificationCount(user?.id);
 
   const handleLogout = () => {
     authStorage.clear();
@@ -56,6 +58,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
       title: 'Notificações',
       icon: 'notifications',
       active: isActive('/notificacoes'),
+      badge: notificationCount > 0 ? notificationCount : undefined,
     },
     {
       to: '/mensagens',

@@ -1,7 +1,8 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { notify } from "../_shared/notifications";
+import type { PushEnv } from "../_shared/push";
 
-export interface Env {
-  DB: D1Database;
+export interface Env extends PushEnv {
   JWT_SECRET: string;
 }
 
@@ -85,25 +86,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const parentId = parent_id ? Number(parent_id) : null;
 
     // Valida se o post existe
-    const post = await env.DB.prepare("SELECT id FROM posts WHERE id = ?")
+    const post = await env.DB.prepare("SELECT id, author_id FROM posts WHERE id = ?")
       .bind(Number(post_id))
-      .first();
+      .first<{ id: number; author_id: number }>();
 
     if (!post) {
       return errorResponse("Postagem não encontrada.", 404);
     }
 
     // Se informou parent_id, valida se o comentário pai existe
+    let parentAuthorId: number | null = null;
     if (parentId) {
       const parentComment = await env.DB.prepare(
-        "SELECT id FROM comments WHERE id = ? AND post_id = ?"
+        "SELECT id, author_id FROM comments WHERE id = ? AND post_id = ?"
       )
         .bind(parentId, Number(post_id))
-        .first();
+        .first<{ id: number; author_id: number }>();
 
       if (!parentComment) {
         return errorResponse("Comentário pai não encontrado neste post.", 404);
       }
+      parentAuthorId = parentComment.author_id;
     }
 
     const insertResult = await env.DB.prepare(
@@ -113,6 +116,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const newId = insertResult.meta.last_row_id;
+
+    // Avisa o autor da publicação e, se for uma resposta, o autor do comentário respondido
+    const common = {
+      actor: user,
+      postId: post.id,
+      commentId: Number(newId),
+      content: cleanContent,
+    };
+    const notifications = [
+      notify(env, { ...common, userId: post.author_id, type: "post_comment", dedupeKey: `c:${newId}` }),
+    ];
+    if (parentAuthorId !== null && parentAuthorId !== post.author_id) {
+      notifications.push(
+        notify(env, { ...common, userId: parentAuthorId, type: "comment_reply", dedupeKey: `r:${newId}` })
+      );
+    }
+    context.waitUntil(Promise.all(notifications));
 
     return jsonResponse(
       {

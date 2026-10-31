@@ -1,5 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 import { pushFriendRequest, type PushEnv } from "../_shared/push";
+import { notify } from "../_shared/notifications";
 
 export interface Env extends PushEnv {
   JWT_SECRET: string;
@@ -174,6 +175,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       await env.DB.prepare("UPDATE friendships SET status = 'accepted' WHERE id = ?")
         .bind(existing.id)
         .run();
+      context.waitUntil(
+        notify(env, {
+          userId: targetFriendId,
+          actor: user,
+          type: "friend_accepted",
+          dedupeKey: `fa:${Math.min(user.id, targetFriendId)}:${Math.max(user.id, targetFriendId)}`,
+        })
+      );
       return jsonResponse({
         message: `Você agora é amigo de @${target.username}!`,
         friend: friendPayload("accepted"),

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { friendsApi } from '../../lib/api';
 
 interface PersonResult {
@@ -13,21 +14,18 @@ interface PeopleSearchResultsProps {
   myId: number;
   knownFriendIds: Set<number>;
   onOpenChat: (person: { id: number; username: string }) => void;
-  onRequestChanged: () => void;
 }
 
-// Resultados de pessoas na busca da lista: abrir conversa (amigo), pedir, aceitar ou ver pedido enviado
+// Pessoas na busca da lista: conversar com amigos ou abrir o perfil.
+// Pedidos de amizade (enviar, aceitar, recusar) ficam nas Notificações e no perfil.
 export const PeopleSearchResults: React.FC<PeopleSearchResultsProps> = ({
   query,
   myId,
   knownFriendIds,
   onOpenChat,
-  onRequestChanged,
 }) => {
   const [results, setResults] = useState<PersonResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [busyId, setBusyId] = useState<number | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -49,43 +47,26 @@ export const PeopleSearchResults: React.FC<PeopleSearchResultsProps> = ({
     return () => window.clearTimeout(timer);
   }, [query, knownFriendIds]);
 
-  const request = async (person: PersonResult) => {
-    setBusyId(person.id);
-    try {
-      const res = await friendsApi.add(person.id, person.username);
-      const status = res.friend?.status || 'pending';
-      setResults((prev) =>
-        prev.map((p) =>
-          p.id === person.id ? { ...p, friendship_status: status, friendship_from: myId } : p
-        )
-      );
-      setMessage(res.message);
-      onRequestChanged();
-    } catch (err: any) {
-      setMessage(err?.message || 'Não foi possível enviar o pedido.');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   if (query.trim().length < 2) return null;
-  if (!loading && results.length === 0 && !message) return null;
+  if (!loading && results.length === 0) return null;
 
   return (
     <div className="mt-2 pt-2 border-t border-outline-variant/30">
       <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Pessoas</p>
-      {loading && results.length === 0 && (
-        <p className="px-3 py-2 text-xs text-on-surface-variant">Buscando...</p>
-      )}
+      {loading && results.length === 0 && <p className="px-3 py-2 text-xs text-on-surface-variant">Buscando...</p>}
       {results.map((person) => {
         const status = person.friendship_status;
         const incoming = status === 'pending' && person.friendship_from !== myId;
+        const profilePath = `/perfil/${encodeURIComponent(person.username)}`;
         return (
           <div key={person.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container-low/60">
-            <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
+            <Link
+              to={profilePath}
+              className="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase flex-shrink-0"
+            >
               {person.username.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
+            </Link>
+            <Link to={profilePath} className="flex-1 min-w-0">
               <span className="block text-xs font-semibold text-on-surface truncate">@{person.username}</span>
               <span className="block text-[11px] text-on-surface-variant">
                 {status === 'accepted'
@@ -96,7 +77,7 @@ export const PeopleSearchResults: React.FC<PeopleSearchResultsProps> = ({
                     : 'Pedido enviado'
                   : 'Não é seu amigo'}
               </span>
-            </div>
+            </Link>
             {status === 'accepted' ? (
               <button
                 type="button"
@@ -105,22 +86,24 @@ export const PeopleSearchResults: React.FC<PeopleSearchResultsProps> = ({
               >
                 Conversar
               </button>
-            ) : status === 'pending' && !incoming ? (
-              <span className="text-[11px] text-on-surface-variant px-2">Aguardando</span>
-            ) : (
-              <button
-                type="button"
-                disabled={busyId === person.id}
-                onClick={() => request(person)}
-                className="px-3 py-1.5 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold hover:bg-primary disabled:opacity-60 cursor-pointer"
+            ) : incoming ? (
+              <Link
+                to="/notificacoes?tab=amigos"
+                className="px-3 py-1.5 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold hover:bg-primary"
               >
-                {incoming ? 'Aceitar' : 'Adicionar'}
-              </button>
+                Responder
+              </Link>
+            ) : (
+              <Link
+                to={profilePath}
+                className="px-3 py-1.5 rounded-full bg-surface-container text-on-surface text-[11px] font-semibold hover:bg-surface-container-high"
+              >
+                Ver perfil
+              </Link>
             )}
           </div>
         );
       })}
-      {message && <p className="px-3 py-2 text-[11px] text-on-surface-variant">{message}</p>}
     </div>
   );
 };
