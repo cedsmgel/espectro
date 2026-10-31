@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   return (
     <>
       {/* 1. HEADER GLOBAL FULL-WIDTH (Visible Spectrum Social) */}
-      <header className="fixed top-0 left-0 right-0 w-full h-14 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-40 px-3 sm:px-6 flex md:hidden items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 w-full h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-40 px-3 sm:px-6 flex md:hidden items-center justify-between">
         <div className="h-full w-full flex items-center justify-between gap-2 sm:gap-4 max-w-7xl mx-auto">
           {/* Canto Esquerdo: Botão Toggle Hamburger (Desktop) + Logo Oficial Espectro */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -368,7 +368,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
         {/* Barra de Pesquisa Mobile Expandida (Overlay Stitch) */}
         {mobileSearchOpen && (
-          <div className="md:hidden absolute inset-0 bg-surface-container-lowest z-50 flex items-center px-3 gap-2 animate-in fade-in duration-150">
+          <div className="md:hidden fixed inset-0 bg-surface-container-lowest z-50 flex items-center px-3 gap-2 pt-[env(safe-area-inset-top)] animate-in fade-in duration-150">
             <form onSubmit={handleSearchSubmit} className="flex-1 relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
                 search

@@ -90,7 +90,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 w-full max-w-lg shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] w-full max-w-lg shadow-2xl flex flex-col gap-5 max-h-[90dvh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
           <div className="flex items-center gap-2.5">

@@ -155,7 +155,7 @@ export const Feed: React.FC = () => {
       <SidebarNav onOpenCreateModal={openCreatePostModal} />
 
       {/* 3. Coluna Central: Feed (Tarefa 3: flex-1 com div max-w-2xl mx-auto perfeitamente centralizada) */}
-      <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-16 md:pt-0 pb-20 md:pb-8">
+      <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
         <div className="w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
           {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
           <div className="-mx-3 sm:mx-0">
@@ -210,7 +210,7 @@ export const Feed: React.FC = () => {
           </div>
 
           {/* Abas do Feed fixas no topo da lista (Tarefa 5: dentro de max-w-2xl mx-auto) */}
-          <div className="sticky top-0 z-20 -mx-4 px-4 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
+          <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-20 -mx-4 px-4 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
             <div className="flex items-center gap-6 sm:gap-8">
               {(
                 [

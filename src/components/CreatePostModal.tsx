@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { communitiesApi, Community, CreatePostData, Post, postsApi } from '../lib/api';
 import { CreatePostForm } from './CreatePostForm';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   onPostCreated,
 }) => {
   const [communities, setCommunities] = useState<Community[]>([]);
+  const { height, isMobile } = useVisualViewport();
 
   useEffect(() => {
     if (isOpen) {
@@ -49,16 +51,22 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden"
+      style={{
+        height: isMobile && height ? `${height}px` : undefined,
+      }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      {/* Modal: Tela inteira no mobile (h-screen w-screen, sem bordas), Janela no Desktop (max-w-2xl, rounded-2xl) */}
+      {/* Modal: Tela inteira no mobile respeitando a viewport dinâmica (dvh/visualViewport) sem corte inferior pelo Safari, Janela no Desktop (max-w-2xl, rounded-2xl) */}
       <div
-        className="w-screen h-screen sm:w-full sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface"
+        style={{
+          height: isMobile && height ? `${height}px` : undefined,
+        }}
+        className="w-full h-full sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface overscroll-contain"
       >
         <CreatePostForm
           onPostCreated={handlePostSubmit}

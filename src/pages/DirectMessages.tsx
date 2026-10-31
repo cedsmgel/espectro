@@ -8,6 +8,7 @@ import { useSidebar } from '../context/SidebarContext';
 import { authStorage, friendsApi, Friend, uploadApi } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
+import { useVisualViewport } from '../hooks/useVisualViewport';
 
 // Emojis populares pré-selecionados para o seletor rápido
 const QUICK_EMOJIS = [
@@ -98,6 +99,17 @@ export const DirectMessages: React.FC = () => {
   // Estados de ações de mensagem (Responder, Encaminhar, Dados, Toast) - Tarefa 3
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [forwardModalMessage, setForwardModalMessage] = useState<ChatMessage | null>(null);
+  const { height: viewportHeight, isMobile, isKeyboardOpen } = useVisualViewport();
+
+  // Rolagem automática quando o teclado virtual abre no mobile
+  useEffect(() => {
+    if (isKeyboardOpen && activeFriend) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isKeyboardOpen, activeFriend]);
   const [forwardSearchQuery, setForwardSearchQuery] = useState('');
   const [infoModalMessage, setInfoModalMessage] = useState<ChatMessage | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -777,8 +789,13 @@ export const DirectMessages: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-surface text-on-surface flex flex-col fixed inset-0">
-      <Header />
+    <div
+      style={{
+        height: isMobile && viewportHeight ? `${viewportHeight}px` : undefined,
+      }}
+      className="w-full h-dvh md:h-screen overflow-hidden bg-surface text-on-surface flex flex-col md:flex-row fixed inset-x-0 top-0 md:static"
+    >
+      {!activeFriend && <Header />}
       <SidebarNav />
 
       {/* Hidden File Inputs para Fotos, Câmera e Documentos */}
@@ -838,8 +855,8 @@ export const DirectMessages: React.FC = () => {
       )}
 
       <div
-        className={`pt-16 flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
+        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out ${
+          !activeFriend ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0' : 'pt-0'
         }`}
       >
         <main className="w-full flex-1 flex h-full overflow-hidden">
@@ -922,7 +939,7 @@ export const DirectMessages: React.FC = () => {
                 </div>
 
                 {/* Lista de Conversas / Amigos */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-20 md:pb-2">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-2">
                   {filteredConversations.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
@@ -985,7 +1002,7 @@ export const DirectMessages: React.FC = () => {
                 ) : (
                   <>
                     {/* Header da Conversa Ativa */}
-                    <div className="h-16 px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+                    <div className="h-14 sm:h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0 box-content">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         {/* Botão Voltar para Lista no Mobile (Tela Cheia) */}
                         <button
@@ -1070,7 +1087,7 @@ export const DirectMessages: React.FC = () => {
                     )}
 
                     {/* Histórico de Mensagens */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-0 overscroll-contain">
                       <div className="flex items-center justify-center">
                         <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full uppercase tracking-wider font-medium">
                           Conversa privada criptografada
@@ -1573,7 +1590,7 @@ export const DirectMessages: React.FC = () => {
                     )}
 
                     {/* Input do Chat com Botões de Anexo, Emojis, GIFs e Enviar */}
-                    <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0">
+                    <div className="p-2.5 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 z-20">
                       {/* Barra de Citação ao Responder (Tarefa 3) */}
                       {replyingTo && (
                         <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-1 shadow-2xs">

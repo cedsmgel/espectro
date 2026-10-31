@@ -539,7 +539,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       )}
 
       {/* 1. TOPO FIXO (Header do Modal): Botão X à esquerda e título "Criar Publicação" */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-zinc-800/80 bg-surface-container-lowest shrink-0 z-10">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-zinc-800/80 bg-surface-container-lowest shrink-0 z-10">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -970,20 +970,20 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         )}
       </div>
 
-      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 bg-black p-4 border-t border-zinc-800 */}
-      <footer className="sticky bottom-0 bg-black p-3 sm:p-4 border-t border-zinc-800 shrink-0 z-20 flex flex-wrap items-center justify-between gap-3">
+      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e flex adaptativo */}
+      <footer className="sticky bottom-0 bg-black px-3 sm:px-4 py-2.5 sm:py-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-zinc-800 shrink-0 z-20 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
         {/* Lado Esquerdo: Ícones Foto, Vídeo, Emoji, GIF e Localização */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           {/* Foto */}
           <button
             type="button"
             onClick={() => handleTriggerUpload('image')}
             disabled={uploading}
-            className="p-2 rounded-full hover:bg-zinc-800 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             title="Foto"
             aria-label="Adicionar Foto"
           >
-            <span className="material-symbols-outlined text-[21px]">photo_camera</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
           </button>
 
           {/* Vídeo (sem R2) */}
@@ -991,11 +991,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={() => handleTriggerUpload('video')}
             disabled={uploading}
-            className="p-2 rounded-full hover:bg-zinc-800 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             title="Vídeo"
             aria-label="Adicionar Vídeo"
           >
-            <span className="material-symbols-outlined text-[21px]">videocam</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">videocam</span>
           </button>
 
           {/* Emoji */}
@@ -1005,11 +1005,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               setShowEmojiPicker(!showEmojiPicker);
               setShowGifPicker(false);
             }}
-            className="p-2 rounded-full hover:bg-zinc-800 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center justify-center"
             title="Emoji"
             aria-label="Adicionar Emoji"
           >
-            <span className="material-symbols-outlined text-[21px]">sentiment_satisfied</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">sentiment_satisfied</span>
           </button>
 
           {/* GIF */}
@@ -1019,36 +1019,36 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               setShowGifPicker(!showGifPicker);
               setShowEmojiPicker(false);
             }}
-            className="p-2 rounded-full hover:bg-zinc-800 text-teal-400 hover:text-teal-300 transition-colors cursor-pointer flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-teal-400 hover:text-teal-300 transition-colors cursor-pointer flex items-center justify-center"
             title="GIF"
             aria-label="Adicionar GIF"
           >
-            <span className="material-symbols-outlined text-[21px]">gif_box</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">gif_box</span>
           </button>
 
           {/* Localização */}
           <button
             type="button"
             onClick={handleLocationClick}
-            className={`p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center ${
+            className={`p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center ${
               locationTag ? 'text-rose-500 bg-rose-500/15' : 'text-rose-400 hover:text-rose-300'
             }`}
             title="Localização"
             aria-label="Adicionar Localização"
           >
-            <span className="material-symbols-outlined text-[21px]">location_on</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">location_on</span>
           </button>
         </div>
 
         {/* Lado Direito: Seletor de Destino e Botão Publicar em Azul Vibrante */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Seletor de Destino */}
-          <div className="flex items-center gap-1.5 bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-700/60 text-xs">
-            <span className="material-symbols-outlined text-zinc-400 text-[16px]">groups</span>
+          <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 sm:px-3 py-1.5 rounded-full border border-zinc-700/60 text-xs">
+            <span className="material-symbols-outlined text-zinc-400 text-[15px] sm:text-[16px]">groups</span>
             <select
               value={communityId}
               onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
-              className="bg-transparent text-xs text-zinc-200 font-medium focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[180px] truncate"
+              className="bg-transparent text-xs text-zinc-200 font-medium focus:outline-none cursor-pointer max-w-[120px] sm:max-w-[180px] truncate"
             >
               <option value="" className="bg-zinc-900 text-zinc-100">Publicar no Feed Geral</option>
               {communities.map((c) => (
@@ -1064,7 +1064,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={submitting || uploading}
-            className="px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
+            className="px-4 sm:px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             {submitting ? (
               <>
