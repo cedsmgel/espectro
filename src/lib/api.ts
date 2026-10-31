@@ -542,7 +542,7 @@ export interface GroupMember {
 export interface GroupMessage {
   id: number;
   content: string;
-  message_type: 'text' | 'gif' | 'sticker' | 'system';
+  message_type: 'text' | 'gif' | 'sticker' | 'system' | 'image' | 'video' | 'audio' | 'file';
   media_url: string | null;
   sender_id: number | null;
   sender_username: string | null;
@@ -563,7 +563,7 @@ export const groupsApi = {
       `/api/groups/${id}/messages${beforeId ? `?before_id=${beforeId}` : ""}`,
       { method: "GET" }
     ),
-  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker'; media_url?: string }) =>
+  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file'; media_url?: string }) =>
     apiRequest<{ message: GroupMessage }>(`/api/groups/${id}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
   manage: (id: number, body: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>(`/api/groups/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),

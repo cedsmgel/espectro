@@ -32,6 +32,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const notificationCount = useNotificationCount(userId);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
+  // Botão Pesquisa da barra inferior abre esta mesma busca
+  useEffect(() => {
+    const open = () => setMobileSearchOpen(true);
+    window.addEventListener('espectro:open-mobile-search', open);
+    return () => window.removeEventListener('espectro:open-mobile-search', open);
+  }, []);
+
   // Debounce de 300ms na pesquisa global para não sobrecarregar o D1
   useEffect(() => {
     const trimmed = searchQuery.trim();
@@ -126,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               type="button"
               onClick={handleToggle}
               aria-label="Abrir ou fechar menu de navegação"
-              className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="hidden md:flex md:w-auto md:h-auto md:p-2 items-center justify-center shrink-0 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
