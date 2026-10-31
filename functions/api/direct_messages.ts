@@ -9,7 +9,7 @@ import {
   rateLimit,
   isBlockedBetween,
 } from "../_shared/auth";
-import { MESSAGE_COLUMNS, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
+import { MESSAGE_COLUMNS, attachReactions, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 import { pushNewMessage, type PushEnv } from "../_shared/push";
 
 export interface Env extends ChatEnv, PushEnv {
@@ -75,7 +75,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const rows = results || [];
     const hasMore = rows.length > limit;
-    const messages = rows.slice(0, limit).reverse();
+    const messages = await attachReactions(env.DB, rows.slice(0, limit).reverse());
 
     return jsonResponse({ messages, has_more: hasMore });
   } catch (err: unknown) {
@@ -171,7 +171,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .first<{ id: number }>();
       if (existing) {
         const row = await fetchMessage(env.DB, existing.id);
-        return jsonResponse({ message: row, duplicate: true });
+        const [withReactions] = row ? await attachReactions(env.DB, [row]) : [row];
+        return jsonResponse({ message: withReactions, duplicate: true });
       }
     }
 
@@ -196,7 +197,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const newId = Number(insertResult.meta.last_row_id);
-    let message = (await fetchMessage(env.DB, newId)) as DirectMessageRow;
+    let message = { ...((await fetchMessage(env.DB, newId)) as DirectMessageRow), reactions: [] };
 
     // Entrega em tempo real; se o destinatário está conectado, marca como entregue
     const { delivered } = await notifyRoom(env, user.id, targetId, { type: "message", message }, targetId);

@@ -14,6 +14,7 @@ export interface DirectMessageRow {
   media_url: string | null;
   reply_to_id: number | null;
   client_id: string | null;
+  reactions?: Array<{ user_id: number; emoji: string }>;
   status: "sent" | "delivered" | "read";
   created_at: string;
 }
@@ -32,6 +33,28 @@ export const MESSAGE_COLUMNS = `
   CASE WHEN dm.read_at IS NOT NULL THEN 'read' WHEN dm.delivered_at IS NOT NULL THEN 'delivered' ELSE 'sent' END AS status,
   strftime('%Y-%m-%dT%H:%M:%SZ', dm.created_at) AS created_at
 `;
+
+export const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
+// Anexa as reações (no máximo uma por participante) às mensagens
+export async function attachReactions<T extends { id: number; reactions?: Array<{ user_id: number; emoji: string }> }>(
+  db: D1Database,
+  messages: T[]
+): Promise<T[]> {
+  if (messages.length === 0) return messages;
+  const ids = messages.map((m) => m.id);
+  const placeholders = ids.map(() => "?").join(",");
+  const { results } = await db
+    .prepare(`SELECT message_id, user_id, emoji FROM message_reactions WHERE message_id IN (${placeholders})`)
+    .bind(...ids)
+    .all<{ message_id: number; user_id: number; emoji: string }>();
+
+  const byMessage = new Map<number, Array<{ user_id: number; emoji: string }>>();
+  for (const row of results || []) {
+    byMessage.set(row.message_id, [...(byMessage.get(row.message_id) || []), { user_id: row.user_id, emoji: row.emoji }]);
+  }
+  return messages.map((m) => ({ ...m, reactions: byMessage.get(m.id) || [] }));
+}
 
 export const CONVERSATION_THEMES = ["default", "violet", "rose", "amber", "emerald", "sky", "slate", "orange"];
 export const CONVERSATION_WALLPAPERS = ["none", "dots", "grid", "aurora", "sunset", "ocean", "forest"];

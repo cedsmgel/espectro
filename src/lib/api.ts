@@ -72,6 +72,7 @@ export interface DirectMessage {
   media_url: string | null;
   reply_to_id: number | null;
   client_id: string | null;
+  reactions?: Array<{ user_id: number; emoji: string }>;
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
 }
@@ -394,6 +395,11 @@ export const directMessagesApi = {
     }),
   remove: (messageId: number) =>
     apiRequest<{ success: boolean }>(`/api/direct_messages?id=${messageId}`, { method: 'DELETE' }),
+  react: (messageId: number, emoji: string | null) =>
+    apiRequest<{ message_id: number; user_id: number; emoji: string | null }>('/api/direct_messages/reaction', {
+      method: 'PUT',
+      body: JSON.stringify({ message_id: messageId, emoji }),
+    }),
   markAllRead: () =>
     apiRequest<{ marked: number }>('/api/direct_messages/read', {
       method: 'POST',

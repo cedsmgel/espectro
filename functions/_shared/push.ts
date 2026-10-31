@@ -152,6 +152,31 @@ export async function pushNewMessage(
   }
 }
 
+export async function pushReaction(
+  env: PushEnv,
+  sender: { id: number; username: string },
+  receiverId: number,
+  emoji: string
+): Promise<void> {
+  try {
+    const settings = await env.DB.prepare(
+      "SELECT muted, nickname FROM conversation_settings WHERE user_id = ? AND friend_id = ?"
+    )
+      .bind(receiverId, sender.id)
+      .first<{ muted: number; nickname: string | null }>();
+    if (settings?.muted) return;
+
+    await sendPushToUser(env, receiverId, {
+      title: settings?.nickname || `@${sender.username}`,
+      body: `reagiu ${emoji} à sua mensagem`,
+      url: `/mensagens?u=${encodeURIComponent(sender.username)}`,
+      tag: `rx-${sender.id}`,
+    });
+  } catch (err) {
+    console.error("pushReaction falhou:", err);
+  }
+}
+
 export async function pushFriendRequest(
   env: PushEnv,
   sender: { id: number; username: string },
