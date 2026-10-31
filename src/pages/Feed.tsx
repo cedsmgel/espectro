@@ -163,7 +163,7 @@ export const Feed: React.FC = () => {
           <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* FEED CENTRAL (Colunas 1 a 8) */}
-              <section className="lg:col-span-8 flex flex-col gap-4 min-w-0">
+              <section className="lg:col-span-8 flex flex-col gap-4 min-w-0 w-full max-w-2xl mx-auto">
                 {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
                 <div className="-mx-3 sm:mx-0">
                   <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
@@ -302,49 +302,49 @@ export const Feed: React.FC = () => {
               </section>
 
               {/* COLUNA LATERAL DIREITA (Colunas 9 a 12) */}
-              <aside className="lg:col-span-4 flex flex-col gap-6 sticky top-20 hidden lg:flex">
+              <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
                 {/* Card 1: Comunidades em Alta (D1) */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
+                <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-secondary text-[20px]">local_fire_department</span>
-                      <h2 className="font-bold text-sm text-on-surface">Comunidades em Alta</h2>
+                      <span className="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
+                      <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades em Alta</h2>
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowCommunityModal(true)}
-                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[14px]">add</span>
+                      <span className="material-symbols-outlined text-[13px]">add</span>
                       <span>Criar</span>
                     </button>
                   </div>
 
                   {communities.length === 0 ? (
-                    <div className="p-4 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
-                      <span className="material-symbols-outlined text-[24px] text-on-surface-variant/40 mb-1">
+                    <div className="p-3 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant/40 mb-1">
                         group_off
                       </span>
-                      <p className="font-medium text-on-surface">Nenhuma comunidade ainda</p>
-                      <p className="mt-1 text-[11px]">Seja o primeiro a fundar uma comunidade no Espectro!</p>
+                      <p className="font-medium text-on-surface text-[11px]">Nenhuma comunidade ainda</p>
+                      <p className="mt-0.5 text-[10px]">Seja o primeiro a fundar uma comunidade no Espectro!</p>
                       <button
                         type="button"
                         onClick={() => setShowCommunityModal(true)}
-                        className="mt-2.5 px-3 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[11px] hover:bg-primary cursor-pointer shadow-xs"
+                        className="mt-2 px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[10px] hover:bg-primary cursor-pointer shadow-xs"
                       >
                         + Criar Comunidade
                       </button>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2.5">
                       {communities.slice(0, 5).map((c, idx) => (
-                        <div key={c.id} className="flex items-center justify-between gap-2 group">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="text-[11px] font-bold text-on-surface-variant w-4 text-center">
+                        <div key={c.id} className="flex items-center justify-between gap-1.5 group">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[10px] font-bold text-on-surface-variant w-3.5 text-center">
                               #{idx + 1}
                             </span>
                             <div
-                              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
                               style={{ backgroundColor: c.icon_color || '#712ae2' }}
                             >
                               {c.name.charAt(0).toUpperCase()}
@@ -356,14 +356,14 @@ export const Feed: React.FC = () => {
                               >
                                 c/{c.name}
                               </Link>
-                              <span className="text-[11px] text-on-surface-variant truncate">
+                              <span className="text-[10px] text-on-surface-variant truncate">
                                 {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
                               </span>
                             </div>
                           </div>
                           <Link
                             to={`/c/${c.slug || c.id}`}
-                            className="px-3 py-1 rounded-full bg-surface-container text-primary text-xs font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
+                            className="px-2.5 py-0.5 rounded-full bg-surface-container text-primary text-[11px] font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
                           >
                             Ver
                           </Link>
@@ -374,40 +374,40 @@ export const Feed: React.FC = () => {
 
                   <Link
                     to="/comunidades"
-                    className="pt-2 border-t border-outline-variant/20 text-xs font-semibold text-primary hover:underline text-center block"
+                    className="pt-2 border-t border-outline-variant/15 text-[11px] font-semibold text-primary hover:underline text-center block"
                   >
                     Explorar todas as comunidades →
                   </Link>
                 </div>
 
                 {/* Card 2: Comunidades Ativas (D1) */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
+                <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
-                      <h2 className="font-bold text-sm text-on-surface">Comunidades Ativas</h2>
+                      <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
+                      <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades Ativas</h2>
                     </div>
-                    <span className="text-[11px] font-medium text-on-surface-variant">
+                    <span className="text-[10px] font-medium text-on-surface-variant">
                       {communities.length} {communities.length === 1 ? 'comunidade' : 'comunidades'}
                     </span>
                   </div>
 
                   {communities.length <= 5 ? (
-                    <div className="text-xs text-on-surface-variant bg-surface-container-low p-3.5 rounded-xl text-center space-y-1">
-                      <p className="font-medium text-on-surface">Conecte-se com interesses mútuos</p>
-                      <p className="text-[11px]">Entre nas comunidades acima ou crie uma nova para seu grupo.</p>
+                    <div className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-xl text-center space-y-0.5">
+                      <p className="font-medium text-on-surface text-[11px]">Conecte-se com interesses mútuos</p>
+                      <p className="text-[10px]">Entre nas comunidades acima ou crie uma nova para seu grupo.</p>
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2.5">
+                    <div className="flex flex-col gap-2">
                       {communities.slice(5, 10).map((c) => (
                         <Link
                           key={c.id}
                           to={`/c/${c.slug || c.id}`}
-                          className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container transition-colors group"
+                          className="flex items-center justify-between p-1.5 rounded-xl hover:bg-surface-container transition-colors group"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
                             <div
-                              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-[10px] flex-shrink-0"
+                              className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-white text-[9px] flex-shrink-0"
                               style={{ backgroundColor: c.icon_color || '#712ae2' }}
                             >
                               {c.name.charAt(0).toUpperCase()}
@@ -424,8 +424,6 @@ export const Feed: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-
               </aside>
             </div>
           </div>

@@ -208,7 +208,7 @@ export const Notifications: React.FC = () => {
             {/* Grid Layout: Stream (8 cols) + Right Rail (4 cols) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Notifications Stream (8 colunas) */}
-              <div className="lg:col-span-8 flex flex-col gap-6 min-w-0">
+              <div className="lg:col-span-8 flex flex-col gap-6 min-w-0 w-full max-w-2xl mx-auto">
                 {filteredNotifications.length === 0 ? (
                   <EmptyState
                     icon="notifications_off"
@@ -301,7 +301,7 @@ export const Notifications: React.FC = () => {
               </div>
 
               {/* Right Contextual Rail: Controls & Insights (4 colunas) */}
-              <aside className="lg:col-span-4 flex flex-col gap-6 sticky top-20 hidden lg:flex">
+              <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
                 {/* Card 1: Preferências Rápidas de Alerta */}
                 <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
