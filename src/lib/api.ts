@@ -72,6 +72,7 @@ export interface DirectMessage {
   media_url: string | null;
   reply_to_id: number | null;
   client_id: string | null;
+  reactions?: Array<{ user_id: number; emoji: string }>;
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
 }
@@ -394,6 +395,11 @@ export const directMessagesApi = {
     }),
   remove: (messageId: number) =>
     apiRequest<{ success: boolean }>(`/api/direct_messages?id=${messageId}`, { method: 'DELETE' }),
+  react: (messageId: number, emoji: string | null) =>
+    apiRequest<{ message_id: number; user_id: number; emoji: string | null }>('/api/direct_messages/reaction', {
+      method: 'PUT',
+      body: JSON.stringify({ message_id: messageId, emoji }),
+    }),
   markAllRead: () =>
     apiRequest<{ marked: number }>('/api/direct_messages/read', {
       method: 'POST',
@@ -485,6 +491,26 @@ export const suggestionsApi = {
     }),
 };
 
+export interface BlockedUser {
+  id: number;
+  username: string;
+  avatar_url?: string | null;
+  created_at: string;
+}
+
+export const blocksApi = {
+  list: () => apiRequest<BlockedUser[]>('/api/blocks', { method: 'GET' }),
+  block: (userId: number) =>
+    apiRequest<{ blocked: boolean }>('/api/blocks', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+  unblock: (userId: number) =>
+    apiRequest<{ blocked: boolean }>(`/api/blocks?user_id=${userId}`, { method: 'DELETE' }),
+};
+
+export const reportsApi = {
+  send: (params: { user_id: number; reason: string; details?: string; message_id?: number | null }) =>
+    apiRequest<{ reported: boolean }>('/api/reports', { method: 'POST', body: JSON.stringify(params) }),
+};
+
 export const conversationsApi = {
   list: () => apiRequest<Conversation[]>('/api/conversations', { method: 'GET' }),
 };
@@ -555,6 +581,7 @@ export interface UserProfile {
   friendship_status?: string | null;
   friendship_direction?: 'outgoing' | 'incoming' | null;
   friends_count?: number;
+  blocked_by_me?: boolean;
   created_at?: string;
 }
 

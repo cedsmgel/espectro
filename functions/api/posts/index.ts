@@ -62,6 +62,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     )`;
     params.push(viewerId, viewerId, viewerId);
 
+    // Quem eu bloqueei (ou me bloqueou) some do feed
+    query += ` AND p.author_id NOT IN (
+      SELECT blocked_id FROM blocks WHERE blocker_id = ?
+      UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?
+    )`;
+    params.push(viewerId, viewerId);
+
     if (authorId || authorName) {
       // 1. Verifica se o autor possui perfil privado (is_private)
       const authorQuery = authorId

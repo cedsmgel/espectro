@@ -24,6 +24,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          ) m
          WHERE id > COALESCE(
            (SELECT cleared_before_id FROM conversation_settings WHERE user_id = ?1 AND friend_id = m.peer_id), 0)
+           AND peer_id NOT IN (
+             SELECT blocked_id FROM blocks WHERE blocker_id = ?1
+             UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?1
+           )
          GROUP BY peer_id
        )
        SELECT

@@ -32,6 +32,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const auth = await getAuthUser(request, secret);
     const isSelf = auth && auth.id === user.id;
 
+    // Se a pessoa me bloqueou, o perfil "não existe" para mim; se eu bloqueei, mostro o estado
+    let blockedByMe = false;
+    if (auth && !isSelf) {
+      const { results: blockRows } = await env.DB.prepare(
+        "SELECT blocker_id FROM blocks WHERE (blocker_id = ?1 AND blocked_id = ?2) OR (blocker_id = ?2 AND blocked_id = ?1)"
+      )
+        .bind(auth.id, user.id)
+        .all<{ blocker_id: number }>();
+      if ((blockRows || []).some((row) => row.blocker_id === user.id)) {
+        return errorResponse("Usuário não encontrado.", 404);
+      }
+      blockedByMe = (blockRows || []).some((row) => row.blocker_id === auth.id);
+    }
+
     let isFriend = false;
     let friendshipStatus: string | null = null;
     let friendshipDirection: "outgoing" | "incoming" | null = null;
@@ -75,6 +89,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       user: {
         ...user,
         friends_count: Number(friendsCount?.total || 0),
+        blocked_by_me: blockedByMe,
         friendship_direction: friendshipDirection,
         is_private: Boolean(user.is_private),
         allow_scraps: Boolean(user.allow_scraps ?? 1),

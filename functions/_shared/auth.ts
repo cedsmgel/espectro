@@ -207,6 +207,17 @@ export async function areFriends(db: D1Database, a: number, b: number): Promise<
   return Boolean(row);
 }
 
+// Há bloqueio entre os dois usuários, em qualquer sentido?
+export async function isBlockedBetween(db: D1Database, a: number, b: number): Promise<boolean> {
+  const row = await db
+    .prepare(
+      "SELECT 1 AS found FROM blocks WHERE (blocker_id = ?1 AND blocked_id = ?2) OR (blocker_id = ?2 AND blocked_id = ?1) LIMIT 1"
+    )
+    .bind(a, b)
+    .first();
+  return Boolean(row);
+}
+
 // Aceita apenas URLs de mídia do próprio site (/api/media/...) ou https; descarta o resto (javascript:, data:, etc.)
 export function sanitizeMediaUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;

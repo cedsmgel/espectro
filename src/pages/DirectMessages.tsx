@@ -15,15 +15,18 @@ import {
   conversationSettingsApi,
   ConversationSettings,
   directMessagesApi,
+  blocksApi,
 } from '../lib/api';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
+import { ReportModal } from '../components/chat/ReportModal';
 import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
 import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
+import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
@@ -172,6 +175,7 @@ export const DirectMessages: React.FC = () => {
   const [conversations, setConversations] = useState<Record<number, Conversation>>({});
   const [showPrefs, setShowPrefs] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ messageId: number | null } | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [convSearchOpen, setConvSearchOpen] = useState(false);
   const [convSearch, setConvSearch] = useState('');
@@ -235,6 +239,7 @@ export const DirectMessages: React.FC = () => {
     reconnect,
     markAsRead,
     retrySend,
+    reactToMessage,
     loadOlder,
     hasMore,
     loadingOlder,
@@ -318,6 +323,14 @@ export const DirectMessages: React.FC = () => {
 
 
   // Auto-scroll para a mensagem mais recente
+  useEffect(() => {
+    if (!activeKebabMessage) return;
+    const timer = window.setTimeout(() => {
+      document.querySelector('[data-kebab-menu]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [activeKebabMessage]);
+
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMessageKey = lastMessage ? lastMessage.client_id || String(lastMessage.id) : '';
   const searchTerm = convSearch.trim().toLowerCase();
@@ -736,6 +749,26 @@ export const DirectMessages: React.FC = () => {
       setToastMessage('Conversa limpa.');
     } catch {
       setToastMessage('Não foi possível limpar a conversa.');
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!activeFriend) return;
+    if (
+      !window.confirm(
+        `Bloquear @${activeFriend.username}? Vocês deixam de ser amigos e nenhum dos dois consegue enviar mensagens ou pedidos. Você pode desbloquear depois.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await blocksApi.block(activeFriend.friend_id);
+      setFriends((prev) => prev.filter((f) => f.friend_id !== activeFriend.friend_id));
+      setActiveFriend(null);
+      refreshConversations();
+      setToastMessage(`@${activeFriend.username} foi bloqueado.`);
+    } catch {
+      setToastMessage('Não foi possível bloquear.');
     }
   };
 
@@ -1318,6 +1351,20 @@ export const DirectMessages: React.FC = () => {
                               onSelect: handleClearConversation,
                             },
                             {
+                              key: 'report',
+                              label: 'Denunciar',
+                              icon: 'flag',
+                              danger: true,
+                              onSelect: () => setReportTarget({ messageId: null }),
+                            },
+                            {
+                              key: 'block',
+                              label: 'Bloquear',
+                              icon: 'block',
+                              danger: true,
+                              onSelect: handleBlockUser,
+                            },
+                            {
                               key: 'remove',
                               label: 'Remover amigo',
                               icon: 'person_remove',
@@ -1500,11 +1547,36 @@ export const DirectMessages: React.FC = () => {
                                   {/* Submenu Dropdown com Efeito de Foco */}
                                   {isKebabOpen && (
                                     <div
+                                      data-kebab-menu
                                       className={`absolute z-50 ${
                                         isMe ? 'right-0 top-full mt-1.5' : 'left-0 top-full mt-1.5'
                                       } min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
                                       onClick={(e) => e.stopPropagation()}
                                     >
+                                      {m.id && m.id > 0 && (
+                                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant/20 dark:border-zinc-800">
+                                          {REACTION_EMOJIS.map((emoji) => {
+                                            const mine = (m.reactions || []).some((r) => r.user_id === user.id && r.emoji === emoji);
+                                            return (
+                                              <button
+                                                key={emoji}
+                                                type="button"
+                                                aria-label={`Reagir com ${emoji}`}
+                                                aria-pressed={mine}
+                                                onClick={() => {
+                                                  reactToMessage(m.id!, mine ? null : emoji);
+                                                  setActiveKebabMessage(null);
+                                                }}
+                                                className={`w-8 h-8 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-125 cursor-pointer ${
+                                                  mine ? 'bg-primary/20' : ''
+                                                }`}
+                                              >
+                                                {emoji}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1552,6 +1624,23 @@ export const DirectMessages: React.FC = () => {
                                         <span className="material-symbols-outlined text-[18px] text-on-surface-variant">info</span>
                                         <span className="font-medium">Dados da Mensagem</span>
                                       </button>
+
+                                      {!isMe && m.id && m.id > 0 && (
+                                        <>
+                                          <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setReportTarget({ messageId: m.id! });
+                                              setActiveKebabMessage(null);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">flag</span>
+                                            <span className="font-medium">Denunciar mensagem</span>
+                                          </button>
+                                        </>
+                                      )}
 
                                       {isMe && m.id && (
                                         <>
@@ -1614,6 +1703,29 @@ export const DirectMessages: React.FC = () => {
 
                                     {renderMessageContent(m, isMe)}
                                   </div>
+
+                                  {groupReactions(m.reactions, user.id).length > 0 && (
+                                    <div className={`flex flex-wrap gap-1 -mt-1.5 ${isMe ? 'justify-end mr-2' : 'ml-2'}`}>
+                                      {groupReactions(m.reactions, user.id).map((group) => (
+                                        <button
+                                          key={group.emoji}
+                                          type="button"
+                                          onClick={() => m.id && reactToMessage(m.id, group.mine ? null : group.emoji)}
+                                          title={group.mine ? 'Remover sua reação' : 'Reagir igual'}
+                                          className={`h-6 px-1.5 rounded-full text-xs flex items-center gap-1 border shadow-xs cursor-pointer transition-colors ${
+                                            group.mine
+                                              ? 'bg-primary/15 border-primary/40'
+                                              : 'bg-surface-container-high border-outline-variant/40 hover:bg-surface-container-highest'
+                                          }`}
+                                        >
+                                          <span>{group.emoji}</span>
+                                          {group.count > 1 && (
+                                            <span className="text-[10px] font-semibold text-on-surface-variant">{group.count}</span>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
 
                                   {/* Horário e Ticks de Confirmação (Tarefa 3) */}
                                   <div
@@ -2244,6 +2356,24 @@ export const DirectMessages: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {reportTarget && activeFriend && (
+        <ReportModal
+          userId={activeFriend.friend_id}
+          username={activeFriend.username}
+          messageId={reportTarget.messageId}
+          onClose={() => setReportTarget(null)}
+          onDone={({ blocked }) => {
+            setReportTarget(null);
+            if (blocked) {
+              setFriends((prev) => prev.filter((f) => f.friend_id !== activeFriend.friend_id));
+              setActiveFriend(null);
+              refreshConversations();
+            }
+            setToastMessage(blocked ? 'Denúncia enviada e usuário bloqueado.' : 'Denúncia enviada. Obrigado por avisar.');
+          }}
+        />
       )}
 
       {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} push={push} onClose={() => setShowPrefs(false)} />}

@@ -1,4 +1,5 @@
 import { sendPushToUser, type PushEnv } from "./push";
+import { isBlockedBetween } from "./auth";
 
 export type NotificationType = "friend_accepted" | "post_comment" | "comment_reply" | "post_upvote";
 
@@ -35,6 +36,7 @@ const COPY: Record<NotificationType, (actor: string) => { title: string; url: (i
 export async function notify(env: PushEnv, input: NotifyInput): Promise<void> {
   try {
     if (input.userId === input.actor.id) return;
+    if (await isBlockedBetween(env.DB, input.userId, input.actor.id)) return;
 
     const snippet = input.content ? input.content.slice(0, 160) : null;
     const result = await env.DB.prepare(

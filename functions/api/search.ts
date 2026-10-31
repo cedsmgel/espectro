@@ -32,7 +32,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const usersPromise = env.DB.prepare(`
       SELECT id, username, name, avatar_url, bio
       FROM users
-      WHERE LOWER(username) LIKE ? ESCAPE '\\' OR (name IS NOT NULL AND LOWER(name) LIKE ? ESCAPE '\\')
+      WHERE (LOWER(username) LIKE ? ESCAPE '\\' OR (name IS NOT NULL AND LOWER(name) LIKE ? ESCAPE '\\'))
+        AND id NOT IN (
+          SELECT blocked_id FROM blocks WHERE blocker_id = ?
+          UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?
+        )
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER(?) THEN 0
@@ -42,7 +46,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         id DESC
       LIMIT 8
     `)
-      .bind(term, term, trimmed, prefix)
+      .bind(term, term, viewerId, viewerId, trimmed, prefix)
       .all<any>();
 
     // 2. communities: por name ou slug
@@ -81,10 +85,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
               AND ((f.user_id = u.id AND f.friend_id = ?) OR (f.user_id = ? AND f.friend_id = u.id))
           )
         )
+        AND p.author_id NOT IN (
+          SELECT blocked_id FROM blocks WHERE blocker_id = ?
+          UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?
+        )
       ORDER BY p.id DESC
       LIMIT 8
     `)
-      .bind(term, term, viewerId, viewerId, viewerId)
+      .bind(term, term, viewerId, viewerId, viewerId, viewerId, viewerId)
       .all<any>();
 
     const [usersRes, communitiesRes, postsRes] = await Promise.all([
