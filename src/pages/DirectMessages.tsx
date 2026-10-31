@@ -5,7 +5,26 @@ import Picker from '@emoji-mart/react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
-import { authStorage, friendsApi, Friend, uploadApi, conversationsApi, Conversation } from '../lib/api';
+import {
+  authStorage,
+  friendsApi,
+  Friend,
+  uploadApi,
+  conversationsApi,
+  Conversation,
+  conversationSettingsApi,
+  ConversationSettings,
+  directMessagesApi,
+} from '../lib/api';
+import { ChatMenu } from '../components/chat/ChatMenu';
+import { FriendRequestsModal } from '../components/chat/FriendRequestsModal';
+import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
+import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
+import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
+import { useChatPrefs } from '../hooks/useChatPrefs';
+import { usePush } from '../hooks/usePush';
+import { themeColor, wallpaperStyle } from '../lib/chatThemes';
+import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
 import { useVisualViewport } from '../hooks/useVisualViewport';
@@ -151,11 +170,30 @@ export const DirectMessages: React.FC = () => {
 
   // Conversas: última mensagem e não lidas vêm do servidor (D1)
   const [conversations, setConversations] = useState<Record<number, Conversation>>({});
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showRequests, setShowRequests] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [convSearchOpen, setConvSearchOpen] = useState(false);
+  const [convSearch, setConvSearch] = useState('');
+  const [activeSettings, setActiveSettings] = useState<ConversationSettings | null>(null);
+  const { prefs, update: updatePrefs } = useChatPrefs();
+  const push = usePush();
+
+  useEffect(() => {
+    if (push.error) setToastMessage(push.error);
+  }, [push.error]);
+
   const refreshConversations = useCallback(async () => {
     if (!userId) return;
     try {
       const list = await conversationsApi.list();
       setConversations(Object.fromEntries(list.map((c) => [c.friend_id, c])));
+    } catch {}
+    try {
+      const pending = await friendsApi.pending();
+      setPendingCount(pending.length);
     } catch {}
   }, [userId]);
 
@@ -171,6 +209,23 @@ export const DirectMessages: React.FC = () => {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [refreshConversations]);
+
+  useEffect(() => {
+    setConvSearch('');
+    setConvSearchOpen(false);
+    setActiveSettings(null);
+    if (!activeFriend) return;
+    let cancelled = false;
+    conversationSettingsApi
+      .get(activeFriend.friend_id)
+      .then((settings) => {
+        if (!cancelled) setActiveSettings(settings);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFriend?.friend_id]);
 
   // Hook customizado: histórico via HTTP (D1) e tempo real via Durable Objects
   const {
@@ -188,6 +243,7 @@ export const DirectMessages: React.FC = () => {
     loadOlder,
     hasMore,
     loadingOlder,
+    reloadHistory,
   } = useChat({
     activeFriendId: activeFriend?.friend_id,
     activeFriendUsername: activeFriend?.username,
@@ -265,15 +321,15 @@ export const DirectMessages: React.FC = () => {
   // Visualizador de Imagem Ampliada (Lightbox)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
-  // Modal para iniciar nova conversa / buscar pessoas
-  const [showNewChatModal, setShowNewChatModal] = useState(false);
-  const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Array<{ id: number; username: string; friendship_status: string | null }>>([]);
-  const [searchingUsers, setSearchingUsers] = useState(false);
 
   // Auto-scroll para a mensagem mais recente
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMessageKey = lastMessage ? lastMessage.client_id || String(lastMessage.id) : '';
+  const searchTerm = convSearch.trim().toLowerCase();
+  const visibleMessages = searchTerm
+    ? messages.filter((m) => (m.content || '').toLowerCase().includes(searchTerm))
+    : messages;
+  const myBubbleColor = themeColor(activeSettings?.theme);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lastMessageKey, isOtherUserTyping]);
@@ -641,50 +697,74 @@ export const DirectMessages: React.FC = () => {
     setGifSearchQuery('');
   };
 
-  // Busca de usuários no modal de nova conversa
-  useEffect(() => {
-    if (!userSearchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  // Abre a conversa com alguém que já é amigo mas ainda não estava na lista
+  const handleOpenChatWithPerson = (person: { id: number; username: string }) => {
+    const friend: Friend = { friend_id: person.id, username: person.username, status: 'accepted' };
+    setFriends((prev) => (prev.some((f) => f.friend_id === person.id) ? prev : [friend, ...prev]));
+    setActiveFriend(friend);
+    setSearchConv('');
+  };
 
-    const timer = setTimeout(async () => {
-      setSearchingUsers(true);
-      try {
-        const results = await friendsApi.search(userSearchQuery.trim());
-        setSearchResults(results || []);
-      } catch (err) {
-        console.error('Erro ao buscar usuários:', err);
-      } finally {
-        setSearchingUsers(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [userSearchQuery]);
-
-  const handleStartChatWithUser = async (targetUser: { id: number; username: string }) => {
+  const handleMarkAllRead = async () => {
     try {
-      await friendsApi.add(targetUser.id, targetUser.username);
-    } catch {}
+      await directMessagesApi.markAllRead();
+      refreshConversations();
+      notifyUnreadChanged();
+      setToastMessage('Todas as conversas foram marcadas como lidas.');
+    } catch {
+      setToastMessage('Não foi possível marcar como lidas.');
+    }
+  };
 
-    const newFriend: Friend = {
-      friend_id: targetUser.id,
-      username: targetUser.username,
-      status: 'accepted',
-      online: true,
-    };
-    setFriends((prev) => {
-      const exists = prev.some((f) => f.friend_id === targetUser.id);
-      return exists ? prev : [newFriend, ...prev];
-    });
-    setActiveFriend(newFriend);
-    setShowNewChatModal(false);
-    setUserSearchQuery('');
+  const handleToggleMute = async () => {
+    if (!activeFriend) return;
+    const next = !(activeSettings?.muted ?? false);
+    try {
+      const saved = await conversationSettingsApi.update(activeFriend.friend_id, { muted: next });
+      setActiveSettings(saved);
+      refreshConversations();
+      setToastMessage(next ? 'Conversa silenciada.' : 'Notificações reativadas.');
+    } catch {
+      setToastMessage('Não foi possível alterar as notificações.');
+    }
+  };
+
+  const handleClearConversation = async () => {
+    if (!activeFriend) return;
+    if (!window.confirm('Limpar esta conversa apenas para você? A outra pessoa continua vendo as mensagens.')) return;
+    try {
+      const saved = await conversationSettingsApi.update(activeFriend.friend_id, { clear: true });
+      setActiveSettings(saved);
+      refreshConversations();
+      notifyUnreadChanged();
+      reloadHistory();
+      setToastMessage('Conversa limpa.');
+    } catch {
+      setToastMessage('Não foi possível limpar a conversa.');
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    if (!activeFriend) return;
+    if (!window.confirm(`Remover @${activeFriend.username} dos seus amigos? Vocês não poderão mais trocar mensagens.`)) return;
+    try {
+      await friendsApi.remove(activeFriend.friend_id);
+      setFriends((prev) => prev.filter((f) => f.friend_id !== activeFriend.friend_id));
+      setActiveFriend(null);
+      refreshConversations();
+      setToastMessage('Amizade removida.');
+    } catch {
+      setToastMessage('Não foi possível remover a amizade.');
+    }
   };
 
   const filteredConversations = friends
-    .filter((c) => c.username.toLowerCase().includes(searchConv.toLowerCase()))
+    .filter((c) => {
+      const nickname = conversations[c.friend_id]?.nickname || '';
+      const term = searchConv.trim().toLowerCase();
+      return !term || c.username.toLowerCase().includes(term) || nickname.toLowerCase().includes(term);
+    })
+    .filter((c) => !unreadOnly || (conversations[c.friend_id]?.unread_count ?? 0) > 0)
     .sort((a, b) => {
       const ca = conversations[a.friend_id]?.last_message_id ?? 0;
       const cb = conversations[b.friend_id]?.last_message_id ?? 0;
@@ -852,7 +932,7 @@ export const DirectMessages: React.FC = () => {
     }
 
     // Mensagem de texto normal
-    return <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
+    return <p className="chat-text text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
   };
 
   return (
@@ -946,26 +1026,6 @@ export const DirectMessages: React.FC = () => {
               </span>
               <p className="text-sm font-medium">Sintonizando suas conversas privadas...</p>
             </div>
-          ) : friends.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-surface">
-              <div className="flex flex-col items-center gap-2.5 max-w-sm">
-                <span className="material-symbols-outlined text-[48px] text-on-surface-variant/30 mb-1">
-                  chat_bubble_outline
-                </span>
-                <h1 className="text-xl font-bold text-on-surface">Não há conversas</h1>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  Suas mensagens diretas aparecerão aqui quando você iniciar uma nova conversa.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowNewChatModal(true)}
-                  className="mt-3 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                  <span>Nova Conversa</span>
-                </button>
-              </div>
-            </div>
           ) : (
             <div className="flex flex-1 w-full h-full overflow-hidden bg-surface">
               {/* COLUNA 1: Diretório Direct (No mobile: tela cheia quando activeFriend é null) */}
@@ -980,14 +1040,50 @@ export const DirectMessages: React.FC = () => {
                       @{user.username}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewChatModal(true)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface hover:bg-primary-container hover:text-on-primary transition-colors cursor-pointer"
-                    title="Nova Conversa"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">edit_square</span>
-                  </button>
+                  <ChatMenu
+                    title="Configurações das conversas"
+                    items={[
+                      {
+                        key: 'requests',
+                        label: 'Solicitações de amizade',
+                        icon: 'person_add',
+                        badge: pendingCount,
+                        onSelect: () => setShowRequests(true),
+                      },
+                      {
+                        key: 'unread',
+                        label: unreadOnly ? 'Mostrar todas as conversas' : 'Mostrar só não lidas',
+                        icon: 'mark_chat_unread',
+                        active: unreadOnly,
+                        onSelect: () => setUnreadOnly((v) => !v),
+                      },
+                      {
+                        key: 'read-all',
+                        label: 'Marcar todas como lidas',
+                        icon: 'done_all',
+                        onSelect: handleMarkAllRead,
+                      },
+                      {
+                        key: 'push',
+                        label: push.subscribed ? 'Desativar notificações push' : 'Ativar notificações push',
+                        icon: push.subscribed ? 'notifications_off' : 'notifications_active',
+                        hidden: !push.supported || push.permission === 'denied',
+                        onSelect: () => (push.subscribed ? push.disable() : push.enable()),
+                      },
+                      {
+                        key: 'prefs',
+                        label: 'Preferências do chat',
+                        icon: 'tune',
+                        onSelect: () => setShowPrefs(true),
+                      },
+                      {
+                        key: 'account',
+                        label: 'Configurações da conta',
+                        icon: 'settings',
+                        onSelect: () => navigate('/settings/account'),
+                      },
+                    ]}
+                  />
                 </div>
 
                 <div className="px-4 pb-2">
@@ -999,7 +1095,7 @@ export const DirectMessages: React.FC = () => {
                       type="text"
                       value={searchConv}
                       onChange={(e) => setSearchConv(e.target.value)}
-                      placeholder="Pesquisar conversas..."
+                      placeholder="Pesquisar conversas ou pessoas..."
                       className="w-full h-9 pl-9 pr-3 bg-surface-container-low text-on-surface placeholder:text-on-surface-variant rounded-full text-xs focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary-container outline-none transition-all"
                     />
                   </div>
@@ -1012,8 +1108,16 @@ export const DirectMessages: React.FC = () => {
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
                         search_off
                       </span>
-                      <p className="font-semibold text-on-surface">Nenhum resultado</p>
-                      <p className="mt-1 text-[11px]">Nenhum amigo encontrado com essa busca.</p>
+                      <p className="font-semibold text-on-surface">
+                        {searchConv.trim() ? 'Nenhuma conversa encontrada' : unreadOnly ? 'Nada não lido' : 'Sem conversas ainda'}
+                      </p>
+                      <p className="mt-1 text-[11px]">
+                        {searchConv.trim()
+                          ? 'Veja os resultados em Pessoas, logo abaixo.'
+                          : unreadOnly
+                          ? 'Você está em dia com suas mensagens.'
+                          : 'Pesquise o nome de alguém na barra acima para começar.'}
+                      </p>
                     </div>
                   ) : (
                     filteredConversations.map((c) => (
@@ -1040,7 +1144,15 @@ export const DirectMessages: React.FC = () => {
                                   : 'font-semibold text-on-surface'
                               }`}
                             >
-                              @{c.username}
+                              {conversations[c.friend_id]?.nickname || `@${c.username}`}
+                              {conversations[c.friend_id]?.muted && (
+                                <span
+                                  className="material-symbols-outlined text-[13px] text-on-surface-variant align-middle ml-1"
+                                  title="Silenciada"
+                                >
+                                  notifications_off
+                                </span>
+                              )}
                             </span>
                             {conversations[c.friend_id] && (
                               <span className="text-[11px] text-on-surface-variant flex-shrink-0">
@@ -1057,7 +1169,9 @@ export const DirectMessages: React.FC = () => {
                               }`}
                             >
                               {conversations[c.friend_id]
-                                ? conversationPreview(conversations[c.friend_id], user.id)
+                                ? prefs.showPreviews
+                                  ? conversationPreview(conversations[c.friend_id], user.id)
+                                  : 'Mensagem'
                                 : 'Diga um oi!'}
                             </p>
                             {(conversations[c.friend_id]?.unread_count ?? 0) > 0 &&
@@ -1076,6 +1190,13 @@ export const DirectMessages: React.FC = () => {
                       </div>
                     ))
                   )}
+                  <PeopleSearchResults
+                    query={searchConv}
+                    myId={user.id}
+                    knownFriendIds={new Set(friends.map((f) => f.friend_id))}
+                    onOpenChat={handleOpenChatWithPerson}
+                    onRequestChanged={refreshConversations}
+                  />
                 </div>
               </aside>
 
@@ -1118,11 +1239,7 @@ export const DirectMessages: React.FC = () => {
                           </div>
                           <span
                             className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-surface-container-lowest ${
-                              connectionStatus === 'connected'
-                                ? 'bg-olive'
-                                : connectionStatus === 'reconnecting'
-                                ? 'bg-amber-500 animate-pulse'
-                                : 'bg-gray-400'
+                              connectionStatus === 'connected' ? 'bg-gray-400' : 'bg-gray-300 opacity-60'
                             }`}
                           />
                         </div>
@@ -1132,44 +1249,125 @@ export const DirectMessages: React.FC = () => {
                               to={`/perfil/${encodeURIComponent(activeFriend.username)}`}
                               className="font-semibold text-sm text-on-surface hover:text-primary hover:underline transition-colors truncate"
                             >
-                              @{activeFriend.username}
+                              {activeSettings?.nickname || `@${activeFriend.username}`}
                             </Link>
                           </div>
                           <div className="flex items-center gap-2 text-[11px]">
                             {connectionStatus === 'connected' ? (
-                              <span className="text-olive font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-olive" />
-                                Em tempo real
+                              <span className="text-on-surface-variant font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                Online
                               </span>
-                            ) : connectionStatus === 'reconnecting' ? (
-                              <span className="text-amber-500 font-medium flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[13px] animate-spin">sync</span>
-                                Reconectando...
-                              </span>
-                            ) : (
-                              <span className="text-on-surface-variant font-medium">
-                                Conectando...
+                            ) : connectionStatus === 'reconnecting' ? null : (
+                              <span className="text-on-surface-variant font-medium">Conectando...</span>
+                            )}
+                            {activeSettings?.nickname && (
+                              <span className="text-on-surface-variant truncate">@{activeFriend.username}</span>
+                            )}
+                            {activeSettings?.muted && (
+                              <span
+                                className="material-symbols-outlined text-[13px] text-on-surface-variant"
+                                title="Silenciada"
+                              >
+                                notifications_off
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Aviso de Reconexão */}
-                    {connectionStatus === 'reconnecting' && (
-                      <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center justify-between text-xs text-amber-500 z-10 flex-shrink-0 animate-in fade-in">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
-                          <span>Reconectando... tentando restabelecer o WebSocket a cada 3s</span>
-                        </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <button
                           type="button"
-                          onClick={reconnect}
-                          className="underline hover:text-amber-400 font-semibold cursor-pointer text-[11px]"
+                          onClick={() => {
+                            setConvSearchOpen((open) => !open);
+                            setConvSearch('');
+                          }}
+                          title="Buscar na conversa"
+                          aria-label="Buscar na conversa"
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+                            convSearchOpen
+                              ? 'bg-primary-container text-on-primary'
+                              : 'text-on-surface-variant hover:bg-surface-container'
+                          }`}
                         >
-                          Tentar agora
+                          <span className="material-symbols-outlined text-[20px]">search</span>
                         </button>
+                        <ChatMenu
+                          title="Configurações da conversa"
+                          buttonClassName="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+                          items={[
+                            {
+                              key: 'profile',
+                              label: 'Ver perfil',
+                              icon: 'person',
+                              onSelect: () => navigate(`/perfil/${encodeURIComponent(activeFriend.username)}`),
+                            },
+                            {
+                              key: 'search',
+                              label: 'Buscar na conversa',
+                              icon: 'search',
+                              onSelect: () => setConvSearchOpen(true),
+                            },
+                            {
+                              key: 'customize',
+                              label: 'Personalizar conversa',
+                              icon: 'palette',
+                              onSelect: () => setShowCustomizer(true),
+                            },
+                            {
+                              key: 'mute',
+                              label: activeSettings?.muted ? 'Reativar notificações' : 'Silenciar notificações',
+                              icon: activeSettings?.muted ? 'notifications_active' : 'notifications_off',
+                              onSelect: handleToggleMute,
+                            },
+                            {
+                              key: 'clear',
+                              label: 'Limpar conversa para mim',
+                              icon: 'cleaning_services',
+                              onSelect: handleClearConversation,
+                            },
+                            {
+                              key: 'remove',
+                              label: 'Remover amigo',
+                              icon: 'person_remove',
+                              danger: true,
+                              onSelect: handleRemoveFriend,
+                            },
+                          ]}
+                        />
+                      </div>
+                    </div>
+
+                    {convSearchOpen && (
+                      <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center gap-2 flex-shrink-0">
+                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+                        <input
+                          autoFocus
+                          type="text"
+                          value={convSearch}
+                          onChange={(e) => setConvSearch(e.target.value)}
+                          placeholder="Buscar nas mensagens carregadas..."
+                          className="flex-1 h-8 bg-transparent text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConvSearch('');
+                            setConvSearchOpen(false);
+                          }}
+                          aria-label="Fechar busca"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">close</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {connectionStatus === 'reconnecting' && (
+                      <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                        <span className="px-3 py-1 rounded-full bg-surface-container-high text-[11px] font-medium text-on-surface-variant border border-outline-variant/40 shadow-md">
+                          Reconectando
+                        </span>
                       </div>
                     )}
 
@@ -1182,7 +1380,10 @@ export const DirectMessages: React.FC = () => {
                     )}
 
                     {/* Histórico de Mensagens */}
-                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-0 overscroll-contain">
+                    <div
+                      className={`flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-0 overscroll-contain chat-font-${prefs.fontSize}`}
+                      style={wallpaperStyle(activeSettings?.wallpaper)}
+                    >
                       <div className="flex items-center justify-center">
                         <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full uppercase tracking-wider font-medium">
                           Conversa privada
@@ -1209,28 +1410,28 @@ export const DirectMessages: React.FC = () => {
                           </span>
                           <p className="mt-1">Carregando histórico do chat...</p>
                         </div>
-                      ) : messages.length === 0 ? (
+                      ) : visibleMessages.length === 0 ? (
                         <div className="py-8">
                           <EmptyState
                             icon="waving_hand"
-                            title="Nenhuma mensagem ainda. Diga um oi!"
+                            title={searchTerm ? 'Nada encontrado.' : 'Nenhuma mensagem ainda. Diga um oi!'}
                             description={`Inicie a conversa em tempo real com @${activeFriend.username}. Envie fotos, vídeos, localização ou emojis.`}
                             className="max-w-md mx-auto"
                           />
                         </div>
                       ) : (
-                        messages.map((m, idx) => {
+                        visibleMessages.map((m, idx) => {
                           const isMe = m.sender_id === user.id;
 
                           // Separador de datas (Tarefa 2)
                           const currentDateLabel = formatMessageDateSeparator(m.created_at);
                           const prevDateLabel =
-                            idx > 0 ? formatMessageDateSeparator(messages[idx - 1].created_at) : null;
+                            idx > 0 ? formatMessageDateSeparator(visibleMessages[idx - 1].created_at) : null;
                           const showDateSeparator = currentDateLabel !== prevDateLabel;
 
                           // Agrupamento de mensagens consecutivas do mesmo remetente (Tarefa 2)
-                          const prevMsg = idx > 0 ? messages[idx - 1] : null;
-                          const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+                          const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null;
+                          const nextMsg = idx < visibleMessages.length - 1 ? visibleMessages[idx + 1] : null;
                           const isSameSenderAsPrev = !showDateSeparator && prevMsg && prevMsg.sender_id === m.sender_id;
                           const isSameSenderAsNext =
                             nextMsg &&
@@ -1391,6 +1592,7 @@ export const DirectMessages: React.FC = () => {
                                             isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
                                           } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
                                     }`}
+                                    style={isMe && myBubbleColor ? { backgroundColor: myBubbleColor, color: '#ffffff' } : undefined}
                                   >
                                     {/* Citação se for resposta (Tarefa 3) */}
                                     {m.reply_to_id && (
@@ -1835,77 +2037,6 @@ export const DirectMessages: React.FC = () => {
         </main>
       </div>
 
-      {/* MODAL: Nova Conversa / Buscar Amigos */}
-      {showNewChatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[22px]">person_search</span>
-                <h3 className="font-bold text-base text-on-surface">Buscar Amigos no Espectro</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowNewChatModal(false)}
-                className="p-1.5 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
-                search
-              </span>
-              <input
-                type="text"
-                autoFocus
-                value={userSearchQuery}
-                onChange={(e) => setUserSearchQuery(e.target.value)}
-                placeholder="Digitar nome de usuário..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-xs focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
-              />
-            </div>
-
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {searchingUsers ? (
-                <div className="text-center py-6 text-xs text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[22px] text-primary animate-spin">
-                    progress_activity
-                  </span>
-                  <p className="mt-1">Procurando usuários...</p>
-                </div>
-              ) : userSearchQuery.trim() && searchResults.length === 0 ? (
-                <div className="text-center py-6 text-xs text-on-surface-variant">
-                  <p className="font-medium">Nenhum usuário encontrado com "{userSearchQuery}".</p>
-                </div>
-              ) : (
-                searchResults.map((u) => (
-                  <div
-                    key={u.id}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase">
-                        {u.username.charAt(0)}
-                      </div>
-                      <span className="text-xs font-semibold text-on-surface">@{u.username}</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStartChatWithUser(u)}
-                      className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-medium text-xs hover:bg-primary transition-all cursor-pointer"
-                    >
-                      Conversar
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       {/* MODAL AMIGÁVEL: Limite de Tamanho / Duração Excedido */}
       {fileLimitWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
@@ -2122,6 +2253,36 @@ export const DirectMessages: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showRequests && (
+        <FriendRequestsModal
+          onClose={() => setShowRequests(false)}
+          onChanged={() => {
+            refreshConversations();
+            loadFriends();
+          }}
+        />
+      )}
+
+      {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} push={push} onClose={() => setShowPrefs(false)} />}
+
+      {showCustomizer && activeFriend && (
+        <ConversationCustomizer
+          friendId={activeFriend.friend_id}
+          username={activeFriend.username}
+          settings={{
+            theme: activeSettings?.theme || 'default',
+            wallpaper: activeSettings?.wallpaper || 'none',
+            nickname: activeSettings?.nickname || null,
+          }}
+          onSaved={(saved) => {
+            setActiveSettings(saved);
+            refreshConversations();
+            setToastMessage('Conversa personalizada.');
+          }}
+          onClose={() => setShowCustomizer(false)}
+        />
       )}
 
       {/* TOAST FLUTUANTE DE NOTIFICAÇÃO (Tarefa 3) */}

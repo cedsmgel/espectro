@@ -9,8 +9,9 @@ import {
   rateLimit,
 } from "../_shared/auth";
 import { MESSAGE_COLUMNS, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
+import { pushNewMessage, type PushEnv } from "../_shared/push";
 
-export interface Env extends ChatEnv {
+export interface Env extends ChatEnv, PushEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -63,10 +64,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        JOIN users u ON u.id = dm.sender_id
        WHERE ((dm.sender_id = ? AND dm.receiver_id = ?) OR (dm.sender_id = ? AND dm.receiver_id = ?))
          AND (? IS NULL OR dm.id < ?)
+         AND dm.id > COALESCE(
+           (SELECT cleared_before_id FROM conversation_settings WHERE user_id = ? AND friend_id = ?), 0)
        ORDER BY dm.id DESC
        LIMIT ?`
     )
-      .bind(user.id, friendId, friendId, user.id, beforeId, beforeId, limit + 1)
+      .bind(user.id, friendId, friendId, user.id, beforeId, beforeId, user.id, friendId, limit + 1)
       .all<DirectMessageRow>();
 
     const rows = results || [];
@@ -195,6 +198,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .run();
       message = { ...message, status: "delivered" };
       await notifyRoom(env, user.id, targetId, { type: "status", message_id: newId, status: "delivered" });
+    }
+
+    // Destinatário fora da conversa: avisa por push (em segundo plano, sem atrasar a resposta)
+    if (!delivered) {
+      context.waitUntil(pushNewMessage(env, user, targetId, message));
     }
 
     return jsonResponse({ message }, 201);

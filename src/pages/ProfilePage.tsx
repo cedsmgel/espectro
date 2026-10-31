@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   authStorage,
   Community,
-  friendshipsApi,
+  friendsApi,
   Post,
   postsApi,
   UserProfile,
@@ -99,20 +99,51 @@ export const ProfilePage: React.FC = () => {
 
     setAddingFriend(true);
     try {
-      const res = await friendshipsApi.addFriend(userProfile.username);
+      const res = await friendsApi.add(userProfile.id, userProfile.username);
+      const accepted = res.friend?.status === 'accepted';
       setFriendActionSuccess(res.message || 'Solicitação de amizade processada!');
       setUserProfile((prev) =>
         prev
           ? {
               ...prev,
-              is_friend: true,
-              friendship_status: 'accepted',
+              is_friend: accepted,
+              friendship_status: accepted ? 'accepted' : 'pending',
+              friendship_direction: accepted ? prev.friendship_direction : 'outgoing',
+              friends_count: accepted ? (prev.friends_count || 0) + 1 : prev.friends_count,
             }
           : null
       );
       setTimeout(() => setFriendActionSuccess(null), 4000);
     } catch (err: any) {
       alert(err.message || 'Erro ao adicionar amigo.');
+    } finally {
+      setAddingFriend(false);
+    }
+  };
+
+  // Cancelar pedido enviado, recusar pedido recebido ou desfazer amizade
+  const handleRemoveFriendship = async (message: string, confirmText?: string) => {
+    if (!userProfile) return;
+    if (confirmText && !window.confirm(confirmText)) return;
+    setAddingFriend(true);
+    try {
+      await friendsApi.remove(userProfile.id);
+      const wasFriend = userProfile.is_friend;
+      setUserProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              is_friend: false,
+              friendship_status: null,
+              friendship_direction: null,
+              friends_count: wasFriend ? Math.max(0, (prev.friends_count || 1) - 1) : prev.friends_count,
+            }
+          : null
+      );
+      setFriendActionSuccess(message);
+      setTimeout(() => setFriendActionSuccess(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível concluir a ação.');
     } finally {
       setAddingFriend(false);
     }
@@ -182,6 +213,13 @@ export const ProfilePage: React.FC = () => {
   const fullName = userProfile?.name || null;
   const initialLetter = (fullName || usernameHandle).charAt(0).toUpperCase();
   const totalUpvotes = posts.reduce((acc, p) => acc + (p.upvotes || 0), 0);
+  const memberSince = userProfile?.created_at
+    ? new Date(userProfile.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+  const friendshipPending = userProfile?.friendship_status === 'pending';
   const isLockedPrivate = Boolean(userProfile?.is_private && !isSelf && !userProfile?.is_friend);
 
   return (
@@ -219,7 +257,6 @@ export const ProfilePage: React.FC = () => {
                       {initialLetter}
                     </div>
                   )}
-                  <span className="absolute bottom-1 right-1 w-4 h-4 bg-olive rounded-full ring-4 ring-surface-container-lowest" />
                 </div>
 
                 <div className="flex flex-col min-w-0">
@@ -240,7 +277,7 @@ export const ProfilePage: React.FC = () => {
                     )}
 
                     <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
-                      Membro do Espectro
+                      {memberSince ? `Membro desde ${memberSince}` : 'Membro do Espectro'}
                     </span>
 
                     {userProfile?.is_friend && !isSelf && (
@@ -286,6 +323,12 @@ export const ProfilePage: React.FC = () => {
                       <div>
                         <strong className="text-primary font-bold">▲ {totalUpvotes}</strong> upvotes recebidos
                       </div>
+                      {typeof userProfile?.friends_count === 'number' && (
+                        <div>
+                          <strong className="text-on-surface font-bold">{userProfile.friends_count}</strong>{' '}
+                          {userProfile.friends_count === 1 ? 'amigo' : 'amigos'}
+                        </div>
+                      )}
                       {communities.length > 0 && (
                         <div>
                           <strong className="text-secondary font-bold">{communities.length}</strong>{' '}
@@ -318,14 +361,68 @@ export const ProfilePage: React.FC = () => {
                     </Link>
                   </>
                 ) : userProfile?.is_friend ? (
-                  /* Usuários Já São Amigos: Botão Enviar Mensagem Direta */
-                  <Link
-                    to={`/mensagens?u=${encodeURIComponent(username || '')}`}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
-                    <span>Enviar Mensagem</span>
-                  </Link>
+                  /* Já são amigos: mensagem direta e opção de desfazer */
+                  <>
+                    <Link
+                      to={`/mensagens?u=${encodeURIComponent(usernameHandle)}`}
+                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                      <span>Enviar Mensagem</span>
+                    </Link>
+                    <button
+                      type="button"
+                      disabled={addingFriend}
+                      onClick={() =>
+                        handleRemoveFriendship(
+                          'Amizade desfeita.',
+                          `Desfazer a amizade com @${usernameHandle}? Vocês não poderão mais trocar mensagens.`
+                        )
+                      }
+                      title="Desfazer amizade"
+                      aria-label="Desfazer amizade"
+                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant/30 flex items-center justify-center cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">person_remove</span>
+                    </button>
+                  </>
+                ) : friendshipPending && userProfile?.friendship_direction === 'outgoing' ? (
+                  /* Pedido enviado: aguardando aceite */
+                  <>
+                    <span className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-semibold text-xs border border-outline-variant/30 flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">schedule</span>
+                      <span>Pedido enviado</span>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={addingFriend}
+                      onClick={() => handleRemoveFriendship('Pedido de amizade cancelado.')}
+                      className="px-4 py-2.5 rounded-full bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : friendshipPending && userProfile?.friendship_direction === 'incoming' ? (
+                  /* Pedido recebido: aceitar ou recusar */
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleAddFriend}
+                      disabled={addingFriend}
+                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                      <span>Aceitar pedido</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={addingFriend}
+                      onClick={() => handleRemoveFriendship('Pedido recusado.')}
+                      className="px-4 py-2.5 rounded-full bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
+                    >
+                      Recusar
+                    </button>
+                  </>
                 ) : (
                   /* Usuários NÃO São Amigos: Botão Adicionar Amigo */
                   <button

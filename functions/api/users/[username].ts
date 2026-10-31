@@ -34,18 +34,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     let isFriend = false;
     let friendshipStatus: string | null = null;
+    let friendshipDirection: "outgoing" | "incoming" | null = null;
 
     if (auth && !isSelf) {
       const friendship = await env.DB.prepare(`
-        SELECT status FROM friendships
+        SELECT status, user_id FROM friendships
         WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)
         LIMIT 1
       `)
         .bind(auth.id, user.id, user.id, auth.id)
-        .first<{ status: string }>();
+        .first<{ status: string; user_id: number }>();
 
       if (friendship) {
         friendshipStatus = friendship.status;
+        friendshipDirection = friendship.user_id === auth.id ? "outgoing" : "incoming";
         isFriend = friendship.status === "accepted";
       }
     }
@@ -63,9 +65,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .bind(user.id)
       .all<any>();
 
+    const friendsCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS total FROM friendships WHERE status = 'accepted' AND (user_id = ? OR friend_id = ?)"
+    )
+      .bind(user.id, user.id)
+      .first<{ total: number }>();
+
     return jsonResponse({
       user: {
         ...user,
+        friends_count: Number(friendsCount?.total || 0),
+        friendship_direction: friendshipDirection,
         is_private: Boolean(user.is_private),
         allow_scraps: Boolean(user.allow_scraps ?? 1),
         is_friend: isFriend,

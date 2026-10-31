@@ -15,7 +15,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado.", 401);
     }
 
-    const body = (await request.json().catch(() => null)) as { friend_id?: number } | null;
+    const body = (await request.json().catch(() => null)) as { friend_id?: number; all?: boolean } | null;
+
+    if (body?.all) {
+      const result = await env.DB.prepare(
+        `UPDATE direct_messages
+         SET read_at = CURRENT_TIMESTAMP, delivered_at = COALESCE(delivered_at, CURRENT_TIMESTAMP)
+         WHERE receiver_id = ? AND read_at IS NULL`
+      )
+        .bind(user.id)
+        .run();
+      return jsonResponse({ marked: Number(result.meta.changes || 0) });
+    }
+
     const friendId = Number(body?.friend_id);
     if (!Number.isInteger(friendId) || friendId <= 0) {
       return errorResponse("friend_id é obrigatório.", 400);
