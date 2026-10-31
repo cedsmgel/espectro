@@ -1,7 +1,7 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { pushFriendRequest, type PushEnv } from "../_shared/push";
 
-export interface Env {
-  DB: D1Database;
+export interface Env extends PushEnv {
   JWT_SECRET: string;
 }
 
@@ -192,6 +192,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
       .bind(user.id, targetFriendId)
       .run();
+
+    context.waitUntil(pushFriendRequest(env, user, targetFriendId));
 
     return jsonResponse({
       message: `Pedido de amizade enviado para @${target.username}. Aguardando aceite.`,

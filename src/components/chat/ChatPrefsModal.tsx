@@ -1,10 +1,12 @@
 import React from 'react';
 import { ChatFontSize, ChatPrefs } from '../../hooks/useChatPrefs';
+import type { PushState } from '../../hooks/usePush';
 import { ModalShell } from './ModalShell';
 
 interface ChatPrefsModalProps {
   prefs: ChatPrefs;
   onChange: (patch: Partial<ChatPrefs>) => void;
+  push: PushState;
   onClose: () => void;
 }
 
@@ -14,9 +16,60 @@ const FONT_OPTIONS: Array<{ id: ChatFontSize; label: string }> = [
   { id: 'lg', label: 'Grande' },
 ];
 
-export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange, onClose }) => (
+export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange, push, onClose }) => (
   <ModalShell title="Preferências do chat" onClose={onClose}>
     <p className="text-[11px] text-on-surface-variant mb-4">Estas opções valem só neste aparelho.</p>
+
+    <div className="mb-5 p-3 rounded-2xl bg-surface-container-low">
+      <div className="flex items-center justify-between gap-3">
+        <span>
+          <span className="block text-xs font-semibold text-on-surface">Notificações push</span>
+          <span className="block text-[11px] text-on-surface-variant mt-0.5">
+            {!push.supported
+              ? 'Este navegador não suporta notificações.'
+              : push.permission === 'denied'
+              ? 'Bloqueadas no navegador. Libere nas configurações do site.'
+              : push.subscribed
+              ? 'Ativas neste aparelho, mesmo com o app fechado.'
+              : 'Receba mensagens e pedidos de amizade com o app fechado.'}
+          </span>
+        </span>
+        {push.supported && push.permission !== 'denied' && (
+          <button
+            type="button"
+            disabled={push.busy}
+            onClick={push.subscribed ? push.disable : push.enable}
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-[11px] font-semibold cursor-pointer disabled:opacity-60 ${
+              push.subscribed
+                ? 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+                : 'bg-primary-container text-on-primary hover:bg-primary'
+            }`}
+          >
+            {push.busy ? 'Aguarde...' : push.subscribed ? 'Desativar' : 'Ativar'}
+          </button>
+        )}
+      </div>
+
+      {push.iosInstallNeeded && (
+        <p className="mt-2 text-[11px] text-on-surface-variant">
+          No iPhone, toque em Compartilhar e em "Adicionar à Tela de Início" para poder ativar.
+        </p>
+      )}
+
+      {push.subscribed && (
+        <label className="mt-3 pt-3 border-t border-outline-variant/30 flex items-center justify-between gap-4 cursor-pointer">
+          <span className="text-[11px] text-on-surface">Mostrar o texto da mensagem na notificação</span>
+          <input
+            type="checkbox"
+            checked={push.showPreview}
+            onChange={(e) => push.changePreview(e.target.checked)}
+            className="w-5 h-5 accent-[var(--color-primary,#2563eb)] cursor-pointer"
+          />
+        </label>
+      )}
+
+      {push.error && <p className="mt-2 text-[11px] text-error">{push.error}</p>}
+    </div>
 
     <div className="mb-5">
       <span className="text-xs font-semibold text-on-surface">Tamanho do texto</span>

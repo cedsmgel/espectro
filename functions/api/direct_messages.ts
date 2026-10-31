@@ -9,8 +9,9 @@ import {
   rateLimit,
 } from "../_shared/auth";
 import { MESSAGE_COLUMNS, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
+import { pushNewMessage, type PushEnv } from "../_shared/push";
 
-export interface Env extends ChatEnv {
+export interface Env extends ChatEnv, PushEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -197,6 +198,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .run();
       message = { ...message, status: "delivered" };
       await notifyRoom(env, user.id, targetId, { type: "status", message_id: newId, status: "delivered" });
+    }
+
+    // Destinatário fora da conversa: avisa por push (em segundo plano, sem atrasar a resposta)
+    if (!delivered) {
+      context.waitUntil(pushNewMessage(env, user, targetId, message));
     }
 
     return jsonResponse({ message }, 201);

@@ -22,6 +22,7 @@ import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
 import { useChatPrefs } from '../hooks/useChatPrefs';
+import { usePush } from '../hooks/usePush';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
@@ -178,6 +179,11 @@ export const DirectMessages: React.FC = () => {
   const [convSearch, setConvSearch] = useState('');
   const [activeSettings, setActiveSettings] = useState<ConversationSettings | null>(null);
   const { prefs, update: updatePrefs } = useChatPrefs();
+  const push = usePush();
+
+  useEffect(() => {
+    if (push.error) setToastMessage(push.error);
+  }, [push.error]);
 
   const refreshConversations = useCallback(async () => {
     if (!userId) return;
@@ -1056,6 +1062,13 @@ export const DirectMessages: React.FC = () => {
                         label: 'Marcar todas como lidas',
                         icon: 'done_all',
                         onSelect: handleMarkAllRead,
+                      },
+                      {
+                        key: 'push',
+                        label: push.subscribed ? 'Desativar notificações push' : 'Ativar notificações push',
+                        icon: push.subscribed ? 'notifications_off' : 'notifications_active',
+                        hidden: !push.supported || push.permission === 'denied',
+                        onSelect: () => (push.subscribed ? push.disable() : push.enable()),
                       },
                       {
                         key: 'prefs',
@@ -2252,7 +2265,7 @@ export const DirectMessages: React.FC = () => {
         />
       )}
 
-      {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} onClose={() => setShowPrefs(false)} />}
+      {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} push={push} onClose={() => setShowPrefs(false)} />}
 
       {showCustomizer && activeFriend && (
         <ConversationCustomizer
