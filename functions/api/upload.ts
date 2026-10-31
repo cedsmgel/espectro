@@ -64,6 +64,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const bucket = env.MEDIA_BUCKET || env.BUCKET;
 
+    const origin = new URL(request.url).origin;
+    const fullUrl = `${origin}/api/media/${key}`;
+
     if (bucket) {
       await bucket.put(key, fileObj.stream(), {
         httpMetadata: {
@@ -79,7 +82,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
 
       return jsonResponse({
-        url: `/api/media/${key}`,
+        url: fullUrl,
+        relative_url: `/api/media/${key}`,
         key,
         media_type: mediaType,
         filename: fileObj.name,
@@ -90,7 +94,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Fallback se R2 não estiver configurado no ambiente local
     return jsonResponse({
-      url: `/api/media/${key}`,
+      url: fullUrl,
+      relative_url: `/api/media/${key}`,
       key,
       media_type: mediaType,
       filename: fileObj.name,

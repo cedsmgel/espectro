@@ -70,6 +70,7 @@ export const DirectMessages: React.FC = () => {
   const {
     messages,
     sendMessage,
+    sendMediaMessage,
     sendTyping,
     isOtherUserTyping,
     connectionStatus,
@@ -278,18 +279,17 @@ export const DirectMessages: React.FC = () => {
       });
 
       // Determina o tipo de mensagem: image, video ou file
-      let msgType: ChatMessageType = forcedType || 'file';
-      if (!forcedType) {
-        if (file.type.startsWith('image/')) msgType = 'image';
-        else if (isVideo) msgType = 'video';
-        else msgType = 'file';
-      }
+      let msgType: 'image' | 'video' | 'file' = 'file';
+      if (file.type.startsWith('image/')) msgType = 'image';
+      else if (isVideo) msgType = 'video';
+      else msgType = 'file';
 
-      // Envia apenas o link do R2 pelo WebSocket
-      sendMessage({
-        text: file.name,
-        type: msgType,
+      // Envia apenas o payload de mídia exigido pelo WebSocket:
+      // { type: 'media', media_url: 'URL_RETORNADA', message_type: 'image' | 'video' | 'file' }
+      sendMediaMessage({
         media_url: res.url,
+        message_type: msgType,
+        filename: file.name,
       });
     } catch (err: any) {
       if (err.message?.includes('cancelado')) {
@@ -447,78 +447,109 @@ export const DirectMessages: React.FC = () => {
   );
 
   // Renderizador rico de mensagens por tipo (Tarefa 3)
+  // Renderizador rico de mensagens por tipo e verificação de media_url (Tarefa 2)
   const renderMessageContent = (m: ChatMessage, isMe: boolean) => {
-    const msgType = m.message_type || 'text';
+    // Se a mensagem possuir media_url (Tarefa 2)
+    if (m.media_url) {
+      let msgType: ChatMessageType = m.message_type || 'image';
+      // Auto-detecção de tipo caso não venha explícito ou venha 'text'
+      if (msgType === 'text') {
+        const lower = m.media_url.toLowerCase();
+        if (/\.(mp4|webm|mov|ogg|m4v)($|\?)/.test(lower) || lower.includes('/videos/')) {
+          msgType = 'video';
+        } else if (/\.(jpg|jpeg|png|gif|webp|svg)($|\?)/.test(lower) || lower.includes('/images/')) {
+          msgType = 'image';
+        } else if (lower.includes('/documents/')) {
+          msgType = 'file';
+        } else if (m.media_url.includes('google.com/maps')) {
+          msgType = 'location';
+        }
+      }
 
-    switch (msgType) {
-      case 'image':
+      if (msgType === 'image') {
         return (
           <div className="flex flex-col gap-1.5">
-            {m.media_url && (
-              <div
-                onClick={() => setPreviewImageUrl(m.media_url || null)}
-                className="max-w-[220px] rounded-2xl overflow-hidden shadow-xs border border-outline-variant/30 bg-surface-container cursor-pointer hover:opacity-90 transition-opacity"
-              >
-                <img
-                  src={m.media_url}
-                  alt={m.content || 'Foto'}
-                  className="w-full h-auto max-h-60 object-cover"
-                />
-              </div>
-            )}
-            {m.content && m.content !== 'Foto' && !m.content.endsWith('.jpg') && !m.content.endsWith('.png') && (
-              <p className="text-xs">{m.content}</p>
-            )}
+            <img
+              src={m.media_url}
+              alt={m.content || 'Foto'}
+              onClick={() => setPreviewImageUrl(m.media_url || null)}
+              className="max-w-[200px] w-auto h-auto rounded-lg shadow-xs cursor-pointer hover:opacity-95 transition-opacity"
+              loading="lazy"
+            />
+            {m.content &&
+              m.content !== 'Foto' &&
+              m.content !== 'Imagem' &&
+              !m.content.endsWith('.jpg') &&
+              !m.content.endsWith('.jpeg') &&
+              !m.content.endsWith('.png') &&
+              !m.content.endsWith('.webp') && (
+                <p className="text-xs break-words">{m.content}</p>
+              )}
           </div>
         );
+      }
 
-      case 'video':
+      if (msgType === 'video') {
         return (
-          <div className="flex flex-col gap-1.5 max-w-[260px]">
-            {m.media_url && (
-              <video
-                src={m.media_url}
-                controls
-                playsInline
-                className="w-full rounded-2xl shadow-xs border border-outline-variant/30 bg-black max-h-60"
-              />
-            )}
-            {m.content && m.content !== 'Vídeo' && !m.content.endsWith('.mp4') && (
-              <p className="text-xs">{m.content}</p>
-            )}
+          <div className="flex flex-col gap-1.5">
+            <video
+              src={m.media_url}
+              controls
+              playsInline
+              className="max-w-[200px] w-full rounded-lg shadow-xs bg-black"
+            />
+            {m.content &&
+              m.content !== 'Vídeo' &&
+              !m.content.endsWith('.mp4') &&
+              !m.content.endsWith('.webm') &&
+              !m.content.endsWith('.mov') && (
+                <p className="text-xs break-words">{m.content}</p>
+              )}
           </div>
         );
+      }
 
-      case 'file':
+      if (msgType === 'file') {
         return (
-          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 min-w-[180px]">
-            <div className="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-xs">
-              <span className="material-symbols-outlined text-[20px]">description</span>
+          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-surface-container-high/60 border border-outline-variant/30 min-w-[180px] max-w-[240px]">
+            <div className="w-8 h-8 rounded-md bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[18px]">description</span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold truncate text-on-surface" title={m.content}>
                 {m.content || 'Documento'}
               </p>
               <span className="text-[10px] text-on-surface-variant uppercase font-mono">
-                Arquivo Anexo
+                Arquivo
               </span>
             </div>
-            {m.media_url && (
-              <a
-                href={m.media_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors shrink-0 cursor-pointer"
-                title="Baixar arquivo"
-              >
-                <span className="material-symbols-outlined text-[18px]">download</span>
-              </a>
-            )}
+            <a
+              href={m.media_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors shrink-0 cursor-pointer"
+              title="Baixar arquivo"
+            >
+              <span className="material-symbols-outlined text-[18px]">download</span>
+            </a>
           </div>
         );
+      }
 
-      case 'location': {
+      if (msgType === 'gif' || msgType === 'sticker') {
+        return (
+          <div className="max-w-[200px] rounded-lg overflow-hidden shadow-xs border border-outline-variant/30 bg-surface-container">
+            <img
+              src={m.media_url}
+              alt="GIF Animado"
+              className="w-full h-auto object-cover rounded-lg"
+            />
+          </div>
+        );
+      }
+
+      if (msgType === 'location') {
         const coords = m.content.replace('Localização: ', '').trim();
         return (
           <div className="flex flex-col gap-2 min-w-[200px]">
@@ -526,43 +557,25 @@ export const DirectMessages: React.FC = () => {
               <span className="material-symbols-outlined text-[18px] text-rose-500">pin_drop</span>
               <span className="text-xs font-bold text-on-surface">Localização Compartilhada</span>
             </div>
-            {m.media_url && (
-              <a
-                href={m.media_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 rounded-xl bg-surface-container-high/70 hover:bg-surface-container transition-all flex items-center justify-between gap-2 border border-outline-variant/30 cursor-pointer group"
-              >
-                <div className="flex flex-col text-left">
-                  <span className="text-[11px] font-mono text-on-surface truncate">{coords || 'Abrir Mapa'}</span>
-                  <span className="text-[10px] text-primary group-hover:underline">Ver no Google Maps</span>
-                </div>
-                <span className="material-symbols-outlined text-[16px] text-primary">open_in_new</span>
-              </a>
-            )}
+            <a
+              href={m.media_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2.5 rounded-xl bg-surface-container-high/70 hover:bg-surface-container transition-all flex items-center justify-between gap-2 border border-outline-variant/30 cursor-pointer group"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] font-mono text-on-surface truncate">{coords || 'Abrir Mapa'}</span>
+                <span className="text-[10px] text-primary group-hover:underline">Ver no Google Maps</span>
+              </div>
+              <span className="material-symbols-outlined text-[16px] text-primary">open_in_new</span>
+            </a>
           </div>
         );
       }
-
-      case 'gif':
-      case 'sticker':
-        return (
-          <div className="max-w-[200px] rounded-2xl overflow-hidden shadow-xs border border-outline-variant/30 bg-surface-container">
-            {m.media_url ? (
-              <img
-                src={m.media_url}
-                alt="GIF Animado"
-                className="w-full h-auto object-cover rounded-2xl"
-              />
-            ) : (
-              <span className="text-xs italic text-on-surface-variant">[GIF indisponível]</span>
-            )}
-          </div>
-        );
-
-      default:
-        return <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
     }
+
+    // Mensagem de texto normal
+    return <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
   };
 
   return (

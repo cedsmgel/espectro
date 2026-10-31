@@ -135,6 +135,24 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
             });
             // Quando uma mensagem chega, o amigo para de digitar
             setIsOtherUserTyping(false);
+          } else if (data.type === 'media' || data.media_url) {
+            // Suporte para quando a mensagem chega com type: 'media'
+            const mediaMsg: ChatMessage = {
+              id: data.id || (data.message && data.message.id) || Date.now(),
+              sender_id: data.sender_id || (data.message && data.message.sender_id) || 0,
+              sender_username: data.sender_username || (data.message && data.message.sender_username) || '',
+              content: data.content || data.filename || (data.message && data.message.content) || '',
+              message_type: data.message_type || (data.message && data.message.message_type) || 'image',
+              media_url: data.media_url || (data.message && data.message.media_url) || null,
+              created_at: data.created_at || (data.message && data.message.created_at) || new Date().toISOString(),
+            };
+            setMessages((prev) => {
+              if (mediaMsg.id && prev.some((m) => m.id === mediaMsg.id)) {
+                return prev;
+              }
+              return [...prev, mediaMsg];
+            });
+            setIsOtherUserTyping(false);
           } else if (data.type === 'typing') {
             // Indicador de digitação do outro usuário
             if (data.sender_id === activeFriendId) {
@@ -269,7 +287,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
       }
 
       const payload = {
-        type: 'message',
+        type: mediaUrl ? 'media' : 'message',
         message_type: msgType,
         sender_id: userId,
         sender_username: username,
@@ -292,9 +310,40 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId, username, sendTyping]
   );
 
+  // Envio de mídia pelo WebSocket com o formato: { type: 'media', media_url: '...', message_type: 'image' | 'video' | 'file' }
+  const sendMediaMessage = useCallback(
+    (options: { media_url: string; message_type: 'image' | 'video' | 'file'; filename?: string }) => {
+      if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
+      const payload = {
+        type: 'media',
+        media_url: options.media_url,
+        message_type: options.message_type,
+        sender_id: userId,
+        sender_username: username,
+        filename: options.filename || '',
+        content: options.filename || '',
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        socketRef.current.send(JSON.stringify(payload));
+        sendTyping(false);
+        return true;
+      } catch (err) {
+        console.error('Erro ao enviar mídia pelo WebSocket:', err);
+        return false;
+      }
+    },
+    [userId, username, sendTyping]
+  );
+
   return {
     messages,
     sendMessage,
+    sendMediaMessage,
     sendTyping,
     isOtherUserTyping,
     connectionStatus,

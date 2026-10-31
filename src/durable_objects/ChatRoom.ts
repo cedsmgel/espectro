@@ -143,17 +143,18 @@ export class ChatRoom implements DurableObject {
       const raw = typeof message === "string" ? message : new TextDecoder().decode(message);
       const data = JSON.parse(raw);
 
-      // Tratamento de mensagens de chat (texto, fotos, vídeos, arquivos, localização, gifs, stickers)
+      // Tratamento de mensagens de chat (texto, fotos, vídeos, arquivos, localização, gifs, stickers, mídias)
       const isChatMessage =
         data.type === "message" ||
+        data.type === "media" ||
         data.message_type ||
         data.media_url ||
         data.text !== undefined ||
         data.content !== undefined;
 
       if (isChatMessage && data.type !== "typing" && data.type !== "ping") {
-        const rawContent = String(data.content || data.text || "").trim();
-        const rawType = (data.message_type || (data.type !== "message" ? data.type : "text")) as ChatMessageType;
+        const rawContent = String(data.content || data.text || data.filename || "").trim();
+        const rawType = (data.message_type || (data.type !== "message" && data.type !== "media" ? data.type : "text")) as ChatMessageType;
         const validTypes: ChatMessageType[] = [
           'text',
           'image',
@@ -163,7 +164,10 @@ export class ChatRoom implements DurableObject {
           'gif',
           'sticker',
         ];
-        const messageType: ChatMessageType = validTypes.includes(rawType) ? rawType : 'text';
+        let messageType: ChatMessageType = validTypes.includes(rawType) ? rawType : 'text';
+        if (data.type === 'media' && (!rawType || rawType === 'text')) {
+          messageType = (data.message_type as ChatMessageType) || 'image';
+        }
         const mediaUrl = data.media_url ? String(data.media_url).trim() : null;
 
         // Aceita se tiver texto OU se tiver URL de mídia (ou for localização)
@@ -184,6 +188,10 @@ export class ChatRoom implements DurableObject {
           const payload = JSON.stringify({
             type: "message",
             message: newMsg,
+            // Campos no nível raiz para máxima compatibilidade
+            media_url: newMsg.media_url,
+            message_type: newMsg.message_type,
+            content: newMsg.content,
           });
 
           const connectedSockets = this.ctx.getWebSockets();
