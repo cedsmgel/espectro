@@ -14,6 +14,11 @@ const SAFE_INLINE_TYPES = new Set([
   "video/webm",
   "video/quicktime",
   "video/ogg",
+  "audio/webm",
+  "audio/ogg",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/wav",
 ]);
 
 // Impede que conteúdo enviado por usuários seja executado na origem do site (XSS via HTML/SVG)
@@ -28,7 +33,15 @@ function applySecurityHeaders(headers: Headers) {
   }
 }
 
-const KEY_PATTERN = /^(images|videos|documents)\/[\w.-]+$/;
+const AUDIO_TYPES: Record<string, string> = {
+  webm: "audio/webm",
+  ogg: "audio/ogg",
+  m4a: "audio/mp4",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+};
+
+const KEY_PATTERN = /^(images|videos|documents|audio)\/[\w.-]+$/;
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
@@ -66,6 +79,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (!headers.get("content-type")) {
       const lowerKey = key.toLowerCase();
       if (lowerKey.endsWith(".mp4")) headers.set("content-type", "video/mp4");
+      else if (lowerKey.startsWith("audio/")) headers.set("content-type", AUDIO_TYPES[lowerKey.split(".").pop() || ""] || "application/octet-stream");
       else if (lowerKey.endsWith(".webm")) headers.set("content-type", "video/webm");
       else if (lowerKey.endsWith(".mov")) headers.set("content-type", "video/quicktime");
       else if (lowerKey.endsWith(".ogg")) headers.set("content-type", "video/ogg");

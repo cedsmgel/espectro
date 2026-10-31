@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               type="button"
               onClick={handleToggle}
               aria-label="Abrir ou fechar menu de navegação"
-              className="flex p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
@@ -328,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               type="button"
               onClick={() => setMobileSearchOpen(true)}
               aria-label="Abrir pesquisa"
-              className="md:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="md:hidden w-12 h-12 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
               title="Pesquisar"
             >
               <span className="material-symbols-outlined text-[22px]">search</span>
@@ -356,7 +356,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 <Link
                   to="/notificacoes"
                   aria-label="Ver notificações"
-                  className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
+                  className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[22px]">notifications</span>

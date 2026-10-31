@@ -948,6 +948,7 @@ export const DirectMessages: React.FC = () => {
               src={m.media_url}
               controls
               playsInline
+              preload="metadata"
               className="max-w-[200px] w-full rounded-lg shadow-xs bg-black"
             />
             {m.content &&

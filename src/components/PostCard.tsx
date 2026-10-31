@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, postsApi, authStorage } from '../lib/api';
 import { renderMarkdown } from '../lib/markdown';
-import { VideoPlayer } from './VideoPlayer';
+import { LazyVideoPlayer } from './LazyVideoPlayer';
 import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
 
 interface PostCardProps {
@@ -316,7 +316,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
           post.media_url.includes('/videos/') ? (
             <div className="w-full bg-black flex justify-center">
-              <VideoPlayer src={post.media_url} title={title || undefined} />
+              <LazyVideoPlayer src={post.media_url} title={title || undefined} />
             </div>
           ) : (
             <div className="w-full bg-black/10 dark:bg-black/40 flex justify-center overflow-hidden">
