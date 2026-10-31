@@ -343,6 +343,7 @@ export interface UploadResponse {
 export interface UploadOptions {
   onProgress?: (percent: number) => void;
   signal?: AbortSignal;
+  context?: string;
 }
 
 export const uploadApi = {
@@ -350,6 +351,9 @@ export const uploadApi = {
     const token = authStorage.getToken();
     const formData = new FormData();
     formData.append('file', file);
+    if (options?.context) {
+      formData.append('context', options.context);
+    }
 
     const headers: Record<string, string> = {};
     if (token) {

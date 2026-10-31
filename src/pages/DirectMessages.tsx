@@ -26,6 +26,34 @@ const FALLBACK_GIFS = [
   { id: '8', title: 'Love React', url: 'https://media.giphy.com/media/26FLdm964upN2ZYPA/giphy.gif' },
 ];
 
+// Helper para obter a duração do vídeo no navegador antes do upload
+const getVideoDuration = (file: File): Promise<number> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+    video.src = url;
+
+    const timer = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      resolve(0); // Em caso de timeout/codec não suportado, não trava o usuário
+    }, 4000);
+
+    video.onloadedmetadata = () => {
+      clearTimeout(timer);
+      const duration = video.duration || 0;
+      URL.revokeObjectURL(url);
+      resolve(duration);
+    };
+
+    video.onerror = () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      resolve(0);
+    };
+  });
+};
+
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded } = useSidebar();
@@ -72,6 +100,22 @@ export const DirectMessages: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState('');
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Modal Amigável para Avisos de Limite de Arquivo / Vídeo
+  const [fileLimitWarning, setFileLimitWarning] = useState<{
+    title: string;
+    message: string;
+    details?: string;
+  } | null>(null);
+
+  // Auto-limpeza da mensagem de erro após 10 segundos
+  useEffect(() => {
+    if (!uploadError) return;
+    const timer = setTimeout(() => {
+      setUploadError(null);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [uploadError]);
 
   // Estados do Giphy
   const [gifSearchQuery, setGifSearchQuery] = useState('');
@@ -157,15 +201,69 @@ export const DirectMessages: React.FC = () => {
     inputRef.current?.focus();
   };
 
-  // Upload de arquivo genérico com barra de progresso real para o Cloudflare R2
+  // Upload de arquivo com validações de tamanho (máx 10MB) e duração de vídeo (máx 1min)
   const handleUploadFile = async (file: File, forcedType?: 'image' | 'video' | 'file') => {
     if (!file || !activeFriend || !user) return;
 
     setShowAttachMenu(false);
+    setUploadError(null);
+
+    // 1. Limite de tamanho: máximo 10MB por arquivo no chat
+    const MAX_CHAT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_CHAT_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      const friendlyMsg = `O arquivo "${file.name}" possui ${sizeMB} MB. O limite máximo permitido para envio no chat é de 10 MB por arquivo.`;
+
+      setUploadError(friendlyMsg);
+      setFileLimitWarning({
+        title: 'Arquivo muito grande (Limite: 10 MB)',
+        message: `O arquivo "${file.name}" tem ${sizeMB} MB e ultrapassa o limite de envio.`,
+        details: 'Para manter o chat ágil e veloz para todos os usuários, o tamanho máximo permitido por arquivo é de 10 MB. Por favor, envie um arquivo menor.',
+      });
+
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+      if (docInputRef.current) docInputRef.current.value = '';
+      return;
+    }
+
+    // 2. Limite de duração para vídeos: máximo 1 minuto (60 segundos)
+    const isVideo =
+      forcedType === 'video' ||
+      file.type.startsWith('video/') ||
+      /\.(mp4|webm|mov|ogg|m4v|mkv)$/i.test(file.name);
+
+    if (isVideo) {
+      try {
+        const duration = await getVideoDuration(file);
+        // Tolerância de 1 segundo para codecs com imprecisão de timestamp
+        if (duration > 61) {
+          const totalSec = Math.round(duration);
+          const min = Math.floor(totalSec / 60);
+          const sec = totalSec % 60;
+          const durationStr = min > 0 ? `${min} min ${sec > 0 ? `${sec} s` : ''}` : `${totalSec} segundos`;
+          const friendlyMsg = `O vídeo "${file.name}" possui ${durationStr} de duração. No chat, são permitidos vídeos de no máximo 1 minuto (60 segundos).`;
+
+          setUploadError(friendlyMsg);
+          setFileLimitWarning({
+            title: 'Vídeo muito longo (Limite: 1 minuto)',
+            message: `O vídeo selecionado tem ${durationStr} de duração.`,
+            details: 'Para garantir reprodução instantânea sem travamentos nas conversas, vídeos no chat são limitados a no máximo 1 minuto (60 segundos). Por favor, recorte o vídeo ou selecione um arquivo mais curto.',
+          });
+
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+          if (docInputRef.current) docInputRef.current.value = '';
+          return;
+        }
+      } catch (err) {
+        console.warn('Não foi possível verificar a duração do vídeo antecipadamente:', err);
+      }
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
     setUploadFileName(file.name);
-    setUploadError(null);
 
     const controller = new AbortController();
     abortUploadControllerRef.current = controller;
@@ -173,6 +271,7 @@ export const DirectMessages: React.FC = () => {
     try {
       const res = await uploadApi.upload(file, {
         signal: controller.signal,
+        context: 'chat',
         onProgress: (pct) => {
           setUploadProgress(pct);
         },
@@ -182,7 +281,7 @@ export const DirectMessages: React.FC = () => {
       let msgType: ChatMessageType = forcedType || 'file';
       if (!forcedType) {
         if (file.type.startsWith('image/')) msgType = 'image';
-        else if (file.type.startsWith('video/')) msgType = 'video';
+        else if (isVideo) msgType = 'video';
         else msgType = 'file';
       }
 
@@ -841,12 +940,16 @@ export const DirectMessages: React.FC = () => {
                     )}
 
                     {uploadError && (
-                      <div className="px-6 py-1.5 bg-error-container text-error text-xs flex items-center justify-between">
-                        <span>{uploadError}</span>
+                      <div className="px-6 py-2.5 bg-error-container/90 text-error text-xs flex items-center justify-between border-t border-error/20 animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px] shrink-0">info</span>
+                          <span className="font-medium leading-tight">{uploadError}</span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setUploadError(null)}
-                          className="font-bold cursor-pointer"
+                          className="font-bold cursor-pointer hover:opacity-80 p-1 text-sm ml-2 shrink-0"
+                          title="Fechar aviso"
                         >
                           ✕
                         </button>
@@ -1153,6 +1256,40 @@ export const DirectMessages: React.FC = () => {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL AMIGÁVEL: Limite de Tamanho / Duração Excedido */}
+      {fileLimitWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[28px]">warning</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-base text-on-surface">{fileLimitWarning.title}</h3>
+                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                  {fileLimitWarning.message}
+                </p>
+              </div>
+            </div>
+
+            {fileLimitWarning.details && (
+              <div className="p-3.5 rounded-2xl bg-surface-container-low text-xs text-on-surface-variant leading-relaxed border border-outline-variant/20">
+                {fileLimitWarning.details}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setFileLimitWarning(null)}
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary font-semibold text-xs hover:bg-primary/90 transition-all cursor-pointer shadow-sm shadow-primary/20"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         </div>

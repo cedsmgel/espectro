@@ -24,6 +24,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const formData = await request.formData();
     const file = formData.get("file");
+    const uploadContext = formData.get("context") || new URL(request.url).searchParams.get("context");
 
     if (!file || typeof file === "string") {
       return errorResponse("Nenhum arquivo enviado no campo 'file'.", 400);
@@ -35,7 +36,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileObj.name);
     const isFile = !isVideo && !isImage;
 
-    // Limite de tamanho: 100MB
+    // Limite específico para Chat: máximo de 10MB por arquivo
+    if (uploadContext === "chat") {
+      const MAX_CHAT_SIZE = 10 * 1024 * 1024; // 10MB
+      if (fileObj.size > MAX_CHAT_SIZE) {
+        const sizeMb = (fileObj.size / (1024 * 1024)).toFixed(1);
+        return errorResponse(
+          `O arquivo selecionado possui ${sizeMb} MB. O limite máximo permitido para envio no chat é de 10 MB por arquivo.`,
+          400
+        );
+      }
+    }
+
+    // Limite geral de tamanho: 100MB
     const MAX_SIZE = 100 * 1024 * 1024;
     if (fileObj.size > MAX_SIZE) {
       return errorResponse("Arquivo excede o tamanho máximo permitido de 100MB.", 400);
