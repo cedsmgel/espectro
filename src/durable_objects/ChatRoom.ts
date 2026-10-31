@@ -14,6 +14,7 @@ export interface ChatMessage {
   content: string;
   message_type: ChatMessageType;
   media_url?: string | null;
+  reply_to_id?: number | null;
   created_at: string;
 }
 
@@ -37,6 +38,7 @@ export class ChatRoom implements DurableObject {
               content TEXT NOT NULL,
               message_type TEXT DEFAULT 'text',
               media_url TEXT,
+              reply_to_id INTEGER,
               created_at TEXT NOT NULL
             );
           `);
@@ -47,6 +49,9 @@ export class ChatRoom implements DurableObject {
           } catch {}
           try {
             this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN media_url TEXT;`);
+          } catch {}
+          try {
+            this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN reply_to_id INTEGER;`);
           } catch {}
         }
       } catch (err) {
@@ -62,9 +67,9 @@ export class ChatRoom implements DurableObject {
         const cursor = this.ctx.storage.sql.exec<Record<string, SqlStorageValue>>(`
           SELECT id, sender_id, sender_username, content, 
                  COALESCE(message_type, 'text') AS message_type, 
-                 media_url, created_at 
+                 media_url, reply_to_id, created_at 
           FROM (
-            SELECT id, sender_id, sender_username, content, message_type, media_url, created_at 
+            SELECT id, sender_id, sender_username, content, message_type, media_url, reply_to_id, created_at 
             FROM messages 
             ORDER BY id DESC 
             LIMIT 50
@@ -83,20 +88,38 @@ export class ChatRoom implements DurableObject {
   private saveMessage(msg: ChatMessage): ChatMessage {
     try {
       if (this.ctx.storage.sql) {
-        this.ctx.storage.sql.exec(
-          `INSERT INTO messages (sender_id, sender_username, content, message_type, media_url, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+        const cursor = this.ctx.storage.sql.exec<Record<string, SqlStorageValue>>(
+          `INSERT INTO messages (sender_id, sender_username, content, message_type, media_url, reply_to_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
           msg.sender_id,
           msg.sender_username,
           msg.content,
           msg.message_type || 'text',
           msg.media_url || null,
+          msg.reply_to_id || null,
           msg.created_at
         );
+        const rows = cursor.toArray();
+        if (rows.length > 0 && rows[0].id) {
+          msg.id = Number(rows[0].id);
+        }
       }
     } catch (err) {
       console.error("Erro ao persistir mensagem no SQLite:", err);
     }
     return msg;
+  }
+
+  // Deleta uma mensagem do SQLite interno pelo ID
+  private deleteMessage(id: number): boolean {
+    try {
+      if (this.ctx.storage.sql) {
+        this.ctx.storage.sql.exec(`DELETE FROM messages WHERE id = ?`, id);
+        return true;
+      }
+    } catch (err) {
+      console.error("Erro ao deletar mensagem do SQLite:", err);
+    }
+    return false;
   }
 
   // Endpoint de conexão WebSocket com Hibernação
@@ -143,6 +166,30 @@ export class ChatRoom implements DurableObject {
       const raw = typeof message === "string" ? message : new TextDecoder().decode(message);
       const data = JSON.parse(raw);
 
+      // Tarefa 4: Exclusão de mensagens
+      if (data.type === "delete") {
+        const messageId = Number(data.message_id || data.messageId || data.id);
+        if (messageId) {
+          this.deleteMessage(messageId);
+
+          const payload = JSON.stringify({
+            type: "delete",
+            message_id: messageId,
+            messageId: messageId,
+          });
+
+          const connectedSockets = this.ctx.getWebSockets();
+          for (const client of connectedSockets) {
+            try {
+              client.send(payload);
+            } catch (sendErr) {
+              console.error("Erro ao enviar evento delete para socket:", sendErr);
+            }
+          }
+        }
+        return;
+      }
+
       // Tratamento de mensagens de chat (texto, fotos, vídeos, arquivos, localização, gifs, stickers, mídias)
       const isChatMessage =
         data.type === "message" ||
@@ -169,6 +216,11 @@ export class ChatRoom implements DurableObject {
           messageType = (data.message_type as ChatMessageType) || 'image';
         }
         const mediaUrl = data.media_url ? String(data.media_url).trim() : null;
+        const replyToId = data.reply_to_id
+          ? Number(data.reply_to_id)
+          : data.replyToId
+          ? Number(data.replyToId)
+          : null;
 
         // Aceita se tiver texto OU se tiver URL de mídia (ou for localização)
         if (rawContent.length > 0 || mediaUrl) {
@@ -178,6 +230,7 @@ export class ChatRoom implements DurableObject {
             content: rawContent || (messageType === 'location' ? 'Localização compartilhada' : ''),
             message_type: messageType,
             media_url: mediaUrl,
+            reply_to_id: replyToId,
             created_at: data.created_at || new Date().toISOString(),
           };
 
@@ -192,6 +245,7 @@ export class ChatRoom implements DurableObject {
             media_url: newMsg.media_url,
             message_type: newMsg.message_type,
             content: newMsg.content,
+            reply_to_id: newMsg.reply_to_id,
           });
 
           const connectedSockets = this.ctx.getWebSockets();

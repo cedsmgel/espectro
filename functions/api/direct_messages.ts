@@ -26,6 +26,9 @@ async function ensureMessagesTable(db: D1Database) {
     try {
       await db.prepare(`ALTER TABLE direct_messages ADD COLUMN media_url TEXT;`).run();
     } catch {}
+    try {
+      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN reply_to_id INTEGER;`).run();
+    } catch {}
   } catch (e) {
     // ignore if already exists
   }

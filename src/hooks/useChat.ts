@@ -17,6 +17,7 @@ export interface ChatMessage {
   content: string;
   message_type?: ChatMessageType;
   media_url?: string | null;
+  reply_to_id?: number | null;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ export interface SendMessageOptions {
   text?: string;
   type?: ChatMessageType;
   media_url?: string | null;
+  reply_to_id?: number | null;
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -153,6 +155,12 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
               return [...prev, mediaMsg];
             });
             setIsOtherUserTyping(false);
+          } else if (data.type === 'delete') {
+            // Remoção de mensagem deletada em tempo real (Tarefa 4)
+            const deletedId = Number(data.message_id || data.messageId || data.id);
+            if (deletedId) {
+              setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+            }
           } else if (data.type === 'typing') {
             // Indicador de digitação do outro usuário
             if (data.sender_id === activeFriendId) {
@@ -262,11 +270,11 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId]
   );
 
-  // Função para enviar nova mensagem (suporta texto puro ou mídias/arquivos)
+  // Função para enviar nova mensagem (suporta texto puro, mídias e citação/resposta - Tarefa 4)
   const sendMessage = useCallback(
     (
       textOrOptions: string | SendMessageOptions,
-      extraOptions?: { type?: ChatMessageType; media_url?: string | null }
+      extraOptions?: { type?: ChatMessageType; media_url?: string | null; reply_to_id?: number | null }
     ) => {
       const text = typeof textOrOptions === 'string' ? textOrOptions : textOrOptions.text || '';
       const msgType: ChatMessageType =
@@ -277,6 +285,10 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
         typeof textOrOptions === 'object' && textOrOptions.media_url
           ? textOrOptions.media_url
           : extraOptions?.media_url || null;
+      const replyToId =
+        typeof textOrOptions === 'object' && textOrOptions.reply_to_id !== undefined
+          ? textOrOptions.reply_to_id
+          : extraOptions?.reply_to_id || null;
 
       const trimmed = text.trim();
       if (!trimmed && !mediaUrl) {
@@ -294,6 +306,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
         content: trimmed,
         text: trimmed,
         media_url: mediaUrl,
+        reply_to_id: replyToId || null,
         created_at: new Date().toISOString(),
       };
 
@@ -310,9 +323,14 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId, username, sendTyping]
   );
 
-  // Envio de mídia pelo WebSocket com o formato: { type: 'media', media_url: '...', message_type: 'image' | 'video' | 'file' }
+  // Envio de mídia pelo WebSocket com suporte a resposta
   const sendMediaMessage = useCallback(
-    (options: { media_url: string; message_type: 'image' | 'video' | 'file'; filename?: string }) => {
+    (options: {
+      media_url: string;
+      message_type: 'image' | 'video' | 'file';
+      filename?: string;
+      reply_to_id?: number | null;
+    }) => {
       if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
         return false;
       }
@@ -325,6 +343,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
         sender_username: username,
         filename: options.filename || '',
         content: options.filename || '',
+        reply_to_id: options.reply_to_id || null,
         created_at: new Date().toISOString(),
       };
 
@@ -340,10 +359,33 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     [userId, username, sendTyping]
   );
 
+  // Deletar mensagem no Durable Object (Tarefa 4)
+  const deleteMessage = useCallback((messageId: number) => {
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    try {
+      socketRef.current.send(
+        JSON.stringify({
+          type: 'delete',
+          message_id: messageId,
+          messageId: messageId,
+        })
+      );
+      // Atualização otimista local
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      return true;
+    } catch (err) {
+      console.error('Erro ao deletar mensagem pelo WebSocket:', err);
+      return false;
+    }
+  }, []);
+
   return {
     messages,
     sendMessage,
     sendMediaMessage,
+    deleteMessage,
     sendTyping,
     isOtherUserTyping,
     connectionStatus,

@@ -56,6 +56,33 @@ const getVideoDuration = (file: File): Promise<number> => {
   });
 };
 
+// Formatação amigável de datas para separadores de chat (Hoje, Ontem, 12 de Outubro) - Tarefa 2
+const formatMessageDateSeparator = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isToday) return 'Hoje';
+  if (isYesterday) return 'Ontem';
+
+  const isSameYear = date.getFullYear() === now.getFullYear();
+  if (isSameYear) {
+    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+  }
+  return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded } = useSidebar();
@@ -68,11 +95,26 @@ export const DirectMessages: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [loadingFriends, setLoadingFriends] = useState(true);
 
+  // Estados de ações de mensagem (Responder, Encaminhar, Dados, Toast) - Tarefa 3
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [forwardModalMessage, setForwardModalMessage] = useState<ChatMessage | null>(null);
+  const [forwardSearchQuery, setForwardSearchQuery] = useState('');
+  const [infoModalMessage, setInfoModalMessage] = useState<ChatMessage | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Auto-limpeza do toast
+  useEffect(() => {
+    if (!toastMessage) return;
+    const t = setTimeout(() => setToastMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [toastMessage]);
+
   // Hook customizado de WebSocket para Chat em tempo real via Durable Objects
   const {
     messages,
     sendMessage,
     sendMediaMessage,
+    deleteMessage,
     sendTyping,
     isOtherUserTyping,
     connectionStatus,
@@ -197,20 +239,22 @@ export const DirectMessages: React.FC = () => {
     }, 2000);
   };
 
-  // Envio de mensagem de texto normal pelo WebSocket
+  // Envio de mensagem de texto normal pelo WebSocket (com suporte a resposta - Tarefa 4)
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !activeFriend || !user) return;
 
     const content = inputText.trim();
+    const replyToId = replyingTo?.id || null;
     setInputText('');
+    setReplyingTo(null);
 
     if (typingTimerRef.current) {
       window.clearTimeout(typingTimerRef.current);
     }
     sendTyping(false);
 
-    sendMessage({ text: content, type: 'text' });
+    sendMessage({ text: content, type: 'text', reply_to_id: replyToId });
     inputRef.current?.focus();
   };
 
@@ -313,13 +357,14 @@ export const DirectMessages: React.FC = () => {
       else if (isVideo) msgType = 'video';
       else msgType = 'file';
 
-      // Envia apenas o payload de mídia exigido pelo WebSocket:
-      // { type: 'media', media_url: 'URL_RETORNADA', message_type: 'image' | 'video' | 'file' }
+      // Envia apenas o payload de mídia exigido pelo WebSocket (com suporte a resposta - Tarefa 4):
       sendMediaMessage({
         media_url: res.url,
         message_type: msgType,
         filename: file.name,
+        reply_to_id: replyingTo?.id || null,
       });
+      setReplyingTo(null);
     } catch (err: any) {
       if (err.message?.includes('cancelado')) {
         setUploadError('Upload cancelado.');
@@ -344,6 +389,67 @@ export const DirectMessages: React.FC = () => {
     setIsUploading(false);
     setUploadProgress(0);
     setUploadError('Upload cancelado pelo usuário.');
+  };
+
+  // Ações de Mensagens (Hover Menu - Tarefa 3)
+  const handleStartReply = (m: ChatMessage) => {
+    setReplyingTo(m);
+    inputRef.current?.focus();
+  };
+
+  const handleCopyMessage = async (m: ChatMessage) => {
+    const textToCopy = m.content || m.media_url || '';
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setToastMessage('Mensagem copiada para a área de transferência!');
+    } catch {
+      setToastMessage('Não foi possível copiar o texto.');
+    }
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    if (window.confirm('Deseja excluir esta mensagem para todos na conversa?')) {
+      deleteMessage(messageId);
+      setToastMessage('Mensagem excluída com sucesso.');
+    }
+  };
+
+  const handleForwardToFriend = (targetFriend: Friend) => {
+    if (!forwardModalMessage) return;
+
+    if (activeFriend?.friend_id === targetFriend.friend_id) {
+      if (forwardModalMessage.media_url) {
+        sendMediaMessage({
+          media_url: forwardModalMessage.media_url,
+          message_type: (forwardModalMessage.message_type as any) || 'image',
+          filename: forwardModalMessage.content,
+        });
+      } else {
+        sendMessage({
+          text: forwardModalMessage.content,
+          type: 'text',
+        });
+      }
+    } else {
+      setActiveFriend(targetFriend);
+      setTimeout(() => {
+        if (forwardModalMessage.media_url) {
+          sendMediaMessage({
+            media_url: forwardModalMessage.media_url,
+            message_type: (forwardModalMessage.message_type as any) || 'image',
+            filename: forwardModalMessage.content,
+          });
+        } else {
+          sendMessage({
+            text: forwardModalMessage.content,
+            type: 'text',
+          });
+        }
+      }, 400);
+    }
+
+    setForwardModalMessage(null);
+    setToastMessage(`Mensagem encaminhada para @${targetFriend.username}!`);
   };
 
   // Enviar Localização Geográfica Atual
@@ -608,7 +714,7 @@ export const DirectMessages: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-surface text-on-surface flex flex-col fixed inset-0">
       <Header />
       <SidebarNav />
 
@@ -669,11 +775,11 @@ export const DirectMessages: React.FC = () => {
       )}
 
       <div
-        className={`pt-16 flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+        className={`pt-16 flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
         }`}
       >
-        <main className="w-full flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+        <main className="w-full flex-1 flex h-full overflow-hidden">
           {/* Se o usuário não estiver logado */}
           {!user ? (
             <div className="flex-1 flex items-center justify-center p-6">
@@ -898,40 +1004,172 @@ export const DirectMessages: React.FC = () => {
                       ) : (
                         messages.map((m, idx) => {
                           const isMe = m.sender_id === user.id;
+
+                          // Separador de datas (Tarefa 2)
+                          const currentDateLabel = formatMessageDateSeparator(m.created_at);
+                          const prevDateLabel =
+                            idx > 0 ? formatMessageDateSeparator(messages[idx - 1].created_at) : null;
+                          const showDateSeparator = currentDateLabel !== prevDateLabel;
+
+                          // Agrupamento de mensagens consecutivas do mesmo remetente (Tarefa 2)
+                          const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                          const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+                          const isSameSenderAsPrev = !showDateSeparator && prevMsg && prevMsg.sender_id === m.sender_id;
+                          const isSameSenderAsNext =
+                            nextMsg &&
+                            nextMsg.sender_id === m.sender_id &&
+                            formatMessageDateSeparator(nextMsg.created_at) === currentDateLabel;
+
+                          const isFirstInBlock = !isSameSenderAsPrev;
+                          const isLastInBlock = !isSameSenderAsNext;
+                          const marginTopClass = showDateSeparator ? 'mt-4' : isFirstInBlock ? 'mt-3' : 'mt-1';
+
+                          // Se a mensagem citou outra (Responder - Tarefa 3 & 4)
+                          const repliedMsg = m.reply_to_id
+                            ? messages.find((item) => item.id === m.reply_to_id)
+                            : null;
+
                           return (
-                            <div
-                              key={m.id || `${m.created_at}-${idx}`}
-                              className={`flex items-end gap-2 max-w-xl ${
-                                isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
-                              }`}
-                            >
-                              {!isMe && (
-                                <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase">
-                                  {activeFriend.username.charAt(0)}
+                            <React.Fragment key={m.id || `${m.created_at}-${idx}`}>
+                              {/* Separador de Data Visual */}
+                              {showDateSeparator && (
+                                <div className="flex justify-center my-3 select-none">
+                                  <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant/20">
+                                    {currentDateLabel}
+                                  </span>
                                 </div>
                               )}
-                              <div className="flex flex-col">
-                                <div
-                                  className={`p-3 rounded-2xl text-xs leading-relaxed shadow-xs ${
-                                    isMe
-                                      ? 'bg-primary-container text-on-primary rounded-br-xs'
-                                      : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
-                                  }`}
-                                >
-                                  {renderMessageContent(m, isMe)}
+
+                              <div
+                                id={`msg-${m.id}`}
+                                className={`group relative flex items-end gap-2 max-w-xl ${marginTopClass} ${
+                                  isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
+                                }`}
+                              >
+                                {/* Avatar do contato apenas na última mensagem do bloco consecutivo */}
+                                {!isMe && (
+                                  isLastInBlock ? (
+                                    <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase">
+                                      {activeFriend.username.charAt(0)}
+                                    </div>
+                                  ) : (
+                                    <div className="w-7 h-7 flex-shrink-0" />
+                                  )
+                                )}
+
+                                <div className="relative flex flex-col max-w-[85%] sm:max-w-md">
+                                  {/* Menu Flutuante de Ações no Hover (Tarefa 3) */}
+                                  <div
+                                    className={`absolute -top-3.5 z-20 opacity-0 group-hover:opacity-100 transition-all duration-150 bg-surface-container-high/95 backdrop-blur-md border border-outline-variant/40 rounded-full shadow-lg px-1 py-0.5 flex items-center gap-0.5 scale-95 group-hover:scale-100 ${
+                                      isMe ? 'right-2' : 'left-2'
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleStartReply(m)}
+                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                                      title="Responder"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">reply</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setForwardModalMessage(m)}
+                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                                      title="Encaminhar"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">forward</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyMessage(m)}
+                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                                      title="Copiar texto"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setInfoModalMessage(m)}
+                                      className="p-1 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                                      title="Dados da Mensagem"
+                                    >
+                                      <span className="material-symbols-outlined text-[15px]">info</span>
+                                    </button>
+
+                                    {isMe && m.id && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMessage(m.id!)}
+                                        className="p-1 rounded-full hover:bg-error/15 text-error transition-colors cursor-pointer"
+                                        title="Excluir Mensagem"
+                                      >
+                                        <span className="material-symbols-outlined text-[15px]">delete</span>
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Balão de Mensagem */}
+                                  <div
+                                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${
+                                      isMe
+                                        ? `bg-primary-container text-on-primary rounded-2xl ${
+                                            isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'
+                                          } ${isLastInBlock ? 'rounded-br-xs' : 'rounded-br-md'} rounded-l-2xl`
+                                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant/30 ${
+                                            isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
+                                          } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
+                                    }`}
+                                  >
+                                    {/* Citação se for resposta (Tarefa 3) */}
+                                    {m.reply_to_id && (
+                                      <div
+                                        onClick={() => {
+                                          const el = document.getElementById(`msg-${m.reply_to_id}`);
+                                          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }}
+                                        className={`mb-2 p-2 rounded-xl text-left border-l-2 text-xs cursor-pointer transition-opacity hover:opacity-90 ${
+                                          isMe
+                                            ? 'bg-black/20 border-on-primary/70 text-on-primary'
+                                            : 'bg-surface-container border-primary text-on-surface'
+                                        }`}
+                                      >
+                                        <span className="font-bold text-[11px] block truncate">
+                                          @{repliedMsg?.sender_username || 'Mensagem anterior'}
+                                        </span>
+                                        <span className="text-[11px] opacity-80 block truncate">
+                                          {repliedMsg?.content ||
+                                            (repliedMsg?.message_type === 'image'
+                                              ? '📷 Foto'
+                                              : repliedMsg?.message_type === 'video'
+                                              ? '🎥 Vídeo'
+                                              : 'Mensagem original')}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {renderMessageContent(m, isMe)}
+                                  </div>
+
+                                  {/* Timestamp visível na última mensagem do grupo */}
+                                  {isLastInBlock && (
+                                    <span
+                                      className={`text-[10px] text-on-surface-variant mt-0.5 ${
+                                        isMe ? 'text-right mr-1' : 'ml-1'
+                                      }`}
+                                    >
+                                      {new Date(m.created_at).toLocaleTimeString('pt-BR', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                  )}
                                 </div>
-                                <span
-                                  className={`text-[10px] text-on-surface-variant mt-1 ${
-                                    isMe ? 'text-right mr-1' : 'ml-1'
-                                  }`}
-                                >
-                                  {new Date(m.created_at).toLocaleTimeString('pt-BR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
                               </div>
-                            </div>
+                            </React.Fragment>
                           );
                         })
                       )}
@@ -1169,6 +1407,38 @@ export const DirectMessages: React.FC = () => {
 
                     {/* Input do Chat com Botões de Anexo, Emojis, GIFs e Enviar */}
                     <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0">
+                      {/* Barra de Citação ao Responder (Tarefa 3) */}
+                      {replyingTo && (
+                        <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-1 shadow-2xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="material-symbols-outlined text-primary text-[18px] shrink-0">reply</span>
+                            <div className="min-w-0">
+                              <span className="font-semibold text-primary block truncate text-[11px]">
+                                Respondendo a @{replyingTo.sender_username}
+                              </span>
+                              <span className="text-on-surface-variant text-[11px] block truncate">
+                                {replyingTo.content ||
+                                  (replyingTo.message_type === 'image'
+                                    ? '📷 Foto'
+                                    : replyingTo.message_type === 'video'
+                                    ? '🎥 Vídeo'
+                                    : replyingTo.media_url
+                                    ? '📎 Mídia'
+                                    : 'Mensagem')}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setReplyingTo(null)}
+                            className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0 ml-2"
+                            title="Cancelar resposta"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                          </button>
+                        </div>
+                      )}
+
                       <form
                         onSubmit={handleSendMessage}
                         className="flex items-center gap-1.5 bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant/30 relative"
@@ -1359,6 +1629,185 @@ export const DirectMessages: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MODAL: Encaminhar Mensagem (Tarefa 3) */}
+      {forwardModalMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">forward</span>
+                <h3 className="font-bold text-base text-on-surface">Encaminhar Mensagem</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForwardModalMessage(null)}
+                className="p-1.5 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Prévia da Mensagem a Encaminhar */}
+            <div className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-xs">
+              <span className="font-semibold text-primary block text-[11px] mb-0.5">
+                @{forwardModalMessage.sender_username}
+              </span>
+              <p className="text-on-surface line-clamp-3">
+                {forwardModalMessage.content ||
+                  (forwardModalMessage.message_type === 'image'
+                    ? '📷 Foto anexada'
+                    : forwardModalMessage.message_type === 'video'
+                    ? '🎥 Vídeo anexado'
+                    : forwardModalMessage.media_url
+                    ? '📎 Arquivo de mídia'
+                    : 'Mensagem')}
+              </p>
+            </div>
+
+            {/* Busca de Contatos para Encaminhar */}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">
+                search
+              </span>
+              <input
+                type="text"
+                value={forwardSearchQuery}
+                onChange={(e) => setForwardSearchQuery(e.target.value)}
+                placeholder="Buscar amigo para encaminhar..."
+                className="w-full pl-9 pr-4 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-xs focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
+              />
+            </div>
+
+            {/* Lista de Amigos para Encaminhar */}
+            <div className="max-h-60 overflow-y-auto space-y-1.5">
+              {friends.filter((f) =>
+                f.username.toLowerCase().includes(forwardSearchQuery.toLowerCase())
+              ).length === 0 ? (
+                <div className="text-center py-6 text-xs text-on-surface-variant">
+                  Nenhum contato encontrado.
+                </div>
+              ) : (
+                friends
+                  .filter((f) =>
+                    f.username.toLowerCase().includes(forwardSearchQuery.toLowerCase())
+                  )
+                  .map((friend) => (
+                    <div
+                      key={friend.friend_id}
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shrink-0">
+                          {friend.username.charAt(0)}
+                        </div>
+                        <span className="text-xs font-semibold text-on-surface truncate">
+                          @{friend.username}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleForwardToFriend(friend)}
+                        className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-medium text-xs hover:bg-primary transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">send</span>
+                        <span>Encaminhar</span>
+                      </button>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Dados da Mensagem (Tarefa 3) */}
+      {infoModalMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-sm bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary text-[22px]">info</span>
+                <h3 className="font-bold text-base text-on-surface">Dados da Mensagem</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInfoModalMessage(null)}
+                className="p-1.5 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
+                <span className="text-on-surface-variant">Remetente:</span>
+                <span className="font-semibold text-on-surface">
+                  {infoModalMessage.sender_id === user?.id ? 'Você' : `@${infoModalMessage.sender_username}`}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
+                <span className="text-on-surface-variant">Data e Hora:</span>
+                <span className="font-semibold text-on-surface text-right">
+                  {new Date(infoModalMessage.created_at).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'medium',
+                  })}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
+                <span className="text-on-surface-variant">Status de Entrega:</span>
+                <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">done_all</span>
+                  Entregue em tempo real
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
+                <span className="text-on-surface-variant">Tipo de Mensagem:</span>
+                <span className="font-medium uppercase text-[11px] bg-surface-container-high px-2 py-0.5 rounded-full">
+                  {infoModalMessage.message_type || 'texto'}
+                </span>
+              </div>
+
+              {infoModalMessage.media_url && (
+                <div className="pt-1 flex flex-col gap-1.5">
+                  <span className="text-on-surface-variant">Link direto da mídia:</span>
+                  <a
+                    href={infoModalMessage.media_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline break-all text-[11px] p-2 rounded-xl bg-surface-container-low border border-outline-variant/20 block"
+                  >
+                    {infoModalMessage.media_url}
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setInfoModalMessage(null)}
+                className="px-5 py-2 rounded-full bg-surface-container-high text-on-surface font-semibold text-xs hover:bg-surface-container transition-all cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST FLUTUANTE DE NOTIFICAÇÃO (Tarefa 3) */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-surface-container-highest text-on-surface px-4 py-2.5 rounded-full shadow-2xl border border-outline-variant/40 flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2">
+          <span className="material-symbols-outlined text-[18px] text-emerald-500">check_circle</span>
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>
