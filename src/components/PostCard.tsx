@@ -175,12 +175,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
   return (
     <>
       <article
-        className={`bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3.5 sm:gap-4 transition-all hover:shadow-md ${
+        className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 flex flex-col transition-all hover:shadow-md ${
           isDeleting ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
         {/* 1. Cabeçalho do Post */}
-        <div className="flex items-start justify-between">
+        <div className="p-4 sm:p-5 pb-2 sm:pb-3 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Link
               to={`/perfil/${encodeURIComponent(post.author_name)}`}
@@ -300,57 +300,66 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
           )}
         </div>
 
-        {/* 2. Conteúdo do Post */}
-        <div className="flex flex-col gap-2.5">
-          {title && (
-            <h3 className="text-base sm:text-lg font-bold text-on-surface leading-snug">
-              {title}
-            </h3>
-          )}
+        {/* 2. Conteúdo do Post (Título e Legenda com padding) */}
+        {(Boolean(title && title.trim()) || Boolean(content && content.trim())) && (
+          <div className="px-4 sm:px-5 pb-3 flex flex-col gap-2">
+            {Boolean(title && title.trim()) && (
+              <h3 className="text-base sm:text-lg font-bold text-on-surface leading-snug">
+                {title.trim()}
+              </h3>
+            )}
 
-          {post.post_type === 'scrap' ? (
-            (() => {
-              const { style, body } = parseScrap(content);
-              const s = style || DEFAULT_SCRAP_STYLE;
-              return (
-                <div className="relative mx-1 my-2 px-5 pt-7 pb-5 rounded-sm shadow-[0_8px_20px_rgba(0,0,0,0.35)] -rotate-[0.6deg]" style={scrapPaperStyle(s)}>
-                  {/* Fita adesiva do recado */}
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm" />
-                  <div className="whitespace-pre-wrap break-words">{renderMarkdown(body)}</div>
-                  <p className="mt-3 text-right text-[0.6em] opacity-70">— @{post.author_name}</p>
+            {Boolean(content && content.trim()) && (
+              post.post_type === 'scrap' ? (
+                (() => {
+                  const { style, body } = parseScrap(content);
+                  const s = style || DEFAULT_SCRAP_STYLE;
+                  return (
+                    <div className="relative mx-1 my-2 px-5 pt-7 pb-5 rounded-sm shadow-[0_8px_20px_rgba(0,0,0,0.35)] -rotate-[0.6deg]" style={scrapPaperStyle(s)}>
+                      {/* Fita adesiva do recado */}
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm" />
+                      <div className="whitespace-pre-wrap break-words">{renderMarkdown(body)}</div>
+                      <p className="mt-3 text-right text-[0.6em] opacity-70">— @{post.author_name}</p>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap break-words">
+                  {renderMarkdown(content)}
                 </div>
-              );
-            })()
-          ) : (
-            <div className="text-sm text-on-surface leading-relaxed">
-              {renderMarkdown(content)}
+              )
+            )}
+          </div>
+        )}
+
+        {/* 3. Mídia Principal: Colada nas bordas laterais do card (sem padding lateral) */}
+        {post.media_url && (
+          post.media_type === 'video' ||
+          /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
+          post.media_url.includes('/videos/') ? (
+            <div className="w-full bg-black flex justify-center">
+              <VideoPlayer src={post.media_url} title={title || undefined} />
             </div>
-          )}
+          ) : (
+            <div className="w-full bg-black/10 dark:bg-black/40 flex justify-center overflow-hidden">
+              <img
+                src={post.media_url}
+                alt={title || "Mídia da postagem"}
+                className="w-full h-auto max-h-[500px] object-cover block cursor-pointer transition-transform duration-300 hover:scale-[1.005]"
+                loading="lazy"
+                onClick={() => {
+                  if (post.media_url) window.open(post.media_url, '_blank');
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )
+        )}
 
-          {/* Mídia Principal: Player de Vídeo Compacto ou Imagem */}
-          {post.media_url &&
-            (post.media_type === 'video' ||
-            /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
-            post.media_url.includes('/videos/') ? (
-              <div className="mt-1 w-full flex justify-center">
-                <VideoPlayer src={post.media_url} title={title || undefined} />
-              </div>
-            ) : (
-              <div className="relative w-full max-w-[480px] mx-auto rounded-xl overflow-hidden shadow-xs bg-surface-container aspect-video max-h-72 mt-1">
-                <img
-                  src={post.media_url}
-                  alt="Mídia da postagem"
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.01]"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            ))}
-        </div>
-
-        {/* 3. BARRA DE AÇÕES: Votos e Comentários */}
-        <div className="flex items-center justify-between pt-2 border-t border-outline-variant/20">
+        {/* 4. Barra de Ações: Votos e Comentários */}
+        <div className="p-4 sm:p-5 pt-3 border-t border-outline-variant/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Controle de Voto */}
             <div className="flex items-center bg-surface-container-low rounded-full px-1.5 py-0.5 border border-outline-variant/30">

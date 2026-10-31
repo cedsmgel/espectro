@@ -355,8 +355,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       return;
     }
 
-    if (postType === 'discussion' && !title.trim()) {
-      setError('Discussões precisam ter um título.');
+    const hasMedia = Boolean(mediaUrl && mediaUrl.trim());
+
+    if (postType === 'discussion' && !hasMedia && !title.trim()) {
+      setError('Discussões sem mídia precisam ter um título.');
       return;
     }
 
@@ -365,7 +367,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       finalContent = `${finalContent}\n\n${locationTag}`;
     }
 
-    if (!finalContent.trim() && !mediaUrl.trim()) {
+    if (!finalContent.trim() && !hasMedia) {
       setError('Escreva algo ou anexe uma foto/vídeo para publicar.');
       return;
     }
@@ -379,7 +381,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       }
 
       await onPostCreated({
-        title: postType === 'discussion' ? title.trim() : undefined,
+        title: (postType === 'discussion' && title.trim()) ? title.trim() : undefined,
         content: postType === 'scrap' ? encodeScrap(scrapStyle, finalContent) : finalContent,
         post_type: postType,
         community_id: communityId === '' ? undefined : Number(communityId),
@@ -560,9 +562,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título da sua discussão..."
+                placeholder={mediaUrl.trim() ? "Título da sua discussão (opcional)..." : "Título da sua discussão..."}
                 className="w-full bg-transparent text-on-surface font-bold text-base sm:text-lg placeholder:text-on-surface-variant/50 focus:outline-none border-b border-outline-variant/20 pb-2 transition-all"
-                autoFocus
+                autoFocus={!mediaUrl.trim()}
               />
             )}
 

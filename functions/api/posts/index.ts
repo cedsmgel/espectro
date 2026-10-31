@@ -178,14 +178,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Criação de Post
     const { content, title, community_id, community_slug, media_url, media_type, post_type } = body;
 
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      return errorResponse("O conteúdo da postagem não pode ser vazio.", 400);
+    const cleanMediaUrl = media_url && typeof media_url === "string" ? media_url.trim() : null;
+    const cleanContent = content && typeof content === "string" ? content.trim() : "";
+    const cleanTitle = title && typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
+
+    // Se o post não tiver conteúdo nem mídia, rejeita
+    if (!cleanContent && !cleanMediaUrl) {
+      return errorResponse("O conteúdo da postagem ou anexo de mídia não pode ser vazio.", 400);
     }
 
-    const cleanContent = content.trim();
-    const cleanTitle = title ? title.trim() : null;
-    const cleanMediaUrl = media_url ? media_url.trim() : null;
-    const cleanMediaType = media_type && ["image", "video", "gif"].includes(media_type) ? media_type : null;
+    // Se for discussão sem mídia anexada, exige título
+    if (post_type === "discussion" && !cleanMediaUrl && !cleanTitle) {
+      return errorResponse("Discussões sem mídia precisam ter um título.", 400);
+    }
+
+    const cleanMediaType = media_type && ["image", "video", "gif"].includes(media_type) ? media_type : (cleanMediaUrl ? "image" : null);
     const cleanPostType = post_type === "discussion" ? "discussion" : "scrap";
 
     let commId = community_id ? Number(community_id) : null;
