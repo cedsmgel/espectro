@@ -63,10 +63,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        JOIN users u ON u.id = dm.sender_id
        WHERE ((dm.sender_id = ? AND dm.receiver_id = ?) OR (dm.sender_id = ? AND dm.receiver_id = ?))
          AND (? IS NULL OR dm.id < ?)
+         AND dm.id > COALESCE(
+           (SELECT cleared_before_id FROM conversation_settings WHERE user_id = ? AND friend_id = ?), 0)
        ORDER BY dm.id DESC
        LIMIT ?`
     )
-      .bind(user.id, friendId, friendId, user.id, beforeId, beforeId, limit + 1)
+      .bind(user.id, friendId, friendId, user.id, beforeId, beforeId, user.id, friendId, limit + 1)
       .all<DirectMessageRow>();
 
     const rows = results || [];

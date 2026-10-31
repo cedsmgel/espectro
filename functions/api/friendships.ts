@@ -33,14 +33,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             WHERE (f.user_id = ? AND f.friend_id = u.id) 
                OR (f.user_id = u.id AND f.friend_id = ?)
             LIMIT 1
-          ) AS friendship_status
+          ) AS friendship_status,
+          (
+            SELECT f.user_id FROM friendships f
+            WHERE (f.user_id = ? AND f.friend_id = u.id)
+               OR (f.user_id = u.id AND f.friend_id = ?)
+            LIMIT 1
+          ) AS friendship_from
         FROM users u
         WHERE u.id != ? AND LOWER(u.username) LIKE ?
         LIMIT 20
       `;
 
       const { results } = await env.DB.prepare(usersQuery)
-        .bind(user.id, user.id, user.id, q)
+        .bind(user.id, user.id, user.id, user.id, user.id, q)
         .all();
 
       return jsonResponse(results || []);

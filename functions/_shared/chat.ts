@@ -33,6 +33,9 @@ export const MESSAGE_COLUMNS = `
   strftime('%Y-%m-%dT%H:%M:%SZ', dm.created_at) AS created_at
 `;
 
+export const CONVERSATION_THEMES = ["default", "violet", "rose", "amber", "emerald", "sky", "slate", "orange"];
+export const CONVERSATION_WALLPAPERS = ["none", "dots", "grid", "aurora", "sunset", "ocean", "forest"];
+
 export function conversationRoomName(a: number, b: number): string {
   const [min, max] = a < b ? [a, b] : [b, a];
   return `chat_${min}_${max}`;

@@ -370,6 +370,15 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     }
   }, [messages, hasMore, loadingOlder]);
 
+  const reloadHistory = useCallback(() => {
+    const friendId = activeFriendRef.current;
+    if (!friendId) return;
+    setMessages([]);
+    setHasMore(false);
+    setLoadingHistory(true);
+    void syncLatest(friendId, true);
+  }, [syncLatest]);
+
   const sendTyping = useCallback(
     (isTyping: boolean) => {
       if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
@@ -524,6 +533,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     deleteMessage,
     retrySend,
     loadOlder,
+    reloadHistory,
     hasMore,
     loadingOlder,
     sendTyping,

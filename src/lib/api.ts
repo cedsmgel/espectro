@@ -86,6 +86,27 @@ export interface Conversation {
   last_message_type: DirectMessage['message_type'];
   last_created_at: string;
   unread_count: number;
+  muted: boolean;
+  theme: string;
+  wallpaper: string;
+  nickname: string | null;
+}
+
+export interface ConversationSettings {
+  friend_id: number;
+  muted: boolean;
+  theme: string;
+  wallpaper: string;
+  nickname: string | null;
+  cleared_before_id: number;
+}
+
+export interface FriendRequest {
+  friendship_id: number;
+  friend_id: number;
+  username: string;
+  avatar_url?: string | null;
+  created_at: string;
 }
 
 export interface CreatePostData {
@@ -325,7 +346,17 @@ export const commentsApi = {
 
 export const friendsApi = {
   list: () => apiRequest<Friend[]>('/api/friendships', { method: 'GET' }),
-  search: (query: string) => apiRequest<Array<{ id: number; username: string; friendship_status: string | null }>>(`/api/friendships?search=${encodeURIComponent(query)}`, { method: 'GET' }),
+  search: (query: string) =>
+    apiRequest<
+      Array<{
+        id: number;
+        username: string;
+        avatar_url?: string | null;
+        friendship_status: string | null;
+        friendship_from: number | null;
+      }>
+    >(`/api/friendships?search=${encodeURIComponent(query)}`, { method: 'GET' }),
+  pending: () => apiRequest<FriendRequest[]>('/api/friendships?pending=1', { method: 'GET' }),
   add: (friendId: number, username?: string) =>
     apiRequest<{ message: string; friend: any }>('/api/friendships', {
       method: 'POST',
@@ -363,10 +394,28 @@ export const directMessagesApi = {
     }),
   remove: (messageId: number) =>
     apiRequest<{ success: boolean }>(`/api/direct_messages?id=${messageId}`, { method: 'DELETE' }),
+  markAllRead: () =>
+    apiRequest<{ marked: number }>('/api/direct_messages/read', {
+      method: 'POST',
+      body: JSON.stringify({ all: true }),
+    }),
   markRead: (friendId: number) =>
     apiRequest<{ marked: number }>('/api/direct_messages/read', {
       method: 'POST',
       body: JSON.stringify({ friend_id: friendId }),
+    }),
+};
+
+export const conversationSettingsApi = {
+  get: (friendId: number) =>
+    apiRequest<ConversationSettings>(`/api/conversation_settings?friend_id=${friendId}`, { method: 'GET' }),
+  update: (
+    friendId: number,
+    patch: Partial<Pick<ConversationSettings, 'muted' | 'theme' | 'wallpaper' | 'nickname'>> & { clear?: boolean }
+  ) =>
+    apiRequest<ConversationSettings>('/api/conversation_settings', {
+      method: 'PUT',
+      body: JSON.stringify({ friend_id: friendId, ...patch }),
     }),
 };
 
@@ -438,6 +487,8 @@ export interface UserProfile {
   is_friend?: boolean;
   is_self?: boolean;
   friendship_status?: string | null;
+  friendship_direction?: 'outgoing' | 'incoming' | null;
+  friends_count?: number;
   created_at?: string;
 }
 
