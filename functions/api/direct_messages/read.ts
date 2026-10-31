@@ -41,6 +41,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(friendId, user.id)
       .run();
 
+    await env.DB.prepare("UPDATE conversation_settings SET manual_unread = 0 WHERE user_id = ? AND friend_id = ?")
+      .bind(user.id, friendId)
+      .run();
+
     const changes = Number(result.meta.changes || 0);
     if (changes > 0) {
       await notifyRoom(env, user.id, friendId, { type: "read", reader_id: user.id });
