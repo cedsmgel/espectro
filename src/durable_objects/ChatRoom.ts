@@ -1,8 +1,19 @@
+export type ChatMessageType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'file'
+  | 'location'
+  | 'gif'
+  | 'sticker';
+
 export interface ChatMessage {
   id?: number;
   sender_id: number;
   sender_username: string;
   content: string;
+  message_type: ChatMessageType;
+  media_url?: string | null;
   created_at: string;
 }
 
@@ -24,9 +35,19 @@ export class ChatRoom implements DurableObject {
               sender_id INTEGER NOT NULL,
               sender_username TEXT NOT NULL,
               content TEXT NOT NULL,
+              message_type TEXT DEFAULT 'text',
+              media_url TEXT,
               created_at TEXT NOT NULL
             );
           `);
+
+          // Migrações seguras caso a tabela já existisse no SQLite do DO
+          try {
+            this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN message_type TEXT DEFAULT 'text';`);
+          } catch {}
+          try {
+            this.ctx.storage.sql.exec(`ALTER TABLE messages ADD COLUMN media_url TEXT;`);
+          } catch {}
         }
       } catch (err) {
         console.error("Erro ao inicializar schema SQLite no ChatRoom:", err);
@@ -39,9 +60,11 @@ export class ChatRoom implements DurableObject {
     try {
       if (this.ctx.storage.sql) {
         const cursor = this.ctx.storage.sql.exec<Record<string, SqlStorageValue>>(`
-          SELECT id, sender_id, sender_username, content, created_at 
+          SELECT id, sender_id, sender_username, content, 
+                 COALESCE(message_type, 'text') AS message_type, 
+                 media_url, created_at 
           FROM (
-            SELECT id, sender_id, sender_username, content, created_at 
+            SELECT id, sender_id, sender_username, content, message_type, media_url, created_at 
             FROM messages 
             ORDER BY id DESC 
             LIMIT 50
@@ -61,10 +84,12 @@ export class ChatRoom implements DurableObject {
     try {
       if (this.ctx.storage.sql) {
         this.ctx.storage.sql.exec(
-          `INSERT INTO messages (sender_id, sender_username, content, created_at) VALUES (?, ?, ?, ?)`,
+          `INSERT INTO messages (sender_id, sender_username, content, message_type, media_url, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
           msg.sender_id,
           msg.sender_username,
           msg.content,
+          msg.message_type || 'text',
+          msg.media_url || null,
           msg.created_at
         );
       }
@@ -118,17 +143,40 @@ export class ChatRoom implements DurableObject {
       const raw = typeof message === "string" ? message : new TextDecoder().decode(message);
       const data = JSON.parse(raw);
 
-      // Tratamento de novas mensagens de chat
-      if (data.type === "message" || data.content || data.text) {
-        const content = String(data.content || data.text || "").trim();
-        const newMsg: ChatMessage = {
-          sender_id: Number(data.sender_id || 0),
-          sender_username: String(data.sender_username || "Usuário"),
-          content,
-          created_at: data.created_at || new Date().toISOString(),
-        };
+      // Tratamento de mensagens de chat (texto, fotos, vídeos, arquivos, localização, gifs, stickers)
+      const isChatMessage =
+        data.type === "message" ||
+        data.message_type ||
+        data.media_url ||
+        data.text !== undefined ||
+        data.content !== undefined;
 
-        if (newMsg.content.length > 0) {
+      if (isChatMessage && data.type !== "typing" && data.type !== "ping") {
+        const rawContent = String(data.content || data.text || "").trim();
+        const rawType = (data.message_type || (data.type !== "message" ? data.type : "text")) as ChatMessageType;
+        const validTypes: ChatMessageType[] = [
+          'text',
+          'image',
+          'video',
+          'file',
+          'location',
+          'gif',
+          'sticker',
+        ];
+        const messageType: ChatMessageType = validTypes.includes(rawType) ? rawType : 'text';
+        const mediaUrl = data.media_url ? String(data.media_url).trim() : null;
+
+        // Aceita se tiver texto OU se tiver URL de mídia (ou for localização)
+        if (rawContent.length > 0 || mediaUrl) {
+          const newMsg: ChatMessage = {
+            sender_id: Number(data.sender_id || 0),
+            sender_username: String(data.sender_username || "Usuário"),
+            content: rawContent || (messageType === 'location' ? 'Localização compartilhada' : ''),
+            message_type: messageType,
+            media_url: mediaUrl,
+            created_at: data.created_at || new Date().toISOString(),
+          };
+
           // 1. Salva no SQLite interno do Durable Object
           this.saveMessage(newMsg);
 
@@ -168,25 +216,28 @@ export class ChatRoom implements DurableObject {
     } catch (err) {
       console.error("Erro ao processar mensagem do WebSocket:", err);
       try {
-        ws.send(JSON.stringify({ type: "error", message: "Formato JSON inválido." }));
+        ws.send(JSON.stringify({ type: "error", error: "Falha ao processar mensagem enviada" }));
       } catch {}
     }
   }
 
-  // Chamado quando um cliente desconecta
-  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
+  // Chamado quando a conexão WebSocket é encerrada
+  async webSocketClose(
+    ws: WebSocket,
+    code: number,
+    reason: string,
+    wasClean: boolean
+  ): Promise<void> {
     try {
-      ws.close(code, reason || "Conexão encerrada.");
-    } catch {
-      // Socket pode já ter sido fechado
-    }
+      ws.close(code, "ChatRoom fechando conexão");
+    } catch {}
   }
 
-  // Tratamento de erros de conexão
+  // Chamado se ocorrer erro na conexão WebSocket
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    console.error("Erro na conexão WebSocket:", error);
+    console.warn("WebSocket erro no ChatRoom:", error);
     try {
-      ws.close(1011, "Erro interno de WebSocket.");
+      ws.close(1011, "Erro inesperado");
     } catch {}
   }
 }

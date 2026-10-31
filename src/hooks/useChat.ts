@@ -1,12 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { authStorage } from '../lib/api';
 
+export type ChatMessageType =
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'file'
+  | 'location'
+  | 'gif'
+  | 'sticker';
+
 export interface ChatMessage {
   id?: number;
   sender_id: number;
   sender_username?: string;
   content: string;
+  message_type?: ChatMessageType;
+  media_url?: string | null;
   created_at: string;
+}
+
+export interface SendMessageOptions {
+  text?: string;
+  type?: ChatMessageType;
+  media_url?: string | null;
 }
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -141,7 +158,7 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
         console.warn('Alerta na conexão WebSocket do Chat:', err);
       };
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         if (pingIntervalRef.current) {
           window.clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
@@ -208,36 +225,6 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
     };
   }, [activeFriendId, userId, connect]);
 
-  // Função para enviar nova mensagem
-  const sendMessage = useCallback(
-    (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || !userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        return false;
-      }
-
-      const payload = {
-        type: 'message',
-        sender_id: userId,
-        sender_username: username,
-        content: trimmed,
-        text: trimmed,
-        created_at: new Date().toISOString(),
-      };
-
-      try {
-        socketRef.current.send(JSON.stringify(payload));
-        // Notifica que parou de digitar
-        sendTyping(false);
-        return true;
-      } catch (err) {
-        console.error('Erro ao enviar mensagem pelo WebSocket:', err);
-        return false;
-      }
-    },
-    [userId, username]
-  );
-
   // Função para avisar status de digitação
   const sendTyping = useCallback(
     (isTyping: boolean) => {
@@ -255,6 +242,54 @@ export function useChat({ activeFriendId, activeFriendUsername }: UseChatOptions
       } catch {}
     },
     [userId]
+  );
+
+  // Função para enviar nova mensagem (suporta texto puro ou mídias/arquivos)
+  const sendMessage = useCallback(
+    (
+      textOrOptions: string | SendMessageOptions,
+      extraOptions?: { type?: ChatMessageType; media_url?: string | null }
+    ) => {
+      const text = typeof textOrOptions === 'string' ? textOrOptions : textOrOptions.text || '';
+      const msgType: ChatMessageType =
+        typeof textOrOptions === 'object' && textOrOptions.type
+          ? textOrOptions.type
+          : extraOptions?.type || 'text';
+      const mediaUrl =
+        typeof textOrOptions === 'object' && textOrOptions.media_url
+          ? textOrOptions.media_url
+          : extraOptions?.media_url || null;
+
+      const trimmed = text.trim();
+      if (!trimmed && !mediaUrl) {
+        return false;
+      }
+      if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        return false;
+      }
+
+      const payload = {
+        type: 'message',
+        message_type: msgType,
+        sender_id: userId,
+        sender_username: username,
+        content: trimmed,
+        text: trimmed,
+        media_url: mediaUrl,
+        created_at: new Date().toISOString(),
+      };
+
+      try {
+        socketRef.current.send(JSON.stringify(payload));
+        // Notifica que parou de digitar
+        sendTyping(false);
+        return true;
+      } catch (err) {
+        console.error('Erro ao enviar mensagem pelo WebSocket:', err);
+        return false;
+      }
+    },
+    [userId, username, sendTyping]
   );
 
   return {

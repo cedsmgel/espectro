@@ -14,10 +14,18 @@ async function ensureMessagesTable(db: D1Database) {
         sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         content TEXT NOT NULL,
+        message_type TEXT DEFAULT 'text',
+        media_url TEXT,
         read_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run();
+    try {
+      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN message_type TEXT DEFAULT 'text';`).run();
+    } catch {}
+    try {
+      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN media_url TEXT;`).run();
+    } catch {}
   } catch (e) {
     // ignore if already exists
   }
@@ -67,6 +75,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         dm.sender_id,
         dm.receiver_id,
         dm.content,
+        COALESCE(dm.message_type, 'text') AS message_type,
+        dm.media_url,
         dm.created_at,
         u.username AS sender_name
       FROM direct_messages dm
@@ -114,6 +124,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       receiver_id?: number;
       receiver_username?: string;
       content?: string;
+      message_type?: string;
+      media_url?: string;
     };
 
     try {
@@ -122,9 +134,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Corpo da requisição inválido. Esperado JSON.", 400);
     }
 
-    const { content } = body;
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      return errorResponse("O conteúdo da mensagem não pode ser vazio.", 400);
+    const content = body.content || "";
+    const messageType = body.message_type || "text";
+    const mediaUrl = body.media_url ? String(body.media_url).trim() : null;
+
+    if (!content.trim() && !mediaUrl) {
+      return errorResponse("O conteúdo da mensagem ou mídia é obrigatório.", 400);
     }
 
     let targetId = body.receiver_id ? Number(body.receiver_id) : null;
@@ -147,10 +162,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const cleanContent = content.trim();
 
     const insertResult = await env.DB.prepare(`
-      INSERT INTO direct_messages (sender_id, receiver_id, content)
-      VALUES (?, ?, ?)
+      INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url)
+      VALUES (?, ?, ?, ?, ?)
     `)
-      .bind(user.id, targetId, cleanContent)
+      .bind(user.id, targetId, cleanContent, messageType, mediaUrl)
       .run();
 
     const newId = insertResult.meta.last_row_id;
@@ -162,6 +177,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         receiver_id: targetId,
         sender_name: user.username,
         content: cleanContent,
+        message_type: messageType,
+        media_url: mediaUrl,
         created_at: new Date().toISOString(),
       },
       201

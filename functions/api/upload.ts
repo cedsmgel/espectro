@@ -33,22 +33,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const mimeType = fileObj.type || "application/octet-stream";
     const isVideo = mimeType.startsWith("video/") || /\.(mp4|webm|mov|ogg|m4v)$/i.test(fileObj.name);
     const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileObj.name);
+    const isFile = !isVideo && !isImage;
 
-    if (!isVideo && !isImage) {
-      return errorResponse("Apenas arquivos de vídeo ou imagem são permitidos.", 400);
-    }
-
-    // Limite de tamanho: 100MB para vídeos e imagens
+    // Limite de tamanho: 100MB
     const MAX_SIZE = 100 * 1024 * 1024;
     if (fileObj.size > MAX_SIZE) {
       return errorResponse("Arquivo excede o tamanho máximo permitido de 100MB.", 400);
     }
 
     const extFromName = fileObj.name.includes(".") ? fileObj.name.split(".").pop() : "";
-    const ext = extFromName ? extFromName.toLowerCase() : (isVideo ? "mp4" : "jpg");
-    const folder = isVideo ? "videos" : "images";
+    const ext = extFromName ? extFromName.toLowerCase() : (isVideo ? "mp4" : isImage ? "jpg" : "bin");
+    const folder = isVideo ? "videos" : isImage ? "images" : "documents";
     const uniqueId = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const key = `${folder}/${uniqueId}.${ext}`;
+
+    const mediaType = isVideo ? "video" : isImage ? "image" : "file";
 
     const bucket = env.MEDIA_BUCKET || env.BUCKET;
 
@@ -69,7 +68,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return jsonResponse({
         url: `/api/media/${key}`,
         key,
-        media_type: isVideo ? "video" : "image",
+        media_type: mediaType,
         filename: fileObj.name,
         size: fileObj.size,
         content_type: mimeType,
@@ -80,7 +79,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return jsonResponse({
       url: `/api/media/${key}`,
       key,
-      media_type: isVideo ? "video" : "image",
+      media_type: mediaType,
       filename: fileObj.name,
       size: fileObj.size,
       content_type: mimeType,
