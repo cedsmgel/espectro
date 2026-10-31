@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
@@ -85,16 +87,33 @@ export const DirectMessages: React.FC = () => {
   const typingTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Referências para inputs de arquivos ocultos
+  // Referências para inputs de arquivos ocultos e popovers
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const abortUploadControllerRef = useRef<AbortController | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // Estados de Menus e Popovers
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+
+  // Fechar popover de emoji ao clicar fora
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target as Node) &&
+        !(e.target as HTMLElement).closest('[title="Inserir Emojis"]')
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
 
   // Estados de Upload com Progresso Real
   const [isUploading, setIsUploading] = useState(false);
@@ -195,10 +214,20 @@ export const DirectMessages: React.FC = () => {
     inputRef.current?.focus();
   };
 
-  // Inserir Emoji no campo de texto
-  const handleSelectEmoji = (emoji: string) => {
-    setInputText((prev) => prev + emoji);
-    setShowEmojiPicker(false);
+  // Inserir Emoji no campo de texto (adiciona ao final sem substituir o que já foi digitado - Tarefa 5)
+  const handleSelectEmoji = (emoji: any) => {
+    const char = emoji?.native || (typeof emoji === 'string' ? emoji : '');
+    if (!char) return;
+
+    setInputText((prev) => prev + char);
+
+    // Salva os recentes no localStorage para persistência ao recarregar a página (Tarefa 3)
+    try {
+      const stored = JSON.parse(localStorage.getItem('espectro_recent_emojis') || '[]');
+      const updated = [char, ...stored.filter((e: string) => e !== char)].slice(0, 32);
+      localStorage.setItem('espectro_recent_emojis', JSON.stringify(updated));
+    } catch {}
+
     inputRef.current?.focus();
   };
 
@@ -969,30 +998,55 @@ export const DirectMessages: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Popover de Emojis */}
+                    {/* Popover Profissional de Emojis (Emoji-Mart) */}
                     {showEmojiPicker && (
-                      <div className="absolute bottom-20 left-6 z-30 bg-surface-container-lowest rounded-2xl p-3 shadow-2xl border border-outline-variant/30 w-72 animate-in fade-in slide-in-from-bottom-2">
-                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
-                          <span className="text-xs font-bold text-on-surface">Selecione um Emoji</span>
+                      <div
+                        ref={emojiPickerRef}
+                        className="absolute bottom-20 left-4 sm:left-12 z-30 shadow-2xl rounded-3xl overflow-hidden border border-outline-variant/30 animate-in fade-in slide-in-from-bottom-2 max-h-[300px] flex flex-col bg-surface-container-lowest"
+                        style={{
+                          ['--rgb-background' as any]: '20, 18, 24',
+                          ['--rgb-input' as any]: '30, 27, 36',
+                          ['--rgb-accent' as any]: '168, 85, 247',
+                          ['--rgb-color' as any]: '238, 235, 244',
+                        }}
+                      >
+                        <div className="flex items-center justify-between px-3.5 py-1.5 bg-surface-container-lowest border-b border-outline-variant/20">
+                          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-primary" />
+                            Emojis
+                          </span>
                           <button
                             type="button"
                             onClick={() => setShowEmojiPicker(false)}
-                            className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+                            className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                            title="Fechar seletor"
                           >
                             <span className="material-symbols-outlined text-[16px]">close</span>
                           </button>
                         </div>
-                        <div className="grid grid-cols-6 gap-1.5 max-h-48 overflow-y-auto">
-                          {QUICK_EMOJIS.map((emoji) => (
-                            <button
-                              key={emoji}
-                              type="button"
-                              onClick={() => handleSelectEmoji(emoji)}
-                              className="text-xl p-1.5 rounded-xl hover:bg-surface-container transition-transform hover:scale-125 cursor-pointer flex items-center justify-center"
-                            >
-                              {emoji}
-                            </button>
-                          ))}
+                        <div className="overflow-y-auto max-h-[260px]">
+                          <Picker
+                            data={data}
+                            onEmojiSelect={handleSelectEmoji}
+                            theme="dark"
+                            locale="pt"
+                            previewPosition="none"
+                            skinTonePosition="none"
+                            navPosition="top"
+                            maxFrequentRows={2}
+                            autoFocus={false}
+                            categories={[
+                              'frequent',
+                              'people',
+                              'nature',
+                              'foods',
+                              'activity',
+                              'places',
+                              'objects',
+                              'symbols',
+                              'flags',
+                            ]}
+                          />
                         </div>
                       </div>
                     )}
