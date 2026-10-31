@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SidebarProvider } from './context/SidebarContext';
+import { SidebarProvider, useSidebar } from './context/SidebarContext';
+import { CreatePostModal } from './components/CreatePostModal';
 import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
 import { Communities } from './pages/Communities';
@@ -11,6 +12,16 @@ import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { AccountSettings } from './pages/AccountSettings';
+
+const GlobalCreatePostModal: React.FC = () => {
+  const { isCreatePostOpen, closeCreatePostModal } = useSidebar();
+  return (
+    <CreatePostModal
+      isOpen={isCreatePostOpen}
+      onClose={closeCreatePostModal}
+    />
+  );
+};
 
 export const App: React.FC = () => {
   return (
@@ -37,6 +48,7 @@ export const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <GlobalCreatePostModal />
       </SidebarProvider>
     </BrowserRouter>
   );

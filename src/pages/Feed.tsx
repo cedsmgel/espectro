@@ -81,6 +81,18 @@ export const Feed: React.FC = () => {
     }
   }, [filterParam]);
 
+  useEffect(() => {
+    const handleGlobalPostCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<Post>;
+      if (customEvent.detail) {
+        const newPost = customEvent.detail;
+        setPosts((prev) => [newPost, ...prev.filter((p) => p.id !== newPost.id)]);
+      }
+    };
+    window.addEventListener('espectro:post-created', handleGlobalPostCreated);
+    return () => window.removeEventListener('espectro:post-created', handleGlobalPostCreated);
+  }, []);
+
   const handlePostCreated = async (data: CreatePostData) => {
     const newPost = await postsApi.create(data);
     // Insere no início da lista para aparecer imediatamente

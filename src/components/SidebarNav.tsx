@@ -11,7 +11,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const location = useLocation();
   const navigate = useNavigate();
   const user = authStorage.getUser();
-  const { isExpanded } = useSidebar();
+  const { isExpanded, openCreatePostModal } = useSidebar();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {
@@ -60,11 +60,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             if (onOpenCreateModal) {
               onOpenCreateModal();
             } else {
-              const composer = document.getElementById('composer-textarea');
-              if (composer) {
-                composer.focus();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
+              openCreatePostModal();
             }
           }}
           aria-label="Criar Publicação"

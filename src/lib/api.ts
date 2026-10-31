@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export interface User {
   id: number;
   username: string;
@@ -338,8 +340,13 @@ export interface UploadResponse {
   content_type: string;
 }
 
+export interface UploadOptions {
+  onProgress?: (percent: number) => void;
+  signal?: AbortSignal;
+}
+
 export const uploadApi = {
-  upload: async (file: File): Promise<UploadResponse> => {
+  upload: async (file: File, options?: UploadOptions): Promise<UploadResponse> => {
     const token = authStorage.getToken();
     const formData = new FormData();
     formData.append('file', file);
@@ -349,18 +356,25 @@ export const uploadApi = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const err: any = await response.json().catch(() => ({ error: 'Falha no upload do arquivo' }));
-      throw new Error(err?.error || `Erro HTTP ${response.status}`);
+    try {
+      const response = await axios.post<UploadResponse>('/api/upload', formData, {
+        headers,
+        signal: options?.signal,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && options?.onProgress) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            options.onProgress(percent);
+          }
+        },
+      });
+      return response.data;
+    } catch (err: any) {
+      if (axios.isCancel(err) || err.name === 'CanceledError') {
+        throw new Error('Upload cancelado pelo usuário.');
+      }
+      const msg = err.response?.data?.error || err.message || 'Falha no upload do arquivo';
+      throw new Error(msg);
     }
-
-    return response.json();
   },
 };
 

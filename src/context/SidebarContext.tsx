@@ -4,15 +4,22 @@ interface SidebarContextType {
   isExpanded: boolean;
   toggleSidebar: () => void;
   setIsExpanded: (expanded: boolean) => void;
+  isCreatePostOpen: boolean;
+  openCreatePostModal: () => void;
+  closeCreatePostModal: () => void;
 }
 
 const SidebarContext = createContext<SidebarContextType>({
   isExpanded: false,
   toggleSidebar: () => {},
   setIsExpanded: () => {},
+  isCreatePostOpen: false,
+  openCreatePostModal: () => {},
+  closeCreatePostModal: () => {},
 });
 
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('espectro_sidebar_expanded');
@@ -34,8 +41,20 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const openCreatePostModal = () => setIsCreatePostOpen(true);
+  const closeCreatePostModal = () => setIsCreatePostOpen(false);
+
   return (
-    <SidebarContext.Provider value={{ isExpanded, toggleSidebar, setIsExpanded }}>
+    <SidebarContext.Provider
+      value={{
+        isExpanded,
+        toggleSidebar,
+        setIsExpanded,
+        isCreatePostOpen,
+        openCreatePostModal,
+        closeCreatePostModal,
+      }}
+    >
       {children}
     </SidebarContext.Provider>
   );

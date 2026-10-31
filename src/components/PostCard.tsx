@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Post, Comment, commentsApi, postsApi, authStorage } from '../lib/api';
+import { renderMarkdown } from '../lib/markdown';
 import { VideoPlayer } from './VideoPlayer';
 
 interface PostCardProps {
@@ -289,14 +290,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
                 <span className="material-symbols-outlined text-[15px]">auto_stories</span>
                 Scrap Nostálgico
               </span>
-              <p className="text-sm italic text-on-surface font-serif">
-                "{content}"
-              </p>
+              <div className="text-sm italic text-on-surface font-serif">
+                "{renderMarkdown(content)}"
+              </div>
             </div>
           ) : (
-            <p className="text-sm text-on-surface leading-relaxed whitespace-pre-line">
-              {content}
-            </p>
+            <div className="text-sm text-on-surface leading-relaxed">
+              {renderMarkdown(content)}
+            </div>
           )}
 
           {/* Mídia Principal: Player de Vídeo Compacto ou Imagem */}
