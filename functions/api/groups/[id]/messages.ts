@@ -1,5 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../../../_shared/auth";
 import { membership } from "../../../_shared/groups";
+import { sanitizeMediaUrl } from "../../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -23,7 +24,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const limit = 30;
 
     const { results } = await env.DB.prepare(
-      `SELECT x.id, x.content, x.sender_id, u.username AS sender_username,
+      `SELECT x.id, x.content, x.message_type, x.media_url, x.sender_id, u.username AS sender_username,
          strftime('%Y-%m-%dT%H:%M:%SZ', x.created_at) AS created_at
        FROM chat_group_messages x LEFT JOIN users u ON u.id = x.sender_id
        WHERE x.group_id = ?1 AND x.created_at >= ?2 AND (?3 IS NULL OR x.id < ?3)
@@ -71,15 +72,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Só os administradores podem enviar mensagens neste grupo.", 403);
     }
 
-    const body = (await request.json().catch(() => null)) as { content?: string } | null;
-    const content = typeof body?.content === "string" ? body.content.trim() : "";
-    if (!content) return errorResponse("A mensagem não pode ser vazia.", 400);
+    const body = (await request.json().catch(() => null)) as { content?: string; message_type?: string; media_url?: string } | null;
+    const messageType = ["text", "gif", "sticker"].includes(body?.message_type || "") ? (body!.message_type as string) : "text";
+    const mediaUrl = sanitizeMediaUrl(body?.media_url);
+    if (body?.media_url && !mediaUrl) return errorResponse("URL de mídia inválida.", 400);
+    let content = typeof body?.content === "string" ? body.content.trim() : "";
+    if (messageType !== "text") content = content || (messageType === "gif" ? "GIF" : "Figurinha");
+    if (!content && !mediaUrl) return errorResponse("A mensagem não pode ser vazia.", 400);
     if (content.length > 2000) return errorResponse("A mensagem deve ter no máximo 2000 caracteres.", 400);
 
     const inserted = await env.DB.prepare(
-      "INSERT INTO chat_group_messages (group_id, sender_id, content) VALUES (?, ?, ?)"
+      "INSERT INTO chat_group_messages (group_id, sender_id, content, message_type, media_url) VALUES (?, ?, ?, ?, ?)"
     )
-      .bind(groupId, user.id, content)
+      .bind(groupId, user.id, content, messageType, mediaUrl)
       .run();
 
     return jsonResponse(
@@ -87,6 +92,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         message: {
           id: Number(inserted.meta.last_row_id),
           content,
+          message_type: messageType,
+          media_url: mediaUrl,
           sender_id: user.id,
           sender_username: user.username,
           created_at: new Date().toISOString(),

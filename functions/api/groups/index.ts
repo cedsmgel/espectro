@@ -90,7 +90,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         env.DB.prepare("INSERT INTO chat_group_members (group_id, user_id, role) VALUES (?, ?, 'member')").bind(groupId, id)
       ),
       env.DB.prepare(
-        "INSERT INTO chat_group_messages (group_id, sender_id, content) VALUES (?, ?, ?)"
+        "INSERT INTO chat_group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'system')"
       ).bind(groupId, user.id, `@${user.username} criou o grupo "${name}"`),
     ];
     await env.DB.batch(statements);

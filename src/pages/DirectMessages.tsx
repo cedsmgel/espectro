@@ -32,6 +32,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { CreateGroupModal } from '../components/chat/CreateGroupModal';
+import { MediaPicker } from '../components/chat/MediaPicker';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
@@ -672,43 +673,14 @@ export const DirectMessages: React.FC = () => {
     );
   };
 
-  // Busca de GIFs na API do Giphy com fallback elegante
-  useEffect(() => {
-    if (!showGifPicker) return;
-
-    const fetchGifs = async () => {
-      setLoadingGifs(true);
-      const query = gifSearchQuery.trim();
-      try {
-        const res = await fetch(`/api/gifs?q=${encodeURIComponent(query)}`, {
-          headers: { Authorization: `Bearer ${authStorage.getToken() || ''}` },
-        });
-        if (res.ok) {
-          const data: any = await res.json();
-          if (Array.isArray(data.results) && data.results.length > 0) {
-            setGifResults(data.results.map((g: any) => ({ id: g.id, title: g.title, url: g.url, preview: g.preview })));
-            setLoadingGifs(false);
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Falha ao buscar GIFs, usando biblioteca local:', err);
-      }
-
-      // Fallback
-      if (query) {
-        setGifResults(
-          FALLBACK_GIFS.filter((g) => g.title.toLowerCase().includes(query.toLowerCase()))
-        );
-      } else {
-        setGifResults(FALLBACK_GIFS);
-      }
-      setLoadingGifs(false);
-    };
-
-    const timer = setTimeout(fetchGifs, 350);
-    return () => clearTimeout(timer);
-  }, [gifSearchQuery, showGifPicker]);
+  const handleSelectMedia = (choice: { type: "gif" | "sticker"; url: string }) => {
+    if (choice.type === "gif") {
+      handleSelectGif(choice.url);
+      return;
+    }
+    sendMessage({ type: "sticker", media_url: choice.url, text: "Figurinha" });
+    setShowGifPicker(false);
+  };
 
   const handleSelectGif = (gifUrl: string) => {
     sendMessage({
@@ -2085,90 +2057,9 @@ export const DirectMessages: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Popover de GIFs / Stickers */}
                     {showGifPicker && (
-                      <div className="absolute bottom-20 left-16 z-30 bg-surface-container-lowest rounded-2xl p-4 shadow-2xl border border-outline-variant/30 w-80 sm:w-96 animate-in fade-in slide-in-from-bottom-2 flex flex-col gap-3">
-                        <div className="flex items-center justify-between pb-1 border-b border-outline-variant/20">
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[18px] text-primary">gif_box</span>
-                            <span className="text-xs font-bold text-on-surface">Buscar GIFs & Stickers</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowGifPicker(false)}
-                            className="text-on-surface-variant hover:text-on-surface cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">close</span>
-                          </button>
-                        </div>
-
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">
-                            search
-                          </span>
-                          <input
-                            type="text"
-                            value={gifSearchQuery}
-                            onChange={(e) => setGifSearchQuery(e.target.value)}
-                            placeholder="Pesquisar no Giphy..."
-                            className="w-full pl-8 pr-3 py-1.5 rounded-full bg-surface-container-low text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:ring-1 focus:ring-primary-container"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto p-0.5">
-                          {loadingGifs ? (
-                            <div className="col-span-2 text-center py-8 text-xs text-on-surface-variant">
-                              <span className="material-symbols-outlined text-[20px] text-primary animate-spin">
-                                progress_activity
-                              </span>
-                              <p className="mt-1">Carregando GIFs...</p>
-                            </div>
-                          ) : gifResults.length === 0 ? (
-                            <div className="col-span-2 text-center py-6 text-xs text-on-surface-variant">
-                              Nenhum GIF encontrado.
-                            </div>
-                          ) : (
-                            gifResults.map((gif) => (
-                              <div
-                                key={gif.id}
-                                onClick={() => handleSelectGif(gif.url)}
-                                className="relative rounded-xl overflow-hidden aspect-video bg-surface-container cursor-pointer hover:opacity-80 transition-opacity border border-outline-variant/20 shadow-2xs group"
-                              >
-                                <img
-                                  src={gif.preview || gif.url}
-                                  alt={gif.title}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        <p className="text-[10px] text-on-surface-variant text-right pt-1">Powered by GIPHY</p>
-                      </div>
-                    )}
-
-                    {voice.recording && (
-                      <div className="absolute bottom-20 left-3 right-3 sm:left-12 sm:right-12 z-30 flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xl">
-                        <span className="w-2.5 h-2.5 rounded-full bg-error animate-pulse" />
-                        <span className="text-xs font-semibold text-on-surface tabular-nums">
-                          {String(Math.floor(voice.seconds / 60)).padStart(2, '0')}:{String(voice.seconds % 60).padStart(2, '0')}
-                        </span>
-                        <span className="flex-1 text-[11px] text-on-surface-variant">Gravando áudio...</span>
-                        <button
-                          type="button"
-                          onClick={voice.cancel}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold text-on-surface bg-surface-container hover:bg-surface-container-high cursor-pointer"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSendVoice}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary hover:bg-primary cursor-pointer"
-                        >
-                          Enviar
-                        </button>
+                      <div className="absolute bottom-20 left-3 sm:left-12 z-30">
+                        <MediaPicker onSelect={handleSelectMedia} onClose={() => setShowGifPicker(false)} />
                       </div>
                     )}
 
