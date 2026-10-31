@@ -42,21 +42,24 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     if (onPostCreated) {
       onPostCreated(created);
     }
-    // Dispara evento global para que qualquer Feed atualize instantaneamente
+    // Dispara evento global para que qualquer Feed ou lista atualize instantaneamente
     window.dispatchEvent(new CustomEvent('espectro:post-created', { detail: created }));
     onClose();
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+      {/* Modal: Tela inteira no mobile (h-screen w-screen, sem bordas), Janela no Desktop (max-w-2xl, rounded-2xl) */}
+      <div
+        className="w-screen h-screen sm:w-full sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-zinc-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface"
+      >
         <CreatePostForm
           onPostCreated={handlePostSubmit}
           communities={communities}

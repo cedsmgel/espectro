@@ -127,7 +127,7 @@ export const Communities: React.FC = () => {
             ) : hasError ? (
               <ErrorState
                 title="Não foi possível carregar as comunidades"
-                message="Falha de conexão com o banco de dados D1. Tente carregar novamente."
+                message="Falha de conexão com a rede. Tente carregar novamente."
                 onRetry={loadCommunities}
               />
             ) : filtered.length === 0 ? (

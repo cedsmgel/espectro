@@ -67,7 +67,7 @@ export const CommunityDetail: React.FC = () => {
         } else {
           console.error(`Erro da API D1 [${res.status}]:`, await res.text());
           setHasError(true);
-          showToast('Falha ao comunicar com o servidor D1.');
+          showToast('Falha ao comunicar com o servidor.');
         }
       } catch (networkErr) {
         console.error('Erro de conexão ao buscar comunidade:', networkErr);
@@ -209,7 +209,7 @@ export const CommunityDetail: React.FC = () => {
     };
     setPosts((prev) => [postWithComm, ...prev.filter((p) => p.id !== postWithComm.id)]);
     setActiveTab('discussions');
-    showToast('Post publicado com sucesso e salvo no D1!');
+    showToast('Post publicado com sucesso no Espectro!');
   };
 
   const handleDeletePost = (deletedId: number) => {
@@ -265,7 +265,7 @@ export const CommunityDetail: React.FC = () => {
             ) : hasError ? (
               <ErrorState
                 title="Erro ao sintonizar com a comunidade"
-                message="Não foi possível recuperar as informações desta comunidade no D1. Verifique sua conexão e tente novamente."
+                message="Não foi possível carregar as informações desta comunidade. Verifique sua conexão e tente novamente."
                 onRetry={fetchData}
               />
             ) : !community ? (

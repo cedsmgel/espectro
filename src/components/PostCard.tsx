@@ -119,7 +119,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
     if (!isAuthor) return;
     const hasMedia = Boolean(post.media_url);
     const confirmMessage = hasMedia
-      ? 'Tem certeza que deseja excluir esta publicação? O arquivo de vídeo/imagem associado será removido permanentemente do Cloudflare R2.'
+      ? 'Tem certeza que deseja excluir esta publicação? As mídias associadas serão removidas permanentemente.'
       : 'Tem certeza que deseja excluir esta publicação?';
 
     if (!window.confirm(confirmMessage)) return;

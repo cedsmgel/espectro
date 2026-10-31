@@ -25,6 +25,23 @@ interface CreatePostFormProps {
 
 const DRAFT_STORAGE_KEY = 'espectro_composer_draft';
 
+// Lista de emojis populares para inserção rápida
+const QUICK_EMOJIS = [
+  '😊', '😂', '🔥', '❤️', '👏', '😍', '👍', '🎉',
+  '✨', '🚀', '👀', '💡', '💬', '💯', '🥳', '😎',
+  '🙌', '🤩', '💜', '🍀', '☕', '⚡', '🌟', '🎯',
+];
+
+// GIFs de fallback rápidos caso a API externa demore
+const FALLBACK_GIFS = [
+  { id: '1', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif', title: 'Celebrate' },
+  { id: '2', url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif', title: 'Party' },
+  { id: '3', url: 'https://media.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif', title: 'Applause' },
+  { id: '4', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', title: 'Dance' },
+  { id: '5', url: 'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif', title: 'Thumbs Up' },
+  { id: '6', url: 'https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif', title: 'Awesome' },
+];
+
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   onPostCreated,
   communities = [],
@@ -45,7 +62,16 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [fileAccept, setFileAccept] = useState('image/*,video/*');
-  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [locationTag, setLocationTag] = useState<string | null>(null);
+
+  // Modais / Popovers flutuantes da barra inferior
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifSearchQuery, setGifSearchQuery] = useState('');
+  const [gifResults, setGifResults] = useState(FALLBACK_GIFS);
+  const [loadingGifs, setLoadingGifs] = useState(false);
+
+  // Estados de submissão e upload
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -68,6 +94,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         }
         if (data.mediaUrl) setMediaUrl(data.mediaUrl);
         if (data.mediaType) setMediaType(data.mediaType);
+        if (data.scrapStyle) setScrapStyle(data.scrapStyle);
 
         if (data.title || data.content || data.mediaUrl) {
           setIsDraftRestored(true);
@@ -91,6 +118,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             communityId,
             mediaUrl,
             mediaType,
+            scrapStyle,
             updatedAt: new Date().toISOString(),
           })
         );
@@ -98,7 +126,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         // ignore
       }
     }
-  }, [title, content, postType, communityId, mediaUrl, mediaType]);
+  }, [title, content, postType, communityId, mediaUrl, mediaType, scrapStyle]);
 
   // Descartar rascunho
   const handleDiscardDraft = () => {
@@ -111,6 +139,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     setContent('');
     setMediaUrl('');
     setMediaType(null);
+    setLocationTag(null);
     setIsDraftRestored(false);
   };
 
@@ -124,7 +153,31 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
-  // Inserção de Markdown simples (Negrito, Itálico, Código, Citação)
+  // Inserção de texto ou emoji na posição do cursor
+  const insertTextAtCursor = (textToInsert: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((prev) => prev + textToInsert);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentVal = textarea.value;
+
+    const newContent =
+      currentVal.substring(0, start) + textToInsert + currentVal.substring(end);
+
+    setContent(newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = start + textToInsert.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 15);
+  };
+
+  // Inserção de Markdown simples (Negrito, Itálico, Link)
   const insertMarkdown = (prefix: string, suffix: string = prefix, placeholder: string = 'texto') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -152,36 +205,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }, 15);
   };
 
-  // Inserção de Link no formato [texto](url)
-  const insertLink = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentVal = textarea.value;
-    const selected = currentVal.substring(start, end);
-
-    const url = window.prompt('Digite a URL do link:', 'https://');
-    if (url === null) return; // cancelou
-
-    const cleanUrl = url.trim() || 'https://';
-    const linkText = selected.trim() || 'link';
-    const formatted = `[${linkText}](${cleanUrl})`;
-
-    const newContent =
-      currentVal.substring(0, start) + formatted + currentVal.substring(end);
-
-    setContent(newContent);
-
-    setTimeout(() => {
-      textarea.focus();
-      const newPos = start + formatted.length;
-      textarea.setSelectionRange(newPos, newPos);
-    }, 15);
-  };
-
   const handleTriggerUpload = (type: 'image' | 'video') => {
+    setShowEmojiPicker(false);
+    setShowGifPicker(false);
     if (type === 'video') {
       setFileAccept('video/mp4,video/webm,video/quicktime,video/ogg,video/m4v');
     } else {
@@ -204,10 +230,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setError('Upload cancelado pelo usuário.');
+    setError('Envio cancelado.');
   };
 
-  // Manipulação de Upload com Axios e barra de progresso real
+  // Manipulação de Upload com barra de progresso amigável
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -217,11 +243,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     setUploadProgress(0);
 
     const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg|m4v)$/i.test(file.name);
-    setUploadMessage(
-      isVid
-        ? 'Enviando vídeo para o Cloudflare R2...'
-        : 'Enviando imagem para o Cloudflare R2...'
-    );
+    setUploadMessage(isVid ? 'Enviando seu vídeo...' : 'Enviando sua foto...');
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -239,9 +261,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setUploadProgress(100);
     } catch (err: any) {
       if (err.message?.includes('cancelado')) {
-        setError('Upload cancelado pelo usuário.');
+        setError('Envio cancelado.');
       } else {
-        setError(err.message || 'Falha ao realizar upload.');
+        setError(err.message || 'Falha ao enviar arquivo.');
       }
     } finally {
       setUploading(false);
@@ -254,13 +276,82 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
+  // Busca rápida de GIFs na API do Giphy com fallback
+  useEffect(() => {
+    if (!showGifPicker) return;
+
+    const timer = setTimeout(async () => {
+      const query = gifSearchQuery.trim();
+      setLoadingGifs(true);
+      const apiKey = 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0P4W3';
+
+      try {
+        const endpoint = query
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=12&rating=g`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12&rating=g`;
+
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const data: any = await res.json();
+          if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
+            const formatted = data.data.map((g: any) => ({
+              id: g.id,
+              url: g.images?.downsized_medium?.url || g.images?.original?.url || g.images?.fixed_height?.url,
+              title: g.title || 'GIF',
+            }));
+            setGifResults(formatted);
+          }
+        }
+      } catch {
+        setGifResults(FALLBACK_GIFS);
+      } finally {
+        setLoadingGifs(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [gifSearchQuery, showGifPicker]);
+
+  const handleSelectGif = (gifUrl: string) => {
+    setMediaUrl(gifUrl);
+    setMediaType('image');
+    setShowGifPicker(false);
+    setGifSearchQuery('');
+  };
+
+  // Obter localização nativa
+  const handleLocationClick = () => {
+    if (locationTag) {
+      setLocationTag(null);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setError('Geolocalização não suportada neste dispositivo.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(2);
+        const lng = pos.coords.longitude.toFixed(2);
+        setLocationTag(`📍 ${lat}, ${lng}`);
+      },
+      () => {
+        // Fallback elegante
+        setLocationTag('📍 Brasil');
+      },
+      { timeout: 7000 }
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
 
     if (!user) {
-      setError('Você precisa estar logado para publicar.');
+      setError('Você precisa estar conectado para publicar.');
       return;
     }
 
@@ -269,8 +360,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       return;
     }
 
-    if (!content.trim()) {
-      setError('Escreva algo na sua publicação.');
+    let finalContent = content.trim();
+    if (locationTag && !finalContent.includes(locationTag)) {
+      finalContent = `${finalContent}\n\n${locationTag}`;
+    }
+
+    if (!finalContent.trim() && !mediaUrl.trim()) {
+      setError('Escreva algo ou anexe uma foto/vídeo para publicar.');
       return;
     }
 
@@ -284,7 +380,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
       await onPostCreated({
         title: postType === 'discussion' ? title.trim() : undefined,
-        content: postType === 'scrap' ? encodeScrap(scrapStyle, content.trim()) : content.trim(),
+        content: postType === 'scrap' ? encodeScrap(scrapStyle, finalContent) : finalContent,
         post_type: postType,
         community_id: communityId === '' ? undefined : Number(communityId),
         media_url: mediaUrl.trim() || undefined,
@@ -302,13 +398,12 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setContent('');
       setMediaUrl('');
       setMediaType(null);
-      setShowUrlInput(false);
+      setLocationTag(null);
       setIsDraftRestored(false);
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
 
       if (isModal && onClose) {
-        setTimeout(() => onClose(), 600);
+        setTimeout(() => onClose(), 500);
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao criar publicação.');
@@ -318,12 +413,17 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   };
 
   if (!user) {
-    return null;
+    return (
+      <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+        <span className="material-symbols-outlined text-4xl text-on-surface-variant">lock</span>
+        <p className="text-sm font-semibold">Faça login para criar publicações no Espectro.</p>
+      </div>
+    );
   }
 
   return (
-    <div className={`bg-surface-container-lowest rounded-3xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 ${isModal ? 'w-full' : ''}`}>
-      {/* Hidden File Input para Cloudflare R2 */}
+    <div className="w-full h-full flex flex-col justify-between overflow-hidden bg-surface-container-lowest">
+      {/* Input de arquivo nativo invisível */}
       <input
         type="file"
         ref={fileInputRef}
@@ -332,107 +432,94 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         className="hidden"
       />
 
-      {/* Modal Header (se aberto como modal) */}
-      {isModal && (
-        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[22px]">edit_square</span>
-            <h2 className="text-base font-bold text-on-surface">Nova Publicação</h2>
-          </div>
+      {/* 1. TOPO FIXO (Header do Modal): Botão X à esquerda e título "Criar Publicação" */}
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-zinc-800/80 bg-surface-container-lowest shrink-0 z-10">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleClose}
             className="w-8 h-8 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
-            title="Fechar (salva como rascunho)"
+            title="Fechar"
+            aria-label="Fechar"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[22px]">close</span>
           </button>
-        </div>
-      )}
-
-      {/* Selector: Post Regular vs Scrap e Dropdown de Comunidade Permanente */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setPostType('discussion')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              postType === 'discussion'
-                ? 'bg-primary-container text-on-primary shadow-xs'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">edit_note</span>
-            <span>Discussão</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setPostType('scrap')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              postType === 'scrap'
-                ? 'bg-secondary-container text-on-secondary-container shadow-xs'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-            <span>Scrap Nostálgico</span>
-          </button>
+          <h1 className="text-base sm:text-lg font-bold text-on-surface tracking-tight">
+            Criar Publicação
+          </h1>
         </div>
 
-        {/* Seletor de Comunidade Destino (ou Feed Geral) */}
-        <div className="flex items-center gap-1.5 bg-surface-container-low px-2.5 py-1 rounded-full border border-outline-variant/30">
-          <span className="material-symbols-outlined text-secondary text-[16px]">groups</span>
-          <select
-            value={communityId}
-            onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
-            className="bg-transparent text-xs text-on-surface font-semibold focus:outline-none cursor-pointer"
-          >
-            <option value="" className="bg-surface-container-lowest text-on-surface">Publicar no Feed Geral</option>
-            {communities.map((c) => (
-              <option key={c.id} value={c.id} className="bg-surface-container-lowest text-on-surface">
-                c/{c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Banner de Rascunho Recuperado */}
-      {isDraftRestored && (
-        <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-on-surface text-xs flex items-center justify-between gap-2 animate-in fade-in">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-500 text-[18px]">drafts</span>
-            <span>Rascunho recuperado automaticamente.</span>
-          </div>
+        {/* Descartar Rascunho (se houver rascunho recuperado) */}
+        {isDraftRestored && (
           <button
             type="button"
             onClick={handleDiscardDraft}
-            className="text-error font-semibold hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
+            className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer font-medium"
+            title="Descartar rascunho salvo"
           >
-            <span className="material-symbols-outlined text-[14px]">delete</span>
-            Descartar rascunho
+            <span className="material-symbols-outlined text-[15px]">delete</span>
+            <span className="hidden sm:inline">Descartar rascunho</span>
           </button>
-        </div>
-      )}
+        )}
+      </header>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {/* 2. ABAS DE TIPO (Logo abaixo do Header): Botões Pílula (Discussão vs Scrap Nostálgico) */}
+      <div className="flex items-center gap-2 px-4 sm:px-6 py-2.5 border-b border-zinc-800/60 bg-surface-container-lowest shrink-0">
+        <button
+          type="button"
+          onClick={() => setPostType('discussion')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            postType === 'discussion'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">forum</span>
+          <span>Discussão</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setPostType('scrap')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            postType === 'scrap'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">auto_stories</span>
+          <span>Scrap Nostálgico</span>
+        </button>
+      </div>
+
+      {/* 3. CORPO CENTRAL INTEGRADO (Scroll Interno) */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 flex flex-col gap-3 min-h-0">
+        {/* Alertas de Erro ou Sucesso */}
         {error && (
-          <div className="p-3 rounded-2xl bg-error-container text-error text-xs font-medium flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">error</span>
-            <span>{error}</span>
+          <div className="p-3 rounded-2xl bg-error-container text-error text-xs font-medium flex items-center justify-between gap-2 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="text-error hover:opacity-80"
+            >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+            </button>
           </div>
         )}
 
         {success && (
-          <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-800 text-xs font-semibold flex items-center gap-2 border border-emerald-300 animate-in fade-in">
+          <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 text-xs font-semibold flex items-center gap-2 border border-emerald-500/20 animate-in fade-in">
             <span className="material-symbols-outlined text-[18px]">check_circle</span>
-            <span>Publicado com sucesso! Salvo no banco D1.</span>
+            <span>Publicado com sucesso no Espectro!</span>
           </div>
         )}
 
-        {/* Upload Progress Real com Botão Cancelar */}
+        {/* Upload Progress com visual limpo */}
         {uploading && (
-          <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/30 flex flex-col gap-2.5 shadow-sm animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/30 flex flex-col gap-2 shadow-sm animate-in fade-in">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
@@ -443,161 +530,130 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                   {uploadProgress}%
                 </span>
               </div>
-
               <button
                 type="button"
                 onClick={handleCancelUpload}
-                className="px-2.5 py-1 rounded-xl bg-error-container/30 text-error hover:bg-error-container text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0"
-                title="Cancelar upload em andamento"
+                className="px-2.5 py-1 rounded-xl bg-error-container/30 text-error hover:bg-error-container text-xs font-semibold transition-colors cursor-pointer shrink-0"
               >
-                <span className="material-symbols-outlined text-[15px]">close</span>
-                <span>Cancelar upload</span>
+                Cancelar
               </button>
             </div>
-
-            {/* Barra de Progresso Real */}
-            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+            <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-150 ease-out rounded-full"
+                className="h-full bg-blue-600 transition-all duration-150 ease-out rounded-full"
                 style={{ width: `${Math.max(5, uploadProgress)}%` }}
               />
             </div>
           </div>
         )}
 
+        {/* Autor + Campo de Título (Se Discussão) */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase flex-shrink-0 shadow-xs">
+          <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm uppercase shrink-0 shadow-xs">
             {user.username.charAt(0)}
           </div>
+
           <div className="flex-1 flex flex-col gap-2 min-w-0">
+            {/* Input de Título: visível apenas na aba "Discussão" */}
             {postType === 'discussion' && (
               <input
-                id="composer-title-input"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Título da sua discussão..."
-                className="w-full bg-surface-container-low rounded-xl px-4 py-2 text-on-surface text-sm font-semibold placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
+                className="w-full bg-transparent text-on-surface font-bold text-base sm:text-lg placeholder:text-on-surface-variant/50 focus:outline-none border-b border-outline-variant/20 pb-2 transition-all"
+                autoFocus
               />
             )}
 
-            {/* Barra de Formatação de Texto Básica (Negrito, Itálico, Link) e Contador */}
-            <div className="flex items-center justify-between border border-outline-variant/20 py-1 px-2 bg-surface-container-low rounded-xl">
-              <div className="flex items-center gap-1">
-                {/* Negrito */}
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('**', '**', 'negrito')}
-                  className="px-2 py-1 rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Negrito (**texto**)"
-                >
-                  <span className="font-extrabold text-[13px]">B</span>
-                  <span className="text-[11px] hidden sm:inline">Negrito</span>
-                </button>
-
-                {/* Itálico */}
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('*', '*', 'itálico')}
-                  className="px-2 py-1 rounded-lg text-xs italic text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Itálico (*texto*)"
-                >
-                  <span className="italic font-serif text-[14px]">I</span>
-                  <span className="text-[11px] hidden sm:inline">Itálico</span>
-                </button>
-
-                {/* Link */}
-                <button
-                  type="button"
-                  onClick={insertLink}
-                  className="px-2 py-1 rounded-lg text-xs text-on-surface hover:bg-surface-container transition-colors flex items-center gap-1 cursor-pointer"
-                  title="Inserir Link [texto](url)"
-                >
-                  <span className="material-symbols-outlined text-[16px]">link</span>
-                  <span className="text-[11px] hidden sm:inline">Link</span>
-                </button>
-
-                <div className="h-4 w-px bg-outline-variant/30 mx-1" />
-
-                {/* Código inline */}
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('`', '`', 'código')}
-                  className="px-2 py-1 rounded-lg text-xs font-mono text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-                  title="Código inline (`código`)"
-                >
-                  &lt;/&gt;
-                </button>
-
-                {/* Citação */}
-                <button
-                  type="button"
-                  onClick={() => insertMarkdown('> ', '', 'citação')}
-                  className="px-2 py-1 rounded-lg text-xs text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-                  title="Citação (> citação)"
-                >
-                  <span className="material-symbols-outlined text-[15px]">format_quote</span>
-                </button>
-              </div>
-
-              {/* Contador de Caracteres no Canto do Input */}
-              <div className="flex items-center gap-1 pr-1">
-                <span
-                  className={`text-[11px] font-mono px-2 py-0.5 rounded-full font-medium transition-colors ${
-                    content.length > 2000
-                      ? 'bg-error-container text-error font-bold'
-                      : content.length > 1500
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'text-on-surface-variant'
-                  }`}
-                  title={`${content.length} caracteres digitados`}
-                >
+            {/* Barra de Formatação Básica (apenas para Discussão) */}
+            {postType === 'discussion' && (
+              <div className="flex items-center justify-between py-1 text-xs text-on-surface-variant">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown('**', '**', 'negrito')}
+                    className="p-1.5 rounded hover:bg-surface-container font-bold text-on-surface transition-colors cursor-pointer"
+                    title="Negrito"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown('*', '*', 'itálico')}
+                    className="p-1.5 rounded hover:bg-surface-container italic font-serif text-on-surface transition-colors cursor-pointer"
+                    title="Itálico"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertMarkdown('`', '`', 'código')}
+                    className="p-1.5 rounded hover:bg-surface-container font-mono text-xs transition-colors cursor-pointer"
+                    title="Código"
+                  >
+                    &lt;/&gt;
+                  </button>
+                </div>
+                <span className="text-[11px] font-mono text-on-surface-variant/70">
                   {content.length} caracteres
                 </span>
               </div>
-            </div>
+            )}
 
-            {/* Personalização da grafia do Scrap (fonte, tamanho, tinta e papel) */}
+            {/* PERSONALIZAÇÃO DE GRAFIA PARA O SCRAP (Nostalgia Orkut: Fontes, Cores, Tamanho e Papel) */}
             {postType === 'scrap' && (
-              <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+              <div className="flex flex-col gap-2.5 p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 animate-in fade-in">
+                {/* Seletor de Fontes Nostálgicas */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] font-semibold text-on-surface-variant w-14">Letra</span>
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-12">
+                    Fonte
+                  </span>
                   {(Object.keys(SCRAP_FONTS) as ScrapFont[]).map((k) => (
                     <button
                       key={k}
                       type="button"
                       onClick={() => setScrapStyle((s) => ({ ...s, f: k }))}
                       style={{ fontFamily: SCRAP_FONTS[k].family }}
-                      className={`px-3 py-1 rounded-full text-sm transition-all cursor-pointer border ${
+                      className={`px-3 py-1 rounded-full text-xs transition-all cursor-pointer border ${
                         scrapStyle.f === k
-                          ? 'border-primary-container bg-primary-container/15 text-on-surface'
-                          : 'border-outline-variant/40 text-on-surface-variant hover:text-on-surface'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-400 font-bold shadow-xs'
+                          : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
                       }`}
                     >
                       {SCRAP_FONTS[k].label}
                     </button>
                   ))}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-on-surface-variant w-14">Tamanho</span>
+
+                {/* Linha de Tamanho, Tinta e Papel */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-outline-variant/20">
+                  {/* Tamanho da Letra */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-12">
+                      Tam.
+                    </span>
                     {(Object.keys(SCRAP_SIZES) as ScrapSize[]).map((k) => (
                       <button
                         key={k}
                         type="button"
                         onClick={() => setScrapStyle((s) => ({ ...s, s: k }))}
-                        className={`w-9 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                        className={`w-8 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
                           scrapStyle.s === k
-                            ? 'border-primary-container bg-primary-container/15 text-on-surface'
-                            : 'border-outline-variant/40 text-on-surface-variant hover:text-on-surface'
+                            ? 'border-blue-500 bg-blue-500/15 text-blue-400'
+                            : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
                         {SCRAP_SIZES[k].label}
                       </button>
                     ))}
                   </div>
+
+                  {/* Cor da Tinta / Texto */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-on-surface-variant">Tinta</span>
+                    <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                      Cor
+                    </span>
                     {SCRAP_INK_COLORS.map((color) => (
                       <button
                         key={color}
@@ -605,14 +661,20 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                         aria-label={`Tinta ${color}`}
                         onClick={() => setScrapStyle((s) => ({ ...s, c: color }))}
                         style={{ backgroundColor: color }}
-                        className={`w-6 h-6 rounded-full cursor-pointer transition-transform ${
-                          scrapStyle.c === color ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-on-surface scale-110' : 'hover:scale-110'
+                        className={`w-5 h-5 rounded-full cursor-pointer transition-transform ${
+                          scrapStyle.c === color
+                            ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-blue-500 scale-110'
+                            : 'hover:scale-110'
                         }`}
                       />
                     ))}
                   </div>
+
+                  {/* Textura do Papel */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-on-surface-variant">Papel</span>
+                    <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                      Papel
+                    </span>
                     {(Object.keys(SCRAP_PAPERS) as ScrapPaper[]).map((k) => (
                       <button
                         key={k}
@@ -621,8 +683,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                         aria-label={`Papel ${SCRAP_PAPERS[k].label}`}
                         onClick={() => setScrapStyle((s) => ({ ...s, p: k }))}
                         style={{ backgroundColor: SCRAP_PAPERS[k].bg }}
-                        className={`w-6 h-6 rounded-md cursor-pointer transition-transform ${
-                          scrapStyle.p === k ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-on-surface scale-110' : 'hover:scale-110'
+                        className={`w-5 h-5 rounded-md cursor-pointer transition-transform ${
+                          scrapStyle.p === k
+                            ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-blue-500 scale-110'
+                            : 'hover:scale-110'
                         }`}
                       />
                     ))}
@@ -631,69 +695,78 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               </div>
             )}
 
+            {/* ÁREA DE TEXTO INTEGRADA (min-h-[150px]) */}
             {postType === 'scrap' ? (
-              /* O próprio campo vira o "recado" — o que você vê é o que será publicado */
-              <div className="relative mt-2 -rotate-[0.6deg]">
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm z-10 pointer-events-none" />
+              /* Estilo Scrap: O textarea se transforma no recado estilizado */
+              <div className="relative mt-2 -rotate-[0.5deg]">
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 backdrop-blur-xs rotate-[-3deg] shadow-sm z-10 pointer-events-none" />
                 <textarea
                   id="composer-textarea"
                   ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="Deixe um recado..."
-                  rows={4}
+                  placeholder="Escreva seu scrap nostálgico aqui..."
+                  rows={6}
                   style={scrapPaperStyle(scrapStyle)}
-                  className="w-full rounded-sm px-5 pt-7 pb-5 shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus:outline-none resize-none placeholder:opacity-50 placeholder:text-current"
+                  className="w-full min-h-[170px] rounded-sm px-5 pt-7 pb-5 shadow-lg focus:outline-none resize-none placeholder:opacity-50 placeholder:text-current"
+                  autoFocus
                 />
               </div>
             ) : (
+              /* Estilo Discussão: Textarea integrado estilo Twitter/Reddit */
               <textarea
                 id="composer-textarea"
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="O que está acontecendo no seu espectro hoje? (Suporta **negrito**, *itálico* e [links](url))"
-                rows={4}
-                className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
+                placeholder="O que você gostaria de discutir ou compartilhar hoje?"
+                rows={6}
+                className="w-full min-h-[160px] bg-transparent text-on-surface text-sm sm:text-base placeholder:text-on-surface-variant/40 focus:outline-none resize-none leading-relaxed"
               />
+            )}
+
+            {/* Tag de Localização se ativa */}
+            {locationTag && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-xs font-semibold self-start border border-rose-500/20">
+                <span>{locationTag}</span>
+                <button
+                  type="button"
+                  onClick={() => setLocationTag(null)}
+                  className="hover:opacity-75"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Prévia de Mídia Carregada (Vídeo Player ou Imagem) */}
+        {/* MINIATURA (Thumbnail) da Mídia acima da barra inferior com botão X */}
         {mediaUrl && (
-          <div className="pl-13 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">
-                  {mediaType === 'video' || mediaUrl.includes('/videos/') ? 'videocam' : 'image'}
-                </span>
-                {mediaType === 'video' || mediaUrl.includes('/videos/')
-                  ? 'Vídeo pronto no Cloudflare R2'
-                  : 'Imagem pronta no Cloudflare R2'}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setMediaUrl('');
-                  setMediaType(null);
-                }}
-                className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[14px]">delete</span>
-                Remover
-              </button>
-            </div>
+          <div className="relative mt-2 max-w-md w-full rounded-2xl overflow-hidden border border-zinc-800 bg-black/50 shadow-md group">
+            {/* Botão X para remover a miniatura */}
+            <button
+              type="button"
+              onClick={() => {
+                setMediaUrl('');
+                setMediaType(null);
+              }}
+              className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer shadow-lg"
+              title="Remover mídia"
+              aria-label="Remover mídia"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
 
             {mediaType === 'video' || /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(mediaUrl) || mediaUrl.includes('/videos/') ? (
-              <div className="w-full max-w-[600px] mx-auto">
-                <VideoPlayer src={mediaUrl} title="Prévia da publicação" />
+              <div className="w-full">
+                <VideoPlayer src={mediaUrl} title="Prévia do vídeo" />
               </div>
             ) : (
-              <div className="relative w-full max-w-[600px] mx-auto rounded-xl overflow-hidden bg-surface-container aspect-video max-h-60 border border-outline-variant/30">
+              <div className="relative w-full aspect-video max-h-56 bg-zinc-950 flex items-center justify-center">
                 <img
                   src={mediaUrl}
-                  alt="Prévia de imagem"
+                  alt="Miniatura anexada"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -701,81 +774,188 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           </div>
         )}
 
-        {/* Input Manual de URL (caso prefira colar link externo) */}
-        {showUrlInput && (
-          <div className="pl-13 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[20px]">link</span>
-            <input
-              type="url"
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
-              placeholder="Ou cole a URL de um vídeo ou imagem (https://...)"
-              className="flex-1 bg-surface-container-low rounded-xl px-3 py-1.5 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary-container"
-            />
+        {/* Popover de Emojis */}
+        {showEmojiPicker && (
+          <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800 text-xs font-bold text-zinc-300">
+              <span>Escolha um Emoji</span>
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(false)}
+                className="text-zinc-500 hover:text-zinc-200"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-8 gap-2">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => insertTextAtCursor(emoji)}
+                  className="text-xl p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer text-center"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Barra de Ações: Imagem, Vídeo, Link e Botão Publicar */}
-        <div className="flex flex-wrap items-center justify-between pt-2 border-t border-outline-variant/20 gap-3">
-          <div className="flex items-center gap-1">
-            {/* Upload de Imagem para o R2 */}
-            <button
-              type="button"
-              onClick={() => handleTriggerUpload('image')}
-              disabled={uploading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-surface-container text-primary text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
-              title="Fazer upload de foto para o R2"
-            >
-              <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-              <span>Foto</span>
-            </button>
-
-            {/* Upload de Vídeo para o R2 com barra de progresso */}
-            <button
-              type="button"
-              onClick={() => handleTriggerUpload('video')}
-              disabled={uploading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-surface-container text-secondary text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
-              title="Fazer upload de vídeo para o R2 com acompanhamento de progresso"
-            >
-              <span className="material-symbols-outlined text-[18px]">videocam</span>
-              <span>Vídeo (R2)</span>
-            </button>
-
-            {/* Alternar Link URL manual */}
-            <button
-              type="button"
-              onClick={() => setShowUrlInput(!showUrlInput)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-surface-container text-tertiary-container text-xs font-semibold transition-colors cursor-pointer"
-              title="Inserir link direto de mídia"
-            >
-              <span className="material-symbols-outlined text-[18px]">link</span>
-              <span>Link</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant text-xs">
-              <span className="material-symbols-outlined text-[14px]">public</span>
-              <span>Público</span>
-            </span>
-            <button
-              type="submit"
-              disabled={submitting || uploading}
-              className="px-5 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Publicando...</span>
-                </>
+        {/* Popover de GIFs com Busca */}
+        {showGifPicker && (
+          <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl animate-in fade-in zoom-in-95 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between text-xs font-bold text-zinc-300">
+              <span>Pesquisar GIFs</span>
+              <button
+                type="button"
+                onClick={() => setShowGifPicker(false)}
+                className="text-zinc-500 hover:text-zinc-200"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                value={gifSearchQuery}
+                onChange={(e) => setGifSearchQuery(e.target.value)}
+                placeholder="Buscar no Giphy..."
+                className="w-full bg-zinc-950 text-zinc-200 text-xs rounded-xl pl-9 pr-3 py-2 border border-zinc-800 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+              {loadingGifs ? (
+                <div className="col-span-3 py-6 text-center text-xs text-zinc-500">
+                  Carregando GIFs...
+                </div>
               ) : (
-                'Publicar'
+                gifResults.map((gif) => (
+                  <button
+                    key={gif.id}
+                    type="button"
+                    onClick={() => handleSelectGif(gif.url)}
+                    className="rounded-lg overflow-hidden border border-zinc-800 hover:border-blue-500 transition-all cursor-pointer aspect-video bg-zinc-950"
+                  >
+                    <img src={gif.url} alt={gif.title} className="w-full h-full object-cover" loading="lazy" />
+                  </button>
+                ))
               )}
-            </button>
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 bg-black p-4 border-t border-zinc-800 */}
+      <footer className="sticky bottom-0 bg-black p-3 sm:p-4 border-t border-zinc-800 shrink-0 z-20 flex flex-wrap items-center justify-between gap-3">
+        {/* Lado Esquerdo: Ícones Foto, Vídeo, Emoji, GIF e Localização */}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* Foto */}
+          <button
+            type="button"
+            onClick={() => handleTriggerUpload('image')}
+            disabled={uploading}
+            className="p-2 rounded-full hover:bg-zinc-800 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            title="Foto"
+            aria-label="Adicionar Foto"
+          >
+            <span className="material-symbols-outlined text-[21px]">photo_camera</span>
+          </button>
+
+          {/* Vídeo (sem R2) */}
+          <button
+            type="button"
+            onClick={() => handleTriggerUpload('video')}
+            disabled={uploading}
+            className="p-2 rounded-full hover:bg-zinc-800 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            title="Vídeo"
+            aria-label="Adicionar Vídeo"
+          >
+            <span className="material-symbols-outlined text-[21px]">videocam</span>
+          </button>
+
+          {/* Emoji */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowEmojiPicker(!showEmojiPicker);
+              setShowGifPicker(false);
+            }}
+            className="p-2 rounded-full hover:bg-zinc-800 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center justify-center"
+            title="Emoji"
+            aria-label="Adicionar Emoji"
+          >
+            <span className="material-symbols-outlined text-[21px]">sentiment_satisfied</span>
+          </button>
+
+          {/* GIF */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowGifPicker(!showGifPicker);
+              setShowEmojiPicker(false);
+            }}
+            className="p-2 rounded-full hover:bg-zinc-800 text-teal-400 hover:text-teal-300 transition-colors cursor-pointer flex items-center justify-center"
+            title="GIF"
+            aria-label="Adicionar GIF"
+          >
+            <span className="material-symbols-outlined text-[21px]">gif_box</span>
+          </button>
+
+          {/* Localização */}
+          <button
+            type="button"
+            onClick={handleLocationClick}
+            className={`p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center ${
+              locationTag ? 'text-rose-500 bg-rose-500/15' : 'text-rose-400 hover:text-rose-300'
+            }`}
+            title="Localização"
+            aria-label="Adicionar Localização"
+          >
+            <span className="material-symbols-outlined text-[21px]">location_on</span>
+          </button>
         </div>
-      </form>
+
+        {/* Lado Direito: Seletor de Destino e Botão Publicar em Azul Vibrante */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Seletor de Destino */}
+          <div className="flex items-center gap-1.5 bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-700/60 text-xs">
+            <span className="material-symbols-outlined text-zinc-400 text-[16px]">groups</span>
+            <select
+              value={communityId}
+              onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
+              className="bg-transparent text-xs text-zinc-200 font-medium focus:outline-none cursor-pointer max-w-[140px] sm:max-w-[180px] truncate"
+            >
+              <option value="" className="bg-zinc-900 text-zinc-100">Publicar no Feed Geral</option>
+              {communities.map((c) => (
+                <option key={c.id} value={c.id} className="bg-zinc-900 text-zinc-100">
+                  c/{c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Botão Publicar em Azul Vibrante */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting || uploading}
+            className="px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
+          >
+            {submitting ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Publicando...</span>
+              </>
+            ) : (
+              <span>Publicar</span>
+            )}
+          </button>
+        </div>
+      </footer>
     </div>
   );
 };

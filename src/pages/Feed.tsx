@@ -263,7 +263,7 @@ export const Feed: React.FC = () => {
                 ) : hasError ? (
                   <ErrorState
                     title="O Espectro perdeu o sinal com o banco de dados"
-                    message="Não conseguimos carregar as publicações do D1 neste momento. Verifique sua conexão e tente novamente."
+                    message="Não conseguimos carregar as publicações neste momento. Verifique sua conexão e tente novamente."
                     onRetry={loadData}
                   />
                 ) : filteredPosts.length === 0 ? (

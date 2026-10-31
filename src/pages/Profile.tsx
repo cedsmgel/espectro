@@ -303,7 +303,7 @@ export const Profile: React.FC = () => {
                   </div>
                 ) : hasError ? (
                   <ErrorState
-                    title="Erro ao sincronizar com o banco D1"
+                    title="Erro ao sincronizar com o Espectro"
                     message="Não foi possível recuperar as postagens deste usuário neste momento."
                     onRetry={loadUserPosts}
                   />

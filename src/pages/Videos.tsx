@@ -136,7 +136,7 @@ export const Videos: React.FC = () => {
             /* Error State */
             <ErrorState
               title="A conexão com os vídeos falhou"
-              message="Não foi possível sincronizar os vídeos com o servidor D1. Pode ser uma oscilação na rede."
+              message="Não foi possível sincronizar os vídeos neste momento. Pode ser uma oscilação na rede."
               onRetry={loadVideos}
             />
           ) : videos.length === 0 ? (
