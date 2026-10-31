@@ -160,7 +160,7 @@ export async function pushFriendRequest(
   await sendPushToUser(env, receiverId, {
     title: "Novo pedido de amizade",
     body: `@${sender.username} quer ser seu amigo`,
-    url: "/mensagens",
+    url: "/notificacoes?tab=amigos",
     tag: `fr-${sender.id}`,
   });
 }

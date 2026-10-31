@@ -17,12 +17,12 @@ import {
   directMessagesApi,
 } from '../lib/api';
 import { ChatMenu } from '../components/chat/ChatMenu';
-import { FriendRequestsModal } from '../components/chat/FriendRequestsModal';
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
 import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
+import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
@@ -170,8 +170,6 @@ export const DirectMessages: React.FC = () => {
 
   // Conversas: última mensagem e não lidas vêm do servidor (D1)
   const [conversations, setConversations] = useState<Record<number, Conversation>>({});
-  const [pendingCount, setPendingCount] = useState(0);
-  const [showRequests, setShowRequests] = useState(false);
   const [showPrefs, setShowPrefs] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -180,6 +178,7 @@ export const DirectMessages: React.FC = () => {
   const [activeSettings, setActiveSettings] = useState<ConversationSettings | null>(null);
   const { prefs, update: updatePrefs } = useChatPrefs();
   const push = usePush();
+  const presence = useFriendPresence(activeFriend?.friend_id);
 
   useEffect(() => {
     if (push.error) setToastMessage(push.error);
@@ -190,10 +189,6 @@ export const DirectMessages: React.FC = () => {
     try {
       const list = await conversationsApi.list();
       setConversations(Object.fromEntries(list.map((c) => [c.friend_id, c])));
-    } catch {}
-    try {
-      const pending = await friendsApi.pending();
-      setPendingCount(pending.length);
     } catch {}
   }, [userId]);
 
@@ -1044,13 +1039,6 @@ export const DirectMessages: React.FC = () => {
                     title="Configurações das conversas"
                     items={[
                       {
-                        key: 'requests',
-                        label: 'Solicitações de amizade',
-                        icon: 'person_add',
-                        badge: pendingCount,
-                        onSelect: () => setShowRequests(true),
-                      },
-                      {
                         key: 'unread',
                         label: unreadOnly ? 'Mostrar todas as conversas' : 'Mostrar só não lidas',
                         icon: 'mark_chat_unread',
@@ -1195,7 +1183,6 @@ export const DirectMessages: React.FC = () => {
                     myId={user.id}
                     knownFriendIds={new Set(friends.map((f) => f.friend_id))}
                     onOpenChat={handleOpenChatWithPerson}
-                    onRequestChanged={refreshConversations}
                   />
                 </div>
               </aside>
@@ -1239,7 +1226,7 @@ export const DirectMessages: React.FC = () => {
                           </div>
                           <span
                             className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-surface-container-lowest ${
-                              connectionStatus === 'connected' ? 'bg-gray-400' : 'bg-gray-300 opacity-60'
+                              presence?.online ? 'bg-gray-400' : 'hidden'
                             }`}
                           />
                         </div>
@@ -1253,14 +1240,18 @@ export const DirectMessages: React.FC = () => {
                             </Link>
                           </div>
                           <div className="flex items-center gap-2 text-[11px]">
-                            {connectionStatus === 'connected' ? (
-                              <span className="text-on-surface-variant font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                                Online
-                              </span>
-                            ) : connectionStatus === 'reconnecting' ? null : (
+                            {presence?.visible ? (
+                              presence.online ? (
+                                <span className="text-on-surface-variant font-medium flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                  Online
+                                </span>
+                              ) : presence.last_seen_at ? (
+                                <span className="text-on-surface-variant">{lastSeenLabel(presence.last_seen_at)}</span>
+                              ) : null
+                            ) : connectionStatus === 'connecting' ? (
                               <span className="text-on-surface-variant font-medium">Conectando...</span>
-                            )}
+                            ) : null}
                             {activeSettings?.nickname && (
                               <span className="text-on-surface-variant truncate">@{activeFriend.username}</span>
                             )}
@@ -2253,16 +2244,6 @@ export const DirectMessages: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {showRequests && (
-        <FriendRequestsModal
-          onClose={() => setShowRequests(false)}
-          onChanged={() => {
-            refreshConversations();
-            loadFriends();
-          }}
-        />
       )}
 
       {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} push={push} onClose={() => setShowPrefs(false)} />}

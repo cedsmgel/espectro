@@ -16,6 +16,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { AccountSettings } from './pages/AccountSettings';
 import { PostDetail } from './pages/PostDetail';
+import { usePresenceHeartbeat } from './hooks/usePresence';
 
 const GlobalCreatePostModal: React.FC = () => {
   const { isCreatePostOpen, closeCreatePostModal } = useSidebar();
@@ -25,6 +26,11 @@ const GlobalCreatePostModal: React.FC = () => {
       onClose={closeCreatePostModal}
     />
   );
+};
+
+const PresenceHeartbeat: React.FC = () => {
+  usePresenceHeartbeat();
+  return null;
 };
 
 export const App: React.FC = () => {
@@ -57,6 +63,7 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <GlobalCreatePostModal />
+        <PresenceHeartbeat />
         <BottomNav />
         </SidebarProvider>
       </ThemeProvider>

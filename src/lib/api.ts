@@ -419,6 +419,72 @@ export const conversationSettingsApi = {
     }),
 };
 
+export type AppNotificationType = 'friend_accepted' | 'post_comment' | 'comment_reply' | 'post_upvote';
+
+export interface AppNotification {
+  id: number;
+  type: AppNotificationType;
+  post_id: number | null;
+  comment_id: number | null;
+  content: string | null;
+  read: boolean;
+  created_at: string;
+  actor_id: number | null;
+  actor_username: string | null;
+  actor_avatar?: string | null;
+}
+
+export interface NotificationSummary {
+  unread: number;
+  pending_requests: number;
+  unread_messages: number;
+  total_badge: number;
+}
+
+export interface FriendSuggestion {
+  id: number;
+  username: string;
+  name?: string | null;
+  avatar_url?: string | null;
+  mutual_friends: number;
+  shared_communities: number;
+}
+
+export const notificationsApi = {
+  list: (beforeId?: number) =>
+    apiRequest<{ notifications: AppNotification[]; has_more: boolean; summary: NotificationSummary }>(
+      `/api/notifications${beforeId ? `?before_id=${beforeId}` : ''}`,
+      { method: 'GET' }
+    ),
+  counts: () => apiRequest<NotificationSummary>('/api/notifications?count=1', { method: 'GET' }),
+  markRead: (ids: number[]) =>
+    apiRequest<{ summary: NotificationSummary }>('/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'read', ids }),
+    }),
+  markUnread: (ids: number[]) =>
+    apiRequest<{ summary: NotificationSummary }>('/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'unread', ids }),
+    }),
+  markAllRead: () =>
+    apiRequest<{ summary: NotificationSummary }>('/api/notifications', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'read_all' }),
+    }),
+  remove: (id: number) =>
+    apiRequest<{ summary: NotificationSummary }>(`/api/notifications?id=${id}`, { method: 'DELETE' }),
+};
+
+export const suggestionsApi = {
+  list: () => apiRequest<FriendSuggestion[]>('/api/friend_suggestions', { method: 'GET' }),
+  dismiss: (id: number) =>
+    apiRequest<{ dismissed: boolean }>('/api/friend_suggestions', {
+      method: 'POST',
+      body: JSON.stringify({ dismiss_id: id }),
+    }),
+};
+
 export const conversationsApi = {
   list: () => apiRequest<Conversation[]>('/api/conversations', { method: 'GET' }),
 };
@@ -560,7 +626,19 @@ export const friendshipsApi = {
 export interface AccountSettings {
   is_private: boolean;
   allow_scraps: boolean;
+  show_last_seen: boolean;
 }
+
+export interface FriendPresence {
+  visible: boolean;
+  online: boolean;
+  last_seen_at: string | null;
+}
+
+export const presenceApi = {
+  ping: () => apiRequest<{ ok: boolean }>('/api/presence', { method: 'POST' }),
+  get: (friendId: number) => apiRequest<FriendPresence>(`/api/presence?friend_id=${friendId}`, { method: 'GET' }),
+};
 
 export const accountApi = {
   getSettings: async (): Promise<AccountSettings> => {

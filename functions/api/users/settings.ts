@@ -17,7 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const row = await env.DB.prepare(
-      "SELECT id, username, is_private, allow_scraps FROM users WHERE id = ?"
+      "SELECT id, username, is_private, allow_scraps, show_last_seen FROM users WHERE id = ?"
     )
       .bind(user.id)
       .first<any>();
@@ -30,6 +30,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       settings: {
         is_private: Boolean(row.is_private),
         allow_scraps: Boolean(row.allow_scraps ?? 1),
+        show_last_seen: Boolean(row.show_last_seen ?? 1),
       },
     });
   } catch (err: any) {
@@ -59,8 +60,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       body.is_private !== undefined ? (body.is_private ? 1 : 0) : null;
     const allowScrapsVal =
       body.allow_scraps !== undefined ? (body.allow_scraps ? 1 : 0) : null;
+    const showLastSeenVal =
+      body.show_last_seen !== undefined ? (body.show_last_seen ? 1 : 0) : null;
 
-    if (isPrivateVal === null && allowScrapsVal === null) {
+    if (isPrivateVal === null && allowScrapsVal === null && showLastSeenVal === null) {
       return errorResponse("Nenhuma preferência fornecida para atualização.", 400);
     }
 
@@ -68,15 +71,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     await env.DB.prepare(
       `UPDATE users 
        SET is_private = COALESCE(?, is_private), 
-           allow_scraps = COALESCE(?, allow_scraps) 
+           allow_scraps = COALESCE(?, allow_scraps),
+           show_last_seen = COALESCE(?, show_last_seen)
        WHERE id = ?`
     )
-      .bind(isPrivateVal, allowScrapsVal, user.id)
+      .bind(isPrivateVal, allowScrapsVal, showLastSeenVal, user.id)
       .run();
 
     // 4. Busca os dados atualizados no banco
     const updated = await env.DB.prepare(
-      "SELECT id, username, is_private, allow_scraps FROM users WHERE id = ?"
+      "SELECT id, username, is_private, allow_scraps, show_last_seen FROM users WHERE id = ?"
     )
       .bind(user.id)
       .first<any>();
@@ -87,6 +91,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       settings: {
         is_private: Boolean(updated?.is_private),
         allow_scraps: Boolean(updated?.allow_scraps ?? 1),
+        show_last_seen: Boolean(updated?.show_last_seen ?? 1),
       },
     });
   } catch (err: any) {

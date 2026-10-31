@@ -1,7 +1,8 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl, serverError, rateLimit } from "../../_shared/auth";
+import { notify } from "../../_shared/notifications";
+import type { PushEnv } from "../../_shared/push";
 
-export interface Env {
-  DB: D1Database;
+export interface Env extends PushEnv {
   JWT_SECRET: string;
   MEDIA_BUCKET?: R2Bucket;
   BUCKET?: R2Bucket;
@@ -151,7 +152,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
       const newVote = body.vote_type === "up" ? 1 : -1;
 
-      const post = await env.DB.prepare("SELECT id FROM posts WHERE id = ?").bind(postId).first();
+      const post = await env.DB.prepare("SELECT id, author_id FROM posts WHERE id = ?")
+        .bind(postId)
+        .first<{ id: number; author_id: number }>();
       if (!post) {
         return errorResponse("Publicação não encontrada.", 404);
       }
@@ -203,6 +206,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       )
         .bind(postId)
         .first();
+
+      // Só o primeiro voto positivo de cada pessoa gera notificação
+      if (finalVote === 1) {
+        context.waitUntil(
+          notify(env, {
+            userId: post.author_id,
+            actor: user,
+            type: "post_upvote",
+            postId,
+            dedupeKey: `v:${postId}:${user.id}`,
+          })
+        );
+      }
 
       return jsonResponse({
         ...(updated || { id: postId }),
