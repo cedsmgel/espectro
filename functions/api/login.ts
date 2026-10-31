@@ -23,6 +23,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const cleanUsername = username.trim().toLowerCase();
+    console.log("[LOGIN] env.DB:", env.DB ? "Conectado ao D1" : "MISSING", "cleanUsername:", cleanUsername);
 
     // Busca usuário no banco D1
     const user = await env.DB.prepare(

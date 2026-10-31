@@ -51,6 +51,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const passwordHash = await hashPassword(password);
 
     // Inserção no D1
+    console.log("[REGISTER] env.DB:", env.DB ? "Conectado ao D1" : "MISSING", "cleanUsername:", cleanUsername);
     const insertResult = await env.DB.prepare(
       "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)"
     )
@@ -58,6 +59,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const newId = insertResult.meta.last_row_id;
+    console.log("[REGISTER] Usuário registrado com sucesso. newId:", newId);
 
     return jsonResponse(
       {

@@ -296,7 +296,7 @@ export const Feed: React.FC = () => {
       </main>
 
       {/* 4. Coluna Direita: Widgets (Tarefa 4: w-80, sticky top-0 h-screen, pt-4, hidden lg:flex) */}
-      <aside className="w-80 shrink-0 hidden lg:flex flex-col sticky top-0 h-screen pt-4 px-4 overflow-y-auto border-l border-outline-variant/15 gap-4">
+      <aside className="w-72 hidden xl:flex flex-col fixed right-0 top-0 h-screen pt-4 px-4 overflow-y-auto border-l border-outline-variant/15 gap-4">
         {/* Barra de Pesquisa Global */}
         <RightSidebarSearch />
 

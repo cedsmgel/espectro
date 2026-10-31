@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authStorage, directMessagesApi } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { useTheme } from '../context/ThemeContext';
+import { RightSidebarSearch } from './RightSidebarSearch';
 
 interface SidebarNavProps {
   onOpenCreateModal?: () => void;
@@ -15,6 +16,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const { isExpanded, toggleSidebar, openCreatePostModal } = useSidebar();
   const { isDark, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [unreadDms, setUnreadDms] = useState(0);
 
   useEffect(() => {
@@ -100,7 +102,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               to="/"
               className="relative group flex items-center gap-2.5 cursor-pointer"
               aria-label="Página Inicial do Espectro"
-              title="Espectro"
             >
               <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-white font-bold text-base shadow-xs group-hover:scale-105 transition-transform shrink-0">
                 E
@@ -124,7 +125,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               }
             }}
             aria-label="Criar Publicação"
-            title="Criar Publicação"
             className={`flex items-center rounded-2xl bg-primary-container text-on-primary shadow-sm hover:bg-primary transition-all duration-200 group relative cursor-pointer my-1 ${
               isExpanded
                 ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center'
@@ -142,7 +142,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
             <span
               role="tooltip"
-              className="hidden md:block absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-neutral-900/95 dark:bg-zinc-800/95 text-white dark:text-zinc-100 text-xs font-medium rounded-lg shadow-lg border border-white/10 dark:border-white/5 pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+              className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
             >
               Criar Publicação
             </span>
@@ -150,6 +150,37 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
 
           {/* Itens de Navegação */}
           <nav className="flex flex-col items-center gap-1.5 w-full">
+            {/* Botão de Pesquisa Integrado */}
+            <button
+              type="button"
+              onClick={() => setShowSearch((prev) => !prev)}
+              aria-label="Pesquisar"
+              className={`flex items-center rounded-xl transition-all duration-200 group relative cursor-pointer ${
+                isExpanded
+                  ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center'
+                  : 'w-11 h-11 justify-center'
+              } ${
+                showSearch
+                  ? 'bg-primary-container text-on-primary shadow-xs font-semibold'
+                  : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+              }`}
+            >
+              <div className="relative flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">search</span>
+              </div>
+              {isExpanded && (
+                <span className="text-sm font-medium truncate animate-in fade-in duration-200 md:hidden">
+                  Pesquisar
+                </span>
+              )}
+              <span
+                role="tooltip"
+                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+              >
+                Pesquisa
+              </span>
+            </button>
+
             {navItems.map((item) => (
               <Link
                 key={item.to}
@@ -158,7 +189,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   if (isExpanded) toggleSidebar();
                 }}
                 aria-label={item.title}
-                title={item.title}
                 className={`flex items-center rounded-xl transition-all duration-200 group relative cursor-pointer ${
                   isExpanded
                     ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center'
@@ -189,7 +219,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                 {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
                 <span
                   role="tooltip"
-                  className="hidden md:block absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-neutral-900/95 dark:bg-zinc-800/95 text-white dark:text-zinc-100 text-xs font-medium rounded-lg shadow-lg border border-white/10 dark:border-white/5 pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                  className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
                 >
                   {item.title}
                 </span>
@@ -206,7 +236,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                 type="button"
                 onClick={() => setShowUserMenu((prev) => !prev)}
                 aria-label={`Menu de @${user.username}`}
-                title={`@${user.username}`}
                 className={`flex items-center rounded-xl p-1.5 transition-all duration-200 group relative cursor-pointer ${
                   isExpanded
                     ? 'w-full px-3 py-2 justify-between hover:bg-surface-container md:w-11 md:h-11 md:p-0 md:justify-center md:hover:ring-2 md:hover:ring-primary'
@@ -238,7 +267,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                 {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
                 <span
                   role="tooltip"
-                  className="hidden md:block absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-neutral-900/95 dark:bg-zinc-800/95 text-white dark:text-zinc-100 text-xs font-medium rounded-lg shadow-lg border border-white/10 dark:border-white/5 pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                  className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
                 >
                   @{user.username}
                 </span>
@@ -319,7 +348,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             <Link
               to="/login"
               aria-label="Acessar conta"
-              title="Acessar conta"
               className={`flex items-center rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors group relative cursor-pointer ${
                 isExpanded
                   ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center'
@@ -337,7 +365,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
               <span
                 role="tooltip"
-                className="hidden md:block absolute left-full ml-3.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-neutral-900/95 dark:bg-zinc-800/95 text-white dark:text-zinc-100 text-xs font-medium rounded-lg shadow-lg border border-white/10 dark:border-white/5 pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
               >
                 Entrar
               </span>
@@ -345,6 +373,30 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
           )}
         </div>
       </aside>
+
+      {/* Drawer Lateral de Pesquisa (Instagram Style) */}
+      {showSearch && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
+            onClick={() => setShowSearch(false)}
+          />
+          <aside className="fixed left-0 md:left-20 top-0 h-screen w-full sm:w-80 bg-surface-container-lowest border-r border-outline-variant/30 shadow-2xl z-50 p-4 flex flex-col gap-4 overflow-y-auto animate-in fade-in slide-in-from-left-4 duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+              <h2 className="text-base font-bold text-on-surface">Pesquisa no Espectro</h2>
+              <button
+                type="button"
+                onClick={() => setShowSearch(false)}
+                className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container cursor-pointer"
+                aria-label="Fechar pesquisa"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <RightSidebarSearch />
+          </aside>
+        </>
+      )}
     </>
   );
 };
