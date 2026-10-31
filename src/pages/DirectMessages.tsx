@@ -17,7 +17,6 @@ import {
   directMessagesApi,
   blocksApi,
 } from '../lib/api';
-import { ChatMenu } from '../components/chat/ChatMenu';
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
@@ -27,6 +26,8 @@ import { usePush } from '../hooks/usePush';
 import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
+import { useTheme } from '../context/ThemeContext';
+import { ChatMenu } from '../components/chat/ChatMenu';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
@@ -122,6 +123,12 @@ export const DirectMessages: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [forwardModalMessage, setForwardModalMessage] = useState<ChatMessage | null>(null);
   const { height: viewportHeight, isMobile, isKeyboardOpen } = useVisualViewport();
+  const { isDark: isDarkTheme } = useTheme();
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((n) => n + 1), 60000);
+    return () => window.clearInterval(t);
+  }, []);
 
   // Rolagem automática quando o teclado virtual abre no mobile
   useEffect(() => {
@@ -752,6 +759,34 @@ export const DirectMessages: React.FC = () => {
     }
   };
 
+  const toggleListFlag = async (c: Friend, flag: 'pinned' | 'muted' | 'manual_unread') => {
+    const current = conversations[c.friend_id];
+    const value =
+      flag === 'pinned' ? !current?.pinned : flag === 'muted' ? !current?.muted : !current?.manual_unread;
+    try {
+      await conversationSettingsApi.update(c.friend_id, { [flag]: value } as any);
+      if (flag === 'manual_unread') notifyUnreadChanged();
+      refreshConversations();
+    } catch {
+      setToastMessage('Não foi possível atualizar a conversa.');
+    }
+  };
+
+  const deleteListConversation = async (c: Friend) => {
+    if (!window.confirm(`Excluir a conversa com @${c.username} apenas para você? A outra pessoa continua vendo as mensagens.`)) {
+      return;
+    }
+    try {
+      await conversationSettingsApi.update(c.friend_id, { clear: true });
+      if (activeFriend?.friend_id === c.friend_id) setActiveFriend(null);
+      refreshConversations();
+      notifyUnreadChanged();
+      setToastMessage('Conversa excluída para você.');
+    } catch {
+      setToastMessage('Não foi possível excluir a conversa.');
+    }
+  };
+
   const handleBlockUser = async () => {
     if (!activeFriend) return;
     if (
@@ -794,6 +829,9 @@ export const DirectMessages: React.FC = () => {
     })
     .filter((c) => !unreadOnly || (conversations[c.friend_id]?.unread_count ?? 0) > 0)
     .sort((a, b) => {
+      const pa = conversations[a.friend_id]?.pinned ? 1 : 0;
+      const pb = conversations[b.friend_id]?.pinned ? 1 : 0;
+      if (pa !== pb) return pb - pa;
       const ca = conversations[a.friend_id]?.last_message_id ?? 0;
       const cb = conversations[b.friend_id]?.last_message_id ?? 0;
       if (ca !== cb) return cb - ca;
@@ -818,6 +856,18 @@ export const DirectMessages: React.FC = () => {
       default:
         return `${prefix}${c.last_content}`;
     }
+  };
+
+  const presenceLabel = (iso: string): string => {
+    const date = new Date(iso.replace(' ', 'T') + (iso.endsWith('Z') ? '' : 'Z'));
+    const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (diffMin < 2) return 'online';
+    const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const startOfToday = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+    if (date.getTime() >= startOfToday) return `visto por último hoje às ${time}`;
+    if (date.getTime() >= startOfToday - 86400000) return `visto por último ontem às ${time}`;
+    const day = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return `visto por último em ${day} às ${time}`;
   };
 
   const formatConversationTime = (iso: string): string => {
@@ -1165,6 +1215,14 @@ export const DirectMessages: React.FC = () => {
                                   : 'font-semibold text-on-surface'
                               }`}
                             >
+                              {conversations[c.friend_id]?.pinned && (
+                                <span
+                                  className="material-symbols-outlined text-[13px] text-on-surface-variant align-middle mr-1"
+                                  title="Fixada"
+                                >
+                                  push_pin
+                                </span>
+                              )}
                               {conversations[c.friend_id]?.nickname || `@${c.username}`}
                               {conversations[c.friend_id]?.muted && (
                                 <span
@@ -1181,6 +1239,11 @@ export const DirectMessages: React.FC = () => {
                               </span>
                             )}
                           </div>
+                          {conversations[c.friend_id]?.peer_last_seen_at && (
+                            <p className="text-[10px] text-on-surface-variant truncate mt-0.5">
+                              {presenceLabel(conversations[c.friend_id].peer_last_seen_at as string)}
+                            </p>
+                          )}
                           <div className="flex items-center justify-between gap-2 mt-0.5">
                             <p
                               className={`text-xs truncate ${
@@ -1195,18 +1258,55 @@ export const DirectMessages: React.FC = () => {
                                   : 'Mensagem'
                                 : 'Diga um oi!'}
                             </p>
-                            {(conversations[c.friend_id]?.unread_count ?? 0) > 0 &&
+                            {((conversations[c.friend_id]?.unread_count ?? 0) > 0 || conversations[c.friend_id]?.manual_unread) &&
                               activeFriend?.friend_id !== c.friend_id && (
                                 <span
                                   className="flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold flex items-center justify-center"
-                                  aria-label={`${conversations[c.friend_id].unread_count} mensagens não lidas`}
+                                  aria-label={`${conversations[c.friend_id]?.unread_count || 1} mensagens não lidas`}
                                 >
-                                  {conversations[c.friend_id].unread_count > 99
+                                  {(conversations[c.friend_id]?.unread_count ?? 0) > 99
                                     ? '99+'
-                                    : conversations[c.friend_id].unread_count}
+                                    : conversations[c.friend_id]?.unread_count || ''}
                                 </span>
                               )}
                           </div>
+                        </div>
+                        <div
+                          className="flex-shrink-0 -mr-1"
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <ChatMenu
+                            title="Opções da conversa"
+                            buttonClassName="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+                            items={[
+                              {
+                                key: 'unread',
+                                label: conversations[c.friend_id]?.manual_unread ? 'Marcar como lida' : 'Marcar como não lida',
+                                icon: 'mark_chat_unread',
+                                onSelect: () => toggleListFlag(c, 'manual_unread'),
+                              },
+                              {
+                                key: 'pin',
+                                label: conversations[c.friend_id]?.pinned ? 'Desafixar' : 'Fixar',
+                                icon: 'push_pin',
+                                onSelect: () => toggleListFlag(c, 'pinned'),
+                              },
+                              {
+                                key: 'mute',
+                                label: conversations[c.friend_id]?.muted ? 'Reativar notificações' : 'Silenciar',
+                                icon: conversations[c.friend_id]?.muted ? 'notifications_active' : 'notifications_off',
+                                onSelect: () => toggleListFlag(c, 'muted'),
+                              },
+                              {
+                                key: 'delete',
+                                label: 'Excluir conversa',
+                                icon: 'delete',
+                                danger: true,
+                                onSelect: () => deleteListConversation(c),
+                              },
+                            ]}
+                          />
                         </div>
                       </div>
                     ))
@@ -1854,33 +1954,16 @@ export const DirectMessages: React.FC = () => {
                     {showEmojiPicker && (
                       <div
                         ref={emojiPickerRef}
-                        className="absolute bottom-20 left-4 sm:left-12 z-30 shadow-2xl rounded-3xl overflow-hidden border border-outline-variant/30 animate-in fade-in slide-in-from-bottom-2 max-h-[300px] flex flex-col bg-surface-container-lowest"
-                        style={{
-                          ['--rgb-background' as any]: '18, 18, 18',
-                          ['--rgb-input' as any]: '24, 24, 27',
-                          ['--rgb-accent' as any]: '168, 85, 247',
-                          ['--rgb-color' as any]: '244, 244, 245',
-                        }}
+                        className="absolute bottom-20 left-4 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl animate-in fade-in slide-in-from-bottom-2"
                       >
-                        <div className="flex items-center justify-between px-3.5 py-1.5 bg-surface-container-lowest border-b border-outline-variant/20">
-                          <span className="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-primary" />
-                            Emojis
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setShowEmojiPicker(false)}
-                            className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
-                            title="Fechar seletor"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">close</span>
-                          </button>
-                        </div>
-                        <div className="overflow-y-auto max-h-[260px]">
+                        <div>
                           <Picker
                             data={data}
                             onEmojiSelect={handleSelectEmoji}
-                            theme="dark"
+                            theme={isDarkTheme ? 'dark' : 'light'}
+                            perLine={8}
+                            emojiSize={22}
+                            emojiButtonSize={34}
                             locale="pt"
                             previewPosition="none"
                             skinTonePosition="none"
@@ -1981,8 +2064,8 @@ export const DirectMessages: React.FC = () => {
                           <span>Foto ou Vídeo</span>
                         </button>
 
-                        {/* Câmera */}
-                        <button
+                        {/* Câmera (somente celular) */}
+                        {isMobile && <button
                           type="button"
                           onClick={() => {
                             setShowAttachMenu(false);
@@ -1992,7 +2075,7 @@ export const DirectMessages: React.FC = () => {
                         >
                           <span className="material-symbols-outlined text-[20px] text-secondary">photo_camera</span>
                           <span>Câmera</span>
-                        </button>
+                        </button>}
 
                         {/* Documento genérico */}
                         <button
@@ -2007,15 +2090,15 @@ export const DirectMessages: React.FC = () => {
                           <span>Documento</span>
                         </button>
 
-                        {/* Localização */}
-                        <button
+                        {/* Localização (somente celular) */}
+                        {isMobile && <button
                           type="button"
                           onClick={handleSendLocation}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
                         >
                           <span className="material-symbols-outlined text-[20px] text-rose-500">location_on</span>
                           <span>Localização</span>
-                        </button>
+                        </button>}
                       </div>
                     )}
 

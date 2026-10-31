@@ -87,6 +87,9 @@ export interface Conversation {
   last_message_type: DirectMessage['message_type'];
   last_created_at: string;
   unread_count: number;
+  pinned: boolean;
+  manual_unread: boolean;
+  peer_last_seen_at: string | null;
   muted: boolean;
   theme: string;
   wallpaper: string;
@@ -95,6 +98,8 @@ export interface Conversation {
 
 export interface ConversationSettings {
   friend_id: number;
+  pinned: boolean;
+  manual_unread: boolean;
   muted: boolean;
   theme: string;
   wallpaper: string;
@@ -417,7 +422,7 @@ export const conversationSettingsApi = {
     apiRequest<ConversationSettings>(`/api/conversation_settings?friend_id=${friendId}`, { method: 'GET' }),
   update: (
     friendId: number,
-    patch: Partial<Pick<ConversationSettings, 'muted' | 'theme' | 'wallpaper' | 'nickname'>> & { clear?: boolean }
+    patch: Partial<Pick<ConversationSettings, 'muted' | 'theme' | 'wallpaper' | 'nickname' | 'pinned' | 'manual_unread'>> & { clear?: boolean }
   ) =>
     apiRequest<ConversationSettings>('/api/conversation_settings', {
       method: 'PUT',

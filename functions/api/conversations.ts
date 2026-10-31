@@ -5,7 +5,7 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-// GET: conversas do usuário (última mensagem + não lidas + preferências), da mais recente para a mais antiga
+// GET: conversas do usuário (última mensagem, não lidas, preferências e visto por último)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -44,10 +44,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          COALESCE(cs.muted, 0) AS muted,
          COALESCE(cs.theme, 'default') AS theme,
          COALESCE(cs.wallpaper, 'none') AS wallpaper,
-         cs.nickname AS nickname
+         cs.nickname AS nickname,
+         COALESCE(cs.pinned, 0) AS pinned,
+         COALESCE(cs.manual_unread, 0) AS manual_unread,
+         CASE WHEN me.show_last_seen = 1 AND u.show_last_seen = 1
+           THEN strftime('%Y-%m-%dT%H:%M:%SZ', u.last_seen_at) END AS peer_last_seen_at
        FROM pairs p
        JOIN direct_messages dm ON dm.id = p.last_id
        JOIN users u ON u.id = p.peer_id
+       JOIN users me ON me.id = ?1
        LEFT JOIN conversation_settings cs ON cs.user_id = ?1 AND cs.friend_id = p.peer_id
        ORDER BY dm.id DESC
        LIMIT 200`
@@ -56,7 +61,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .all<Record<string, unknown>>();
 
     return jsonResponse(
-      (results || []).map((row) => ({ ...row, muted: Boolean(row.muted) }))
+      (results || []).map((row) => ({
+        ...row,
+        muted: Boolean(row.muted),
+        pinned: Boolean(row.pinned),
+        manual_unread: Boolean(row.manual_unread),
+      }))
     );
   } catch (err: unknown) {
     return serverError(err, "conversations");
