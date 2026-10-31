@@ -245,3 +245,28 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 .chat-font-sm .chat-text { font-size: 0.75rem; }
 .chat-font-md .chat-text { font-size: 0.875rem; }
 .chat-font-lg .chat-text { font-size: 1rem; }
+
+/* Espectro sonoro da gravação de voz (barra de envio de áudio) */
+.espectro-wave-bar {
+  height: 30%;
+  animation-name: espectro-wave;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes espectro-wave {
+  from {
+    height: 20%;
+  }
+  to {
+    height: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .espectro-wave-bar {
+    animation: none;
+    height: 60%;
+  }
+}

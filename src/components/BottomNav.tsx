@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
+
+const ITEM_CLASS = 'flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors relative cursor-pointer';
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
@@ -14,10 +16,11 @@ export const BottomNav: React.FC = () => {
     return null;
   }
 
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  };
+  const { pathname, search } = location;
+  const isMessages = pathname.startsWith('/mensagens') || pathname.startsWith('/grupos');
+  const isProfile = pathname.startsWith('/perfil') || pathname.startsWith('/profile') || pathname.startsWith('/u/');
+  const tone = (active: boolean) => (active ? 'text-primary font-semibold' : 'text-on-surface-variant hover:text-on-surface');
+  const fill = (active: boolean) => (active ? { fontVariationSettings: "'FILL' 1" } : undefined);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] md:hidden pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
@@ -26,39 +29,24 @@ export const BottomNav: React.FC = () => {
         <Link
           to="/"
           aria-label="Ir para Início"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
-            isActive('/') && !location.search.includes('trending')
-              ? 'text-primary font-semibold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
+          className={`${ITEM_CLASS} ${tone(pathname === '/' && !search.includes('trending'))}`}
         >
-          <span
-            className="material-symbols-outlined text-[24px]"
-            style={isActive('/') ? { fontVariationSettings: "'FILL' 1" } : undefined}
-          >
+          <span className="material-symbols-outlined text-[24px]" style={fill(pathname === '/')}>
             home
           </span>
           <span className="text-[11px] mt-0.5 tracking-tight">Início</span>
         </Link>
 
-        {/* 2. Comunidades */}
-        <Link
-          to="/comunidades"
-          aria-label="Ir para Comunidades"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
-            isActive('/comunidades') || isActive('/c/')
-              ? 'text-primary font-semibold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
+        {/* 2. Pesquisa: abre a mesma busca do cabeçalho */}
+        <button
+          type="button"
+          aria-label="Pesquisar"
+          onClick={() => window.dispatchEvent(new Event('espectro:open-mobile-search'))}
+          className={`${ITEM_CLASS} ${tone(false)}`}
         >
-          <span
-            className="material-symbols-outlined text-[24px]"
-            style={isActive('/comunidades') ? { fontVariationSettings: "'FILL' 1" } : undefined}
-          >
-            forum
-          </span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Comunidades</span>
-        </Link>
+          <span className="material-symbols-outlined text-[24px]">search</span>
+          <span className="text-[11px] mt-0.5 tracking-tight">Pesquisar</span>
+        </button>
 
         {/* 3. Botão Central de Criar (+) */}
         <div className="flex-1 flex items-center justify-center min-w-[56px]">
@@ -72,39 +60,9 @@ export const BottomNav: React.FC = () => {
           </button>
         </div>
 
-        {/* 4. Vídeos */}
-        <Link
-          to="/videos"
-          aria-label="Ir para Vídeos"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
-            isActive('/videos')
-              ? 'text-primary font-semibold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span
-            className="material-symbols-outlined text-[24px]"
-            style={isActive('/videos') ? { fontVariationSettings: "'FILL' 1" } : undefined}
-          >
-            play_circle
-          </span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Vídeos</span>
-        </Link>
-
-        {/* 5. Mensagens */}
-        <Link
-          to="/mensagens"
-          aria-label="Ir para Mensagens"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors relative cursor-pointer ${
-            isActive('/mensagens')
-              ? 'text-primary font-semibold'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span
-            className="material-symbols-outlined text-[24px]"
-            style={isActive('/mensagens') ? { fontVariationSettings: "'FILL' 1" } : undefined}
-          >
+        {/* 4. Mensagens */}
+        <Link to="/mensagens" aria-label="Ir para Mensagens" className={`${ITEM_CLASS} ${tone(isMessages)}`}>
+          <span className="material-symbols-outlined text-[24px]" style={fill(isMessages)}>
             chat_bubble
           </span>
           <span className="text-[11px] mt-0.5 tracking-tight">Mensagens</span>
@@ -113,6 +71,14 @@ export const BottomNav: React.FC = () => {
               {unreadDms}
             </span>
           )}
+        </Link>
+
+        {/* 5. Perfil */}
+        <Link to="/perfil" aria-label="Ir para Perfil" className={`${ITEM_CLASS} ${tone(isProfile)}`}>
+          <span className="material-symbols-outlined text-[24px]" style={fill(isProfile)}>
+            account_circle
+          </span>
+          <span className="text-[11px] mt-0.5 tracking-tight">Perfil</span>
         </Link>
       </div>
     </nav>

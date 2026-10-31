@@ -2,6 +2,16 @@ import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serv
 import { membership } from "../../../_shared/groups";
 import { sanitizeMediaUrl } from "../../../_shared/auth";
 
+const MESSAGE_TYPES = ["text", "gif", "sticker", "image", "video", "audio", "file"];
+const DEFAULT_LABEL: Record<string, string> = {
+  gif: "GIF",
+  sticker: "Figurinha",
+  image: "Imagem",
+  video: "Vídeo",
+  audio: "Mensagem de voz",
+  file: "Arquivo",
+};
+
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
@@ -73,11 +83,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const body = (await request.json().catch(() => null)) as { content?: string; message_type?: string; media_url?: string } | null;
-    const messageType = ["text", "gif", "sticker"].includes(body?.message_type || "") ? (body!.message_type as string) : "text";
+    const messageType = MESSAGE_TYPES.includes(body?.message_type || "") ? (body!.message_type as string) : "text";
     const mediaUrl = sanitizeMediaUrl(body?.media_url);
+    if (messageType !== "text" && !mediaUrl) return errorResponse("Arquivo inválido.", 400);
     if (body?.media_url && !mediaUrl) return errorResponse("URL de mídia inválida.", 400);
     let content = typeof body?.content === "string" ? body.content.trim() : "";
-    if (messageType !== "text") content = content || (messageType === "gif" ? "GIF" : "Figurinha");
+    if (messageType !== "text") content = content || DEFAULT_LABEL[messageType];
     if (!content && !mediaUrl) return errorResponse("A mensagem não pode ser vazia.", 400);
     if (content.length > 2000) return errorResponse("A mensagem deve ter no máximo 2000 caracteres.", 400);
 

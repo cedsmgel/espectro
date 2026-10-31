@@ -30,6 +30,7 @@ import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
+import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { CreateGroupModal } from '../components/chat/CreateGroupModal';
 import { MediaPicker } from '../components/chat/MediaPicker';
@@ -2152,6 +2153,9 @@ export const DirectMessages: React.FC = () => {
                         </div>
                       )}
 
+                      {voice.recording ? (
+                        <VoiceRecordingBar seconds={voice.seconds} onCancel={voice.cancel} onSend={() => void handleSendVoice()} />
+                      ) : (
                       <form
                         onSubmit={handleSendMessage}
                         className="flex items-center gap-1.5 bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant/30 relative"
@@ -2242,6 +2246,7 @@ export const DirectMessages: React.FC = () => {
                           <span className="material-symbols-outlined text-[20px]">send</span>
                         </button>
                       </form>
+                      )}
                     </div>
                   </>
                 )}
