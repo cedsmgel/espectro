@@ -25,25 +25,10 @@ const SidebarContext = createContext<SidebarContextType>({
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [hideBottomNav, setHideBottomNav] = useState(false);
-  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('espectro_sidebar_expanded');
-      return saved === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   const toggleSidebar = () => {
-    setIsExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('espectro_sidebar_expanded', String(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setIsExpanded((prev) => !prev);
   };
 
   const openCreatePostModal = () => setIsCreatePostOpen(true);

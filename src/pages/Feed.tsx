@@ -13,7 +13,7 @@ import { RightSidebarSearch } from '../components/RightSidebarSearch';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isExpanded, openCreatePostModal } = useSidebar();
+  const { openCreatePostModal } = useSidebar();
   const user = authStorage.getUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
