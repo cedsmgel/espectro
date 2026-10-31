@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
 import { Post, authStorage } from '../lib/api';
-import { VideoPlayer } from '../components/VideoPlayer';
+import { LazyVideoPlayer } from '../components/LazyVideoPlayer';
 import { VideoSkeleton } from '../components/VideoSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
@@ -165,7 +165,7 @@ export const Videos: React.FC = () => {
 
                   <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 max-w-4xl mx-auto w-full">
                     <div className="w-full max-w-2xl mx-auto">
-                      <VideoPlayer src={featuredVideo.media_url!} />
+                      <LazyVideoPlayer src={featuredVideo.media_url!} title={featuredVideo.title || undefined} />
                     </div>
 
                     <div className="flex flex-col gap-1.5 pt-2">
@@ -205,7 +205,7 @@ export const Videos: React.FC = () => {
                         key={video.id}
                         className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/30 shadow-sm flex flex-col gap-3 group"
                       >
-                        <VideoPlayer src={video.media_url!} />
+                        <LazyVideoPlayer src={video.media_url!} title={video.title || undefined} />
                         <div className="flex flex-col min-w-0">
                           <h4 className="font-semibold text-xs sm:text-sm text-on-surface line-clamp-2 group-hover:text-primary transition-colors leading-snug">
                             {video.title || video.content.slice(0, 60) || 'Vídeo compartilhado'}

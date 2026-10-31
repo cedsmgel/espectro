@@ -89,6 +89,7 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     touch-action: manipulation;
+    overscroll-behavior: none;
   }
 
   /* Previne zoom automático agressivo do iOS Safari ao focar inputs/textarea/select com fonte < 16px */

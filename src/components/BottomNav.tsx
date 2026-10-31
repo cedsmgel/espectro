@@ -20,13 +20,13 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] md:hidden pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] md:hidden pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <div className="flex items-center justify-between h-16 px-1 max-w-md mx-auto">
         {/* 1. Início */}
         <Link
           to="/"
           aria-label="Ir para Início"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[44px] transition-colors cursor-pointer ${
+          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
             isActive('/') && !location.search.includes('trending')
               ? 'text-primary font-semibold'
               : 'text-on-surface-variant hover:text-on-surface'
@@ -45,7 +45,7 @@ export const BottomNav: React.FC = () => {
         <Link
           to="/comunidades"
           aria-label="Ir para Comunidades"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[44px] transition-colors cursor-pointer ${
+          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
             isActive('/comunidades') || isActive('/c/')
               ? 'text-primary font-semibold'
               : 'text-on-surface-variant hover:text-on-surface'
@@ -76,7 +76,7 @@ export const BottomNav: React.FC = () => {
         <Link
           to="/videos"
           aria-label="Ir para Vídeos"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[44px] transition-colors cursor-pointer ${
+          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors cursor-pointer ${
             isActive('/videos')
               ? 'text-primary font-semibold'
               : 'text-on-surface-variant hover:text-on-surface'
@@ -95,7 +95,7 @@ export const BottomNav: React.FC = () => {
         <Link
           to="/mensagens"
           aria-label="Ir para Mensagens"
-          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[44px] transition-colors relative cursor-pointer ${
+          className={`flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors relative cursor-pointer ${
             isActive('/mensagens')
               ? 'text-primary font-semibold'
               : 'text-on-surface-variant hover:text-on-surface'

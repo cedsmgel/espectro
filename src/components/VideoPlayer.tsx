@@ -1,11 +1,89 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-interface VideoPlayerProps {
+export interface VideoPlayerProps {
   src: string;
   poster?: string;
   title?: string;
   className?: string;
 }
+
+const SEEK_STEP = 10;
+const SESSION_ACTIONS: MediaSessionAction[] = ['play', 'pause', 'stop', 'seekbackward', 'seekforward', 'seekto'];
+
+// Só um vídeo toca por vez: é ele que aparece na tela de bloqueio e na central de controle
+let activeVideo: HTMLVideoElement | null = null;
+
+const updateSessionPosition = (video: HTMLVideoElement) => {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  if (!Number.isFinite(video.duration) || video.duration <= 0) return;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: video.duration,
+      playbackRate: video.playbackRate || 1,
+      position: Math.min(video.currentTime, video.duration),
+    });
+  } catch {}
+};
+
+const setSessionHandlers = (video: HTMLVideoElement | null) => {
+  const seekTo = (time: number) => {
+    if (!video) return;
+    video.currentTime = Math.max(0, Math.min(video.duration || time, time));
+    updateSessionPosition(video);
+  };
+  const handlers: Record<string, MediaSessionActionHandler | null> = video
+    ? {
+        play: () => void video.play().catch(() => {}),
+        pause: () => video.pause(),
+        stop: () => {
+          video.pause();
+          seekTo(0);
+        },
+        seekbackward: (d) => seekTo(video.currentTime - (d.seekOffset || SEEK_STEP)),
+        seekforward: (d) => seekTo(video.currentTime + (d.seekOffset || SEEK_STEP)),
+        seekto: (d) => {
+          if (d.seekTime != null) seekTo(d.seekTime);
+        },
+      }
+    : {};
+  // Nem todo navegador aceita todas as ações
+  SESSION_ACTIONS.forEach((action) => {
+    try {
+      navigator.mediaSession.setActionHandler(action, handlers[action] || null);
+    } catch {}
+  });
+};
+
+const claimMediaSession = (video: HTMLVideoElement, title?: string, poster?: string) => {
+  if (activeVideo && activeVideo !== video) activeVideo.pause();
+  activeVideo = video;
+  if (!('mediaSession' in navigator)) return;
+
+  if (typeof MediaMetadata !== 'undefined') {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: title || 'Vídeo no Espectro',
+      artist: 'Espectro',
+      artwork: poster
+        ? [{ src: poster }]
+        : [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          ],
+    });
+  }
+  setSessionHandlers(video);
+  navigator.mediaSession.playbackState = 'playing';
+  updateSessionPosition(video);
+};
+
+const releaseMediaSession = (video: HTMLVideoElement) => {
+  if (activeVideo !== video) return;
+  activeVideo = null;
+  if (!('mediaSession' in navigator)) return;
+  setSessionHandlers(null);
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.playbackState = 'none';
+};
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   src,
@@ -38,14 +116,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     maxHeight: '270px',
   });
 
-  const controlsTimeoutRef = useRef<any>(null);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSeekingRef = useRef(false);
+  // No toque, o primeiro tap com os controles escondidos só os revela
+  const revealedByTapRef = useRef(false);
 
   const resetControlsTimeout = () => {
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    if (isPlaying) {
+    const video = videoRef.current;
+    if (video && !video.paused && !video.ended) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 2500);
@@ -56,11 +138,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!videoRef.current) return;
     if (videoRef.current.paused || videoRef.current.ended) {
       videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
     } else {
       videoRef.current.pause();
-      setIsPlaying(false);
     }
+    resetControlsTimeout();
+  };
+
+  const handleVideoClick = () => {
+    if (revealedByTapRef.current) {
+      revealedByTapRef.current = false;
+      return;
+    }
+    togglePlay();
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    revealedByTapRef.current = e.pointerType !== 'mouse' && isPlaying && !showControls;
     resetControlsTimeout();
   };
 
@@ -72,7 +165,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      setDuration(videoRef.current.duration || 0);
+      const total = videoRef.current.duration;
+      setDuration(Number.isFinite(total) ? total : 0);
+      updateSessionPosition(videoRef.current);
       const { videoWidth, videoHeight } = videoRef.current;
       if (videoWidth && videoHeight) {
         const ratio = videoWidth / videoHeight;
@@ -109,17 +204,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const handleVideoEnded = () => {
-    setIsPlaying(false);
-    setShowControls(true);
+  const handlePlay = () => {
+    if (videoRef.current) claimMediaSession(videoRef.current, title, poster);
+    setIsPlaying(true);
+    resetControlsTimeout();
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePause = () => {
+    const video = videoRef.current;
+    setIsPlaying(false);
+    setShowControls(true);
+    if (video && activeVideo === video && 'mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
+      updateSessionPosition(video);
+    }
+  };
+
+  const seekToPointer = (clientX: number) => {
     if (!progressBarRef.current || !videoRef.current || !duration) return;
     const rect = progressBarRef.current.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     videoRef.current.currentTime = pos * duration;
     setCurrentTime(pos * duration);
+    resetControlsTimeout();
+  };
+
+  const handleSeekKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const video = videoRef.current;
+    if (!video || !duration) return;
+    e.preventDefault();
+    const next = video.currentTime + (e.key === 'ArrowLeft' ? -SEEK_STEP : SEEK_STEP);
+    video.currentTime = Math.max(0, Math.min(duration, next));
     resetControlsTimeout();
   };
 
@@ -147,17 +263,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => {
-        setIsFullscreen(true);
-      }).catch(() => {});
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (!containerRef.current || !video) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else if (containerRef.current.requestFullscreen) {
+      containerRef.current.requestFullscreen().catch(() => video.webkitEnterFullscreen?.());
     } else {
-      document.exitFullscreen().then(() => {
-        setIsFullscreen(false);
-      }).catch(() => {});
+      // iPhone: só o próprio vídeo entra em tela cheia
+      video.webkitEnterFullscreen?.();
     }
   };
+
+  // A origem é definida aqui para que a limpeza consiga soltar o download e o decodificador
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.src = src;
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setIsBuffering(false);
+    setShowControls(true);
+
+    return () => {
+      releaseMediaSession(video);
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    };
+  }, [src]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -171,19 +307,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, []);
 
   const formatTime = (seconds: number) => {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
+    if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const controlButton =
+    'w-12 h-12 shrink-0 rounded-full hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer';
 
   return (
     <div
       ref={containerRef}
       onMouseMove={resetControlsTimeout}
       onMouseEnter={() => setShowControls(true)}
+      onPointerDown={handlePointerDown}
       style={{
         aspectRatio: containerStyle.aspectRatio,
         maxWidth: containerStyle.maxWidth,
@@ -194,27 +333,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Elemento de Vídeo */}
       <video
         ref={videoRef}
-        src={src}
         poster={poster}
         playsInline
-        onClick={togglePlay}
+        preload="metadata"
+        onClick={handleVideoClick}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleVideoEnded}
+        onPlay={handlePlay}
+        onPause={handlePause}
+        onSeeked={() => videoRef.current && updateSessionPosition(videoRef.current)}
+        onRateChange={() => videoRef.current && updateSessionPosition(videoRef.current)}
         onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => {
-          setIsBuffering(false);
-          setIsPlaying(true);
-        }}
-        onPause={() => setIsPlaying(false)}
-        className="w-full h-full object-cover cursor-pointer"
+        onPlaying={() => setIsBuffering(false)}
+        onCanPlay={() => setIsBuffering(false)}
+        className={`w-full h-full cursor-pointer ${isFullscreen ? 'object-contain' : 'object-cover'}`}
       />
 
       {/* Top Header Badge (Estilo X / Reddit / Stitch) */}
       <div
-        className={`absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-20 pointer-events-none transition-opacity duration-300 ${
-          showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`absolute flex items-center justify-between z-20 pointer-events-none transition-opacity duration-300 ${
+          isFullscreen
+            ? 'top-[max(0.625rem,env(safe-area-inset-top))] left-[max(0.625rem,env(safe-area-inset-left))] right-[max(0.625rem,env(safe-area-inset-right))]'
+            : 'top-2.5 left-2.5 right-2.5'
+        } ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}
       >
         <div className="flex items-center gap-1.5">
           <span className="px-2 py-0.5 rounded bg-black/65 backdrop-blur-md text-white text-[10px] font-semibold flex items-center gap-1 shadow-sm">
@@ -231,8 +372,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Spinner de Buffering */}
       {isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center z-25 pointer-events-none">
-          <div className="w-10 h-10 rounded-full border-3 border-primary/30 border-t-primary animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+          <div className="w-10 h-10 rounded-full border-4 border-primary/30 border-t-primary animate-spin" />
         </div>
       )}
 
@@ -242,7 +383,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           type="button"
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pausar vídeo' : 'Reproduzir vídeo'}
-          className="absolute z-20 w-12 h-12 rounded-full bg-primary/90 text-on-primary flex items-center justify-center shadow-lg hover:scale-110 hover:bg-primary transition-all duration-200 cursor-pointer backdrop-blur-xs"
+          className="absolute z-30 w-14 h-14 rounded-full bg-primary/90 text-on-primary flex items-center justify-center shadow-lg hover:scale-110 hover:bg-primary transition-all duration-200 cursor-pointer backdrop-blur-xs"
         >
           <span className="material-symbols-outlined text-[28px] ml-0.5">
             {isPlaying ? 'pause' : 'play_arrow'}
@@ -252,49 +393,76 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Barra de Controles Inferior com Gradiente Espectro */}
       <div
-        className={`absolute bottom-0 inset-x-0 pt-6 pb-2 px-3 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 flex flex-col gap-1.5 transition-opacity duration-300 ${
-          showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`absolute bottom-0 inset-x-0 pt-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent z-20 flex flex-col transition-opacity duration-300 ${
+          isFullscreen
+            ? 'pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))]'
+            : 'px-1 pb-0.5'
+        } ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       >
-        {/* Barra de Progresso com Gradiente do Espectro Visível */}
+        {/* Barra de Progresso: fina na tela, com área de toque maior */}
         <div
           ref={progressBarRef}
-          onClick={handleSeek}
-          className="relative w-full h-1 bg-white/20 hover:h-2 rounded-full cursor-pointer transition-all flex items-center group/progress"
+          role="slider"
+          tabIndex={0}
+          aria-label="Posição do vídeo"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(duration)}
+          aria-valuenow={Math.round(currentTime)}
+          aria-valuetext={`${formatTime(currentTime)} de ${formatTime(duration)}`}
+          onKeyDown={handleSeekKey}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            isSeekingRef.current = true;
+            seekToPointer(e.clientX);
+          }}
+          onPointerMove={(e) => {
+            if (isSeekingRef.current) seekToPointer(e.clientX);
+          }}
+          onPointerUp={() => {
+            isSeekingRef.current = false;
+          }}
+          onPointerCancel={() => {
+            isSeekingRef.current = false;
+          }}
+          className="relative w-[calc(100%-1rem)] mx-2 h-8 cursor-pointer touch-none flex items-center group/progress"
         >
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-tertiary-container relative"
-            style={{ width: `${progressPercent}%` }}
-          >
-            {/* Knob interativo no hover */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm scale-0 group-hover/progress:scale-100 transition-transform" />
+          <div className="w-full h-1 group-hover/progress:h-2 bg-white/20 rounded-full transition-all">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-tertiary-container relative"
+              style={{ width: `${progressPercent}%` }}
+            >
+              {/* Knob interativo no hover */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm scale-0 group-hover/progress:scale-100 transition-transform" />
+            </div>
           </div>
         </div>
 
         {/* Linha de Controles: Botões e Timers */}
         <div className="flex items-center justify-between text-white text-[11px]">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center min-w-0">
             {/* Play/Pause */}
             <button
               type="button"
               onClick={togglePlay}
-              className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
-              title={isPlaying ? 'Pausar (Espaço)' : 'Reproduzir (Espaço)'}
+              className={controlButton}
+              aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
+              title={isPlaying ? 'Pausar' : 'Reproduzir'}
             >
-              <span className="material-symbols-outlined text-[17px]">
+              <span className="material-symbols-outlined text-[20px]">
                 {isPlaying ? 'pause' : 'play_arrow'}
               </span>
             </button>
 
             {/* Mudo / Volume */}
-            <div className="flex items-center gap-1 group/volume">
+            <div className="flex items-center group/volume">
               <button
                 type="button"
                 onClick={toggleMute}
-                className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
+                className={controlButton}
+                aria-label={isMuted ? 'Ativar som' : 'Desativar som'}
                 title={isMuted ? 'Ativar som' : 'Desativar som'}
               >
-                <span className="material-symbols-outlined text-[17px]">
+                <span className="material-symbols-outlined text-[20px]">
                   {isMuted || volume === 0 ? 'volume_off' : volume < 0.5 ? 'volume_down' : 'volume_up'}
                 </span>
               </button>
@@ -305,29 +473,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 step="0.05"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-12 h-1 bg-white/30 rounded-lg accent-primary cursor-pointer hidden group-hover/volume:block transition-all"
+                aria-label="Volume"
+                className="w-12 h-1 mr-1 bg-white/30 rounded-lg accent-primary cursor-pointer hidden group-hover/volume:block transition-all"
               />
             </div>
 
             {/* Timestamp */}
-            <span className="text-[10px] font-medium tracking-wide text-white/80">
+            <span className="ml-1 text-[10px] font-medium tracking-wide text-white/80 whitespace-nowrap tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* Tela Cheia */}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
-              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-            >
-              <span className="material-symbols-outlined text-[17px]">
-                {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-              </span>
-            </button>
-          </div>
+          {/* Tela Cheia */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={controlButton}
+            aria-label={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+            </span>
+          </button>
         </div>
       </div>
     </div>

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImageCropperModal } from './ImageCropperModal';
 import { authStorage, Community, CreatePostData, uploadApi } from '../lib/api';
-import { VideoPlayer } from './VideoPlayer';
 import {
   DEFAULT_SCRAP_STYLE,
   SCRAP_FONTS,

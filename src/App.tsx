@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -6,18 +6,26 @@ import { CreatePostModal } from './components/CreatePostModal';
 import { BottomNav } from './components/BottomNav';
 import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
-import { Communities } from './pages/Communities';
-import { CommunityDetail } from './pages/CommunityDetail';
-import { DirectMessages } from './pages/DirectMessages';
-import { Videos } from './pages/Videos';
-import { Notifications } from './pages/Notifications';
-import { Profile } from './pages/Profile';
-import { ProfilePage } from './pages/ProfilePage';
-import { ProfileSettings } from './pages/ProfileSettings';
-import { AccountSettings } from './pages/AccountSettings';
-import { PostDetail } from './pages/PostDetail';
-import { GroupChat } from './pages/GroupChat';
 import { usePresenceHeartbeat } from './hooks/usePresence';
+import { lazyNamed } from './lib/lazy';
+
+// Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
+const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities');
+const CommunityDetail = lazyNamed(() => import('./pages/CommunityDetail'), 'CommunityDetail');
+const DirectMessages = lazyNamed(() => import('./pages/DirectMessages'), 'DirectMessages');
+const Videos = lazyNamed(() => import('./pages/Videos'), 'Videos');
+const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
+const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
+const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
+const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
+const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
+const GroupChat = lazyNamed(() => import('./pages/GroupChat'), 'GroupChat');
+
+const RouteFallback: React.FC = () => (
+  <div className="min-h-dvh flex items-center justify-center" role="status" aria-label="Carregando">
+    <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+  </div>
+);
 
 const GlobalCreatePostModal: React.FC = () => {
   const { isCreatePostOpen, closeCreatePostModal } = useSidebar();
@@ -39,6 +47,7 @@ export const App: React.FC = () => {
     <BrowserRouter>
       <ThemeProvider>
         <SidebarProvider>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
           <Route path="/" element={<Feed />} />
           <Route path="/post/:id" element={<PostDetail />} />
@@ -64,6 +73,7 @@ export const App: React.FC = () => {
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+          </Suspense>
         <GlobalCreatePostModal />
         <PresenceHeartbeat />
         <BottomNav />
