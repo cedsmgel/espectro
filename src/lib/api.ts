@@ -385,12 +385,79 @@ export interface UserProfile {
   name?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  music?: string | null;
   is_private?: boolean;
   allow_scraps?: boolean;
   is_friend?: boolean;
   is_self?: boolean;
+  friendship_status?: string | null;
   created_at?: string;
 }
+
+export interface SearchResults {
+  users: Array<{
+    id: number;
+    username: string;
+    name?: string | null;
+    avatar_url?: string | null;
+    bio?: string | null;
+  }>;
+  communities: Array<{
+    id: number;
+    name: string;
+    slug?: string | null;
+    description?: string | null;
+    icon_color?: string | null;
+    members_count?: number;
+  }>;
+  posts: Array<{
+    id: number;
+    title?: string | null;
+    content: string;
+    media_url?: string | null;
+    media_type?: string | null;
+    post_type: 'discussion' | 'scrap';
+    author_name: string;
+    author_avatar?: string | null;
+    community_name?: string | null;
+    community_slug?: string | null;
+    created_at: string;
+  }>;
+}
+
+export const searchApi = {
+  search: async (query: string): Promise<SearchResults> => {
+    return apiRequest<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`);
+  },
+};
+
+export const usersApi = {
+  getByUsername: async (
+    username: string
+  ): Promise<{ user: UserProfile; communities: Community[] }> => {
+    return apiRequest<{ user: UserProfile; communities: Community[] }>(
+      `/api/users/${encodeURIComponent(username)}`
+    );
+  },
+};
+
+export const friendshipsApi = {
+  addFriend: async (
+    friendUsernameOrId: string | number
+  ): Promise<{ success: boolean; message: string }> => {
+    const payload =
+      typeof friendUsernameOrId === 'number'
+        ? { friend_id: friendUsernameOrId }
+        : { friend_username: friendUsernameOrId };
+    return apiRequest<{ success: boolean; message: string }>('/api/friendships', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+  list: async (): Promise<any[]> => {
+    return apiRequest<any[]>('/api/friendships');
+  },
+};
 
 export interface AccountSettings {
   is_private: boolean;

@@ -178,14 +178,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
         {/* 1. Cabeçalho do Post */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shadow-xs">
-              {post.author_name.charAt(0)}
-            </div>
+            <Link
+              to={`/perfil/${encodeURIComponent(post.author_name)}`}
+              className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shadow-xs shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+              title={`Ver perfil de @${post.author_name}`}
+            >
+              {post.author_avatar ? (
+                <img
+                  src={post.author_avatar}
+                  alt={post.author_name}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                post.author_name.charAt(0)
+              )}
+            </Link>
+
             <div className="flex flex-col">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-sm text-on-surface">
+                <Link
+                  to={`/perfil/${encodeURIComponent(post.author_name)}`}
+                  className="font-semibold text-sm text-on-surface hover:text-primary hover:underline transition-colors cursor-pointer"
+                >
                   {post.author_name}
-                </span>
+                </Link>
+
                 {post.community_name ? (
                   <Link
                     to={`/c/${post.community_slug || post.community_id}`}
@@ -210,9 +227,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
                   })}
                 </span>
               </div>
-              <span className="text-xs text-on-surface-variant">
+              <Link
+                to={`/perfil/${encodeURIComponent(post.author_name)}`}
+                className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+              >
                 @{post.author_name.toLowerCase().replace(/\s+/g, '_')}
-              </span>
+              </Link>
             </div>
           </div>
 
@@ -434,9 +454,12 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
                     className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-1 text-xs"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-on-surface">
+                      <Link
+                        to={`/perfil/${encodeURIComponent(c.author_name)}`}
+                        className="font-semibold text-on-surface hover:text-primary hover:underline transition-colors cursor-pointer"
+                      >
                         @{c.author_name}
-                      </span>
+                      </Link>
                       <span className="text-on-surface-variant text-[11px]">
                         {new Date(c.created_at).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',

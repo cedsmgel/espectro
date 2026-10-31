@@ -10,6 +10,7 @@ import { DirectMessages } from './pages/DirectMessages';
 import { Videos } from './pages/Videos';
 import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
+import { ProfilePage } from './pages/ProfilePage';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { AccountSettings } from './pages/AccountSettings';
 
@@ -29,9 +30,11 @@ export const App: React.FC = () => {
       <SidebarProvider>
         <Routes>
           <Route path="/" element={<Feed />} />
-          <Route path="/perfil" element={<Profile />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/u/:username" element={<Profile />} />
+          <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/perfil/:username" element={<ProfilePage />} />
+          <Route path="/u/:username" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/settings/profile" element={<ProfileSettings />} />
           <Route path="/configuracoes/perfil" element={<ProfileSettings />} />
           <Route path="/settings/account" element={<AccountSettings />} />

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authStorage, directMessagesApi } from '../lib/api';
+import { authStorage, directMessagesApi, searchApi, SearchResults } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
@@ -16,6 +16,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const user = authStorage.getUser();
   const userId = user?.id;
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
@@ -30,9 +35,60 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     }
   }, [userId]);
 
+  // Debounce de 300ms na pesquisa global para não sobrecarregar o D1
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchApi.search(trimmed);
+        setSearchResults(results);
+        setShowSearchResults(true);
+      } catch (err) {
+        console.error('Erro na pesquisa global:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fecha dropdown ao clicar fora ou apertar Esc
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(e.target as Node)
+      ) {
+        setShowSearchResults(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      setShowSearchResults(false);
       navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -62,8 +118,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </Link>
           </div>
 
-          {/* Barra de Pesquisa Centralizada */}
-          <div className="flex items-center flex-1 max-w-xl mx-auto px-2">
+          {/* Barra de Pesquisa Centralizada com Dropdown de Resultados Globais */}
+          <div ref={searchContainerRef} className="relative flex items-center flex-1 max-w-xl mx-auto px-2">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
                 search
@@ -71,11 +127,176 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <input
                 type="text"
                 value={searchQuery}
+                onFocus={() => {
+                  if (searchQuery.trim()) setShowSearchResults(true);
+                }}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Pesquisar no Espectro por posts, tags ou perfis..."
-                className="w-full pl-10 pr-4 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container/20 transition-all"
+                className="w-full pl-10 pr-9 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container/20 transition-all"
               />
+              {isSearching ? (
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults(null);
+                    setShowSearchResults(false);
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface cursor-pointer p-0.5 rounded-full"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              ) : null}
             </form>
+
+            {/* Dropdown com Resultados Agrupados: Pessoas, Comunidades e Posts */}
+            {showSearchResults && searchQuery.trim().length > 0 && (
+              <div className="absolute top-full left-2 right-2 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+                {isSearching && !searchResults && (
+                  <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span>Buscando no Espectro...</span>
+                  </div>
+                )}
+
+                {searchResults && (
+                  <>
+                    {/* 1. Grupo: Pessoas */}
+                    {searchResults.users.length > 0 && (
+                      <div className="p-2 border-b border-outline-variant/20">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary">
+                          <span className="material-symbols-outlined text-[16px]">person</span>
+                          <span>Pessoas ({searchResults.users.length})</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          {searchResults.users.map((u) => (
+                            <Link
+                              key={u.id}
+                              to={`/perfil/${u.username}`}
+                              onClick={() => setShowSearchResults(false)}
+                              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
+                            >
+                              {u.avatar_url ? (
+                                <img
+                                  src={u.avatar_url}
+                                  alt={u.username}
+                                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shrink-0">
+                                  {(u.name || u.username).charAt(0)}
+                                </div>
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors truncate">
+                                  {u.name || `@${u.username}`}
+                                </span>
+                                <span className="text-[11px] text-on-surface-variant truncate">
+                                  @{u.username}
+                                </span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. Grupo: Comunidades */}
+                    {searchResults.communities.length > 0 && (
+                      <div className="p-2 border-b border-outline-variant/20">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-secondary">
+                          <span className="material-symbols-outlined text-[16px]">groups</span>
+                          <span>Comunidades ({searchResults.communities.length})</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          {searchResults.communities.map((c) => (
+                            <Link
+                              key={c.id}
+                              to={`/c/${c.slug || c.id}`}
+                              onClick={() => setShowSearchResults(false)}
+                              className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
+                            >
+                              <div
+                                className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-xs shrink-0"
+                                style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                              >
+                                {c.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-bold text-on-surface group-hover:text-secondary transition-colors truncate">
+                                  c/{c.name}
+                                </span>
+                                <span className="text-[11px] text-on-surface-variant truncate">
+                                  {c.description || `${c.members_count || 1} membros`}
+                                </span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Grupo: Posts */}
+                    {searchResults.posts.length > 0 && (
+                      <div className="p-2">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-tertiary">
+                          <span className="material-symbols-outlined text-[16px]">article</span>
+                          <span>Posts ({searchResults.posts.length})</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          {searchResults.posts.map((p) => (
+                            <Link
+                              key={p.id}
+                              to={`/?q=${encodeURIComponent(p.title || p.content.slice(0, 30))}`}
+                              onClick={() => setShowSearchResults(false)}
+                              className="flex items-start gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[18px] text-on-surface-variant mt-0.5 shrink-0">
+                                {p.post_type === 'scrap' ? 'auto_stories' : 'edit_note'}
+                              </span>
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
+                                  {p.title || p.content}
+                                </span>
+                                <span className="text-[10px] text-on-surface-variant truncate">
+                                  por @{p.author_name} {p.community_name ? `em c/${p.community_name}` : ''}
+                                </span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nenhum resultado */}
+                    {searchResults.users.length === 0 &&
+                      searchResults.communities.length === 0 &&
+                      searchResults.posts.length === 0 && (
+                        <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                          <span className="material-symbols-outlined text-[28px] text-on-surface-variant/60">
+                            search_off
+                          </span>
+                          <span>Nenhum resultado encontrado para "{searchQuery}"</span>
+                        </div>
+                      )}
+
+                    {/* Rodapé: Pressione enter */}
+                    <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-on-surface-variant">
+                      <span>Pressione <strong className="font-semibold text-on-surface">Enter</strong> para ver mais no Feed</span>
+                      <button
+                        type="button"
+                        onClick={handleSearchSubmit}
+                        className="text-primary hover:underline font-semibold cursor-pointer"
+                      >
+                        Ver tudo
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Canto Direito: Ações (+ Criar, Mensagens, Notificações, Perfil) */}

@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 1. Busca perfil público por nome de usuário (?username=...)
     if (targetUsername) {
       const user = await env.DB.prepare(
-        "SELECT id, username, name, bio, avatar_url, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
+        "SELECT id, username, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
       )
         .bind(targetUsername.trim())
         .first<any>();
@@ -56,7 +56,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const user = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, is_private, allow_scraps, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
       .first<any>();
@@ -100,6 +100,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const rawName = body.name !== undefined ? (body.name ? String(body.name).trim() : null) : null;
     const rawBio = body.bio !== undefined ? (body.bio ? String(body.bio).trim() : null) : null;
     const rawAvatarUrl = body.avatar_url !== undefined ? (body.avatar_url ? String(body.avatar_url).trim() : null) : null;
+    const rawMusic = body.music !== undefined ? (body.music ? String(body.music).trim() : null) : null;
 
     // 3. Validação do nome de usuário
     if (!rawUsername || rawUsername.length < 3 || rawUsername.length > 30) {
@@ -123,15 +124,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // 5. Atualização dos dados no D1
     await env.DB.prepare(
       `UPDATE users 
-       SET name = ?, username = ?, bio = ?, avatar_url = ? 
+       SET name = ?, username = ?, bio = ?, avatar_url = ?, music = ?
        WHERE id = ?`
     )
-      .bind(rawName, rawUsername, rawBio, rawAvatarUrl, auth.id)
+      .bind(rawName, rawUsername, rawBio, rawAvatarUrl, rawMusic, auth.id)
       .run();
 
     // 6. Busca os dados atualizados
     const updatedUser = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
       .first();
