@@ -9,6 +9,7 @@ import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
+import { RightSidebarSearch } from '../components/RightSidebarSearch';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -138,7 +139,7 @@ export const Feed: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface flex flex-col">
+    <div className="flex min-h-screen w-full bg-background text-on-surface">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-on-surface text-surface px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -147,310 +148,288 @@ export const Feed: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Header Global */}
+      {/* 1. Header Mobile (Visível apenas em telas pequenas < md) */}
       <Header />
 
-      {/* 2. Barra Lateral Compacta (72px) */}
-      <SidebarNav />
+      {/* 2. Coluna Esquerda: Navegação fixa (Tarefa 2: w-20 ou w-64, sticky top-0 h-screen, fluxo real) */}
+      <SidebarNav onOpenCreateModal={openCreatePostModal} />
 
-      {/* 3. Container Principal Expandido com transição suave */}
-      <div
-        className={`pt-16 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
-        }`}
-      >
-        <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
-          <div className="flex justify-center gap-8 w-full max-w-[1100px] mx-auto px-4 items-start">
-            {/* FEED CENTRAL */}
-            <section className="w-full max-w-2xl flex flex-col gap-4 min-w-0">
-                {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
-                <div className="-mx-3 sm:mx-0">
-                  <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
-                    {/* Seu Momento: abre o modal de criação */}
-                    <button
-                      type="button"
-                      onClick={openCreatePostModal}
-                      className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
-                    >
-                      <div className="relative w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <span className="text-lg font-bold text-on-surface uppercase">
-                          {user ? user.username.charAt(0) : '?'}
-                        </span>
-                        <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs font-bold ring-2 ring-surface">
-                          +
-                        </span>
+      {/* 3. Coluna Central: Feed (Tarefa 3: flex-1 com div max-w-2xl mx-auto perfeitamente centralizada) */}
+      <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-16 md:pt-0 pb-20 md:pb-8">
+        <div className="w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
+          {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
+          <div className="-mx-3 sm:mx-0">
+            <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
+              {/* Seu Momento: abre o modal de criação */}
+              <button
+                type="button"
+                onClick={openCreatePostModal}
+                className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+              >
+                <div className="relative w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <span className="text-lg font-bold text-on-surface uppercase">
+                    {user ? user.username.charAt(0) : '?'}
+                  </span>
+                  <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs font-bold ring-2 ring-surface">
+                    +
+                  </span>
+                </div>
+                <span className="text-[11px] font-medium text-on-surface text-center max-w-[68px] truncate">
+                  Seu momento
+                </span>
+              </button>
+
+              {/* Comunidades reais do D1 como canais */}
+              {communities.slice(0, 12).map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/c/${c.slug || c.id}`}
+                  className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+                >
+                  <div
+                    className="p-[2px] rounded-full group-hover:scale-105 transition-transform"
+                    style={{
+                      background: `linear-gradient(135deg, ${c.icon_color || '#6B8E23'}, #2563EB)`,
+                    }}
+                  >
+                    <div className="rounded-full bg-surface p-[2px]">
+                      <div
+                        className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                        style={{ backgroundColor: c.icon_color || '#6B8E23' }}
+                      >
+                        {c.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-[11px] font-medium text-on-surface text-center max-w-[68px] truncate">
-                        Seu momento
-                      </span>
-                    </button>
-
-                    {/* Comunidades reais do D1 como canais */}
-                    {communities.slice(0, 12).map((c) => (
-                      <Link
-                        key={c.id}
-                        to={`/c/${c.slug || c.id}`}
-                        className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
-                      >
-                        <div
-                          className="p-[2px] rounded-full group-hover:scale-105 transition-transform"
-                          style={{
-                            background: `linear-gradient(135deg, ${c.icon_color || '#6B8E23'}, #2563EB)`,
-                          }}
-                        >
-                          <div className="rounded-full bg-surface p-[2px]">
-                            <div
-                              className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                              style={{ backgroundColor: c.icon_color || '#6B8E23' }}
-                            >
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="text-[11px] text-on-surface-variant text-center max-w-[68px] truncate">
-                          {c.name}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Abas do Feed fixas no topo da lista (Para Você, Seguindo, Em Alta) */}
-                <div className="sticky top-16 z-20 -mx-3 sm:mx-0 px-3 sm:px-1 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
-                  <div className="flex items-center gap-6 sm:gap-8">
-                    {(
-                      [
-                        { key: 'foryou', label: 'Para Você', params: {} },
-                        { key: 'following', label: 'Seguindo', params: {} },
-                        { key: 'trending', label: 'Em Alta 🔥', params: { filter: 'trending' } },
-                      ] as const
-                    ).map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => {
-                          setActiveTab(tab.key);
-                          setSearchParams(tab.params as Record<string, string>);
-                        }}
-                        className={`relative py-3 text-sm font-semibold transition-colors cursor-pointer ${
-                          activeTab === tab.key ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        {tab.label}
-                        {activeTab === tab.key && (
-                          <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="Preferências do feed"
-                    className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">tune</span>
-                  </button>
-                </div>
-
-                {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}
-                {loading ? (
-                  <div className="flex flex-col gap-5">
-                    <PostSkeleton />
-                    <PostSkeleton />
-                    <PostSkeleton />
-                  </div>
-                ) : hasError ? (
-                  <ErrorState
-                    title="O Espectro perdeu o sinal com o banco de dados"
-                    message="Não conseguimos carregar as publicações neste momento. Verifique sua conexão e tente novamente."
-                    onRetry={loadData}
-                  />
-                ) : filteredPosts.length === 0 ? (
-                  typeParam === 'scrap' ? (
-                    <EmptyState
-                      icon="mail_lock"
-                      title="Mural vazio."
-                      description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
-                      actionLabel="Criar primeiro post"
-                      onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
-                    />
-                  ) : (
-                    <EmptyState
-                      icon="forum"
-                      title="O Espectro está silencioso..."
-                      description="Parece que ninguém postou nada ainda. Seja a primeira voz a ecoar por aqui ou explore as comunidades."
-                      actionLabel="Criar primeiro post"
-                      onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
-                      secondaryActionLabel="Explorar comunidades"
-                      secondaryActionLink="/comunidades"
-                    />
-                  )
-                ) : (
-                  <div className="flex flex-col gap-5">
-                    {filteredPosts.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onVote={handleVote}
-                        onDelete={handleDeletePost}
-                        onUpdate={handleUpdatePost}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* BARRA LATERAL DIREITA */}
-            <aside className="w-72 shrink-0 hidden lg:flex flex-col gap-4 sticky top-20">
-                {/* Card 1: Comunidades em Alta (D1) */}
-                <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
-                      <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades em Alta</h2>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowCommunityModal(true)}
-                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">add</span>
-                      <span>Criar</span>
-                    </button>
                   </div>
+                  <span className="text-[11px] text-on-surface-variant text-center max-w-[68px] truncate">
+                    {c.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
 
-                  {communities.length === 0 ? (
-                    <div className="p-3 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
-                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant/40 mb-1">
-                        group_off
-                      </span>
-                      <p className="font-medium text-on-surface text-[11px]">Nenhuma comunidade ainda</p>
-                      <p className="mt-0.5 text-[10px]">Seja o primeiro a fundar uma comunidade no Espectro!</p>
-                      <button
-                        type="button"
-                        onClick={() => setShowCommunityModal(true)}
-                        className="mt-2 px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[10px] hover:bg-primary cursor-pointer shadow-xs"
-                      >
-                        + Criar Comunidade
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2.5">
-                      {communities.slice(0, 5).map((c, idx) => (
-                        <div key={c.id} className="flex items-center justify-between gap-1.5 group">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] font-bold text-on-surface-variant w-3.5 text-center">
-                              #{idx + 1}
-                            </span>
-                            <div
-                              className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
-                            >
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <Link
-                                to={`/c/${c.slug || c.id}`}
-                                className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
-                              >
-                                c/{c.name}
-                              </Link>
-                              <span className="text-[10px] text-on-surface-variant truncate">
-                                {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
-                              </span>
-                            </div>
-                          </div>
-                          <Link
-                            to={`/c/${c.slug || c.id}`}
-                            className="px-2.5 py-0.5 rounded-full bg-surface-container text-primary text-[11px] font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
-                          >
-                            Ver
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
+          {/* Abas do Feed fixas no topo da lista (Tarefa 5: dentro de max-w-2xl mx-auto) */}
+          <div className="sticky top-0 z-20 -mx-4 px-4 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
+            <div className="flex items-center gap-6 sm:gap-8">
+              {(
+                [
+                  { key: 'foryou', label: 'Para Você', params: {} },
+                  { key: 'following', label: 'Seguindo', params: {} },
+                  { key: 'trending', label: 'Em Alta 🔥', params: { filter: 'trending' } },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    setSearchParams(tab.params as Record<string, string>);
+                  }}
+                  className={`relative py-3 text-sm font-semibold transition-colors cursor-pointer ${
+                    activeTab === tab.key ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {tab.label}
+                  {activeTab === tab.key && (
+                    <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />
                   )}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              aria-label="Preferências do feed"
+              className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">tune</span>
+            </button>
+          </div>
 
+          {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}
+          {loading ? (
+            <div className="flex flex-col gap-5">
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
+            </div>
+          ) : hasError ? (
+            <ErrorState
+              title="O Espectro perdeu o sinal com o banco de dados"
+              message="Não conseguimos carregar as publicações neste momento. Verifique sua conexão e tente novamente."
+              onRetry={loadData}
+            />
+          ) : filteredPosts.length === 0 ? (
+            typeParam === 'scrap' ? (
+              <EmptyState
+                icon="mail_lock"
+                title="Mural vazio."
+                description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
+                actionLabel="Criar primeiro post"
+                onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
+              />
+            ) : (
+              <EmptyState
+                icon="forum"
+                title="O Espectro está silencioso..."
+                description="Parece que ninguém postou nada ainda. Seja a primeira voz a ecoar por aqui ou explore as comunidades."
+                actionLabel="Criar primeiro post"
+                onAction={() => window.scrollTo({ top: 120, behavior: 'smooth' })}
+                secondaryActionLabel="Explorar comunidades"
+                secondaryActionLink="/comunidades"
+              />
+            )
+          ) : (
+            <div className="flex flex-col gap-5">
+              {filteredPosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onVote={handleVote}
+                  onDelete={handleDeletePost}
+                  onUpdate={handleUpdatePost}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* 4. Coluna Direita: Widgets (Tarefa 4: w-80, sticky top-0 h-screen, pt-4, hidden lg:flex) */}
+      <aside className="w-80 shrink-0 hidden lg:flex flex-col sticky top-0 h-screen pt-4 px-4 overflow-y-auto border-l border-outline-variant/15 gap-4">
+        {/* Barra de Pesquisa Global */}
+        <RightSidebarSearch />
+
+        {/* Card 1: Comunidades em Alta (D1) */}
+        <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
+              <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades em Alta</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCommunityModal(true)}
+              className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[13px]">add</span>
+              <span>Criar</span>
+            </button>
+          </div>
+
+          {communities.length === 0 ? (
+            <div className="p-3 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
+              <span className="material-symbols-outlined text-[20px] text-on-surface-variant/40 mb-1">
+                group_off
+              </span>
+              <p className="font-medium text-on-surface text-[11px]">Nenhuma comunidade ainda</p>
+              <p className="mt-0.5 text-[10px]">Seja o primeiro a fundar uma comunidade no Espectro!</p>
+              <button
+                type="button"
+                onClick={() => setShowCommunityModal(true)}
+                className="mt-2 px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-semibold text-[10px] hover:bg-primary cursor-pointer shadow-xs"
+              >
+                + Criar Comunidade
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {communities.slice(0, 5).map((c, idx) => (
+                <div key={c.id} className="flex items-center justify-between gap-1.5 group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-bold text-on-surface-variant w-3.5 text-center">
+                      #{idx + 1}
+                    </span>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                      style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                    >
+                      {c.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <Link
+                        to={`/c/${c.slug || c.id}`}
+                        className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
+                      >
+                        c/{c.name}
+                      </Link>
+                      <span className="text-[10px] text-on-surface-variant truncate">
+                        {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
+                      </span>
+                    </div>
+                  </div>
                   <Link
-                    to="/comunidades"
-                    className="pt-2 border-t border-outline-variant/15 text-[11px] font-semibold text-primary hover:underline text-center block"
+                    to={`/c/${c.slug || c.id}`}
+                    className="px-2.5 py-0.5 rounded-full bg-surface-container text-primary text-[11px] font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
                   >
-                    Explorar todas as comunidades →
+                    Ver
                   </Link>
                 </div>
+              ))}
+            </div>
+          )}
 
-                {/* Card 2: Comunidades Ativas (D1) */}
-                <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
-                      <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades Ativas</h2>
+          <Link
+            to="/comunidades"
+            className="pt-2 border-t border-outline-variant/15 text-[11px] font-semibold text-primary hover:underline text-center block"
+          >
+            Explorar todas as comunidades →
+          </Link>
+        </div>
+
+        {/* Card 2: Comunidades Ativas (D1) */}
+        <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[18px]">groups</span>
+              <h2 className="font-bold text-xs sm:text-sm text-on-surface">Comunidades Ativas</h2>
+            </div>
+            <span className="text-[10px] font-medium text-on-surface-variant">
+              {communities.length} {communities.length === 1 ? 'comunidade' : 'comunidades'}
+            </span>
+          </div>
+
+          {communities.length <= 5 ? (
+            <div className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-xl text-center space-y-0.5">
+              <p className="font-medium text-on-surface text-[11px]">Conecte-se com interesses mútuos</p>
+              <p className="text-[10px]">Entre nas comunidades acima ou crie uma nova para seu grupo.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {communities.slice(5, 10).map((c) => (
+                <Link
+                  key={c.id}
+                  to={`/c/${c.slug || c.id}`}
+                  className="flex items-center justify-between p-1.5 rounded-xl hover:bg-surface-container transition-colors group"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-white text-[9px] flex-shrink-0"
+                      style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                    >
+                      {c.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-[10px] font-medium text-on-surface-variant">
-                      {communities.length} {communities.length === 1 ? 'comunidade' : 'comunidades'}
+                    <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
+                      c/{c.name}
                     </span>
                   </div>
+                  <span className="text-[10px] text-on-surface-variant flex-shrink-0">
+                    {c.members_count} mem.
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
 
-                  {communities.length <= 5 ? (
-                    <div className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-xl text-center space-y-0.5">
-                      <p className="font-medium text-on-surface text-[11px]">Conecte-se com interesses mútuos</p>
-                      <p className="text-[10px]">Entre nas comunidades acima ou crie uma nova para seu grupo.</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {communities.slice(5, 10).map((c) => (
-                        <Link
-                          key={c.id}
-                          to={`/c/${c.slug || c.id}`}
-                          className="flex items-center justify-between p-1.5 rounded-xl hover:bg-surface-container transition-colors group"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div
-                              className="w-6 h-6 rounded-md flex items-center justify-center font-bold text-white text-[9px] flex-shrink-0"
-                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
-                            >
-                              {c.name.charAt(0).toUpperCase()}
-                            </div>
-                            <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
-                              c/{c.name}
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-on-surface-variant flex-shrink-0">
-                            {c.members_count} mem.
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </aside>
-          </div>
-        </main>
-
-        {/* Global Footer */}
-        <footer className="w-full bg-surface-container-lowest border-t border-outline-variant/30 py-6 px-6 mt-12">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-lg bg-primary-container text-on-primary flex items-center justify-center text-xs">
-                <span className="material-symbols-outlined text-[16px]">grain</span>
-              </div>
-              <span className="font-semibold text-sm text-on-surface">Espectro</span>
-              <span className="text-on-surface-variant text-xs hidden sm:inline">
-                · A nova geração das redes sociais conectadas
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-on-surface-variant">
-              <a href="#" className="hover:text-primary transition-colors">Termos</a>
-              <a href="#" className="hover:text-primary transition-colors">Privacidade</a>
-              <a href="#" className="hover:text-primary transition-colors">Diretrizes</a>
-              <a href="#" className="hover:text-primary transition-colors">Ajuda & Suporte</a>
-            </div>
-            <div className="text-xs text-on-surface-variant">
-              © 2026 Espectro Inc. Todos os direitos reservados.
-            </div>
-          </div>
-        </footer>
-      </div>
+        {/* Rodapé sutil estilo Twitter */}
+        <div className="px-2 py-3 text-[11px] text-on-surface-variant/70 flex flex-wrap gap-x-3 gap-y-1">
+          <a href="#" className="hover:underline">Termos</a>
+          <a href="#" className="hover:underline">Privacidade</a>
+          <a href="#" className="hover:underline">Diretrizes</a>
+          <span>© 2026 Espectro Inc.</span>
+        </div>
+      </aside>
 
       {/* Modal Criar Comunidade */}
       <CreateCommunityModal

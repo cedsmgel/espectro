@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   return (
     <>
       {/* 1. HEADER GLOBAL FULL-WIDTH (Visible Spectrum Social) */}
-      <header className="fixed top-0 left-0 right-0 w-full h-16 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-50 px-3 sm:px-6">
+      <header className="fixed top-0 left-0 right-0 w-full h-14 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-40 px-3 sm:px-6 flex md:hidden items-center justify-between">
         <div className="h-full w-full flex items-center justify-between gap-2 sm:gap-4 max-w-7xl mx-auto">
           {/* Canto Esquerdo: Botão Toggle Hamburger (Desktop) + Logo Oficial Espectro */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               type="button"
               onClick={handleToggle}
               aria-label="Abrir ou fechar menu de navegação"
-              className="hidden md:flex p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="flex p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
