@@ -7,6 +7,8 @@ interface SidebarContextType {
   isCreatePostOpen: boolean;
   openCreatePostModal: () => void;
   closeCreatePostModal: () => void;
+  hideBottomNav: boolean;
+  setHideBottomNav: (hidden: boolean) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType>({
@@ -16,10 +18,13 @@ const SidebarContext = createContext<SidebarContextType>({
   isCreatePostOpen: false,
   openCreatePostModal: () => {},
   closeCreatePostModal: () => {},
+  hideBottomNav: false,
+  setHideBottomNav: () => {},
 });
 
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [hideBottomNav, setHideBottomNav] = useState(false);
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('espectro_sidebar_expanded');
@@ -53,6 +58,8 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isCreatePostOpen,
         openCreatePostModal,
         closeCreatePostModal,
+        hideBottomNav,
+        setHideBottomNav,
       }}
     >
       {children}

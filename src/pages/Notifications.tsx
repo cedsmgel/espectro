@@ -100,8 +100,8 @@ export const Notifications: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
         }`}
       >
-        <main className="w-full bg-surface py-6 flex-1">
-          <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+        <main className="w-full bg-surface pt-4 pb-24 md:pb-8 flex-1">
+          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             {/* Top Bar: Title & Global Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">

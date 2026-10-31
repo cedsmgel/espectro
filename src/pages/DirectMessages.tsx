@@ -85,7 +85,7 @@ const formatMessageDateSeparator = (dateString: string): string => {
 
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
-  const { isExpanded } = useSidebar();
+  const { isExpanded, setHideBottomNav } = useSidebar();
   const user = authStorage.getUser();
   const userId = user?.id;
 
@@ -198,6 +198,19 @@ export const DirectMessages: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOtherUserTyping]);
 
+  // Controle de visibilidade da BottomNav no chat mobile (tela cheia)
+  useEffect(() => {
+    if (activeFriend && window.innerWidth < 768) {
+      setHideBottomNav(true);
+    } else {
+      setHideBottomNav(false);
+    }
+
+    return () => {
+      setHideBottomNav(false);
+    };
+  }, [activeFriend, setHideBottomNav]);
+
   // Carrega amigos reais do D1
   const loadFriends = async () => {
     if (!userId) {
@@ -209,7 +222,19 @@ export const DirectMessages: React.FC = () => {
       const data = await friendsApi.list();
       if (data && data.length > 0) {
         setFriends(data);
-        setActiveFriend(data[0]);
+        const searchParams = new URLSearchParams(window.location.search);
+        const targetUsername = searchParams.get('u');
+        const found = targetUsername
+          ? data.find((f: any) => f.username.toLowerCase() === targetUsername.toLowerCase())
+          : null;
+
+        if (found) {
+          setActiveFriend(found);
+        } else if (window.innerWidth >= 768) {
+          setActiveFriend(data[0]);
+        } else {
+          setActiveFriend(null);
+        }
       } else {
         setFriends([]);
         setActiveFriend(null);
@@ -821,8 +846,12 @@ export const DirectMessages: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-1 w-full h-full overflow-hidden bg-surface">
-              {/* COLUNA 1: Diretório Direct */}
-              <aside className="w-80 lg:w-96 flex-shrink-0 flex flex-col bg-surface-container-lowest border-r border-outline-variant/30 shadow-xs z-10">
+              {/* COLUNA 1: Diretório Direct (No mobile: tela cheia quando activeFriend é null) */}
+              <aside
+                className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex-col bg-surface-container-lowest border-r border-outline-variant/30 shadow-xs z-10 ${
+                  activeFriend ? 'hidden md:flex' : 'flex'
+                }`}
+              >
                 <div className="p-4 pb-2 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="font-bold text-base text-on-surface truncate">
@@ -855,7 +884,7 @@ export const DirectMessages: React.FC = () => {
                 </div>
 
                 {/* Lista de Conversas / Amigos */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-20 md:pb-2">
                   {filteredConversations.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
@@ -900,8 +929,12 @@ export const DirectMessages: React.FC = () => {
                 </div>
               </aside>
 
-              {/* COLUNA 2: Conversa Ativa */}
-              <section className="flex-1 flex flex-col bg-surface min-w-0 relative">
+              {/* COLUNA 2: Conversa Ativa (No mobile: tela cheia quando activeFriend existe) */}
+              <section
+                className={`flex-1 flex-col bg-surface min-w-0 relative ${
+                  !activeFriend ? 'hidden md:flex' : 'flex'
+                }`}
+              >
                 {!activeFriend ? (
                   <div className="flex-1 flex items-center justify-center p-8">
                     <EmptyState
@@ -914,8 +947,21 @@ export const DirectMessages: React.FC = () => {
                 ) : (
                   <>
                     {/* Header da Conversa Ativa */}
-                    <div className="h-16 px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-16 px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        {/* Botão Voltar para Lista no Mobile (Tela Cheia) */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveFriend(null);
+                            setHideBottomNav(false);
+                          }}
+                          className="md:hidden p-1.5 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer mr-0.5"
+                          title="Voltar para a lista de conversas"
+                        >
+                          <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+                        </button>
+
                         <div className="relative flex-shrink-0">
                           <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm uppercase">
                             {activeFriend.username.charAt(0)}

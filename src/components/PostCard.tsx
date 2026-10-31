@@ -171,7 +171,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
   return (
     <>
       <article
-        className={`bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 transition-all hover:shadow-md ${
+        className={`bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3.5 sm:gap-4 transition-all hover:shadow-md ${
           isDeleting ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
@@ -384,10 +384,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
             <button
               type="button"
               onClick={loadComments}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-xs font-medium cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-xs font-medium cursor-pointer"
             >
               <span className="material-symbols-outlined text-[19px]">chat_bubble_outline</span>
-              <span>{commentsCount} comentários</span>
+              <span className="hidden sm:inline">{commentsCount} comentários</span>
+              <span className="sm:hidden font-semibold">{commentsCount}</span>
             </button>
           </div>
 

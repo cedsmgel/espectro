@@ -27,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [unreadDms, setUnreadDms] = useState(0);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -98,30 +99,30 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   return (
     <>
       {/* 1. HEADER GLOBAL FULL-WIDTH (Visible Spectrum Social) */}
-      <header className="fixed top-0 left-0 right-0 w-full h-16 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-50 px-4 md:px-6">
-        <div className="h-full w-full flex items-center justify-between gap-4 max-w-7xl mx-auto">
-          {/* Canto Esquerdo: Botão Toggle Hamburger + Logo Oficial Espectro */}
-          <div className="flex items-center gap-3">
+      <header className="fixed top-0 left-0 right-0 w-full h-16 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-50 px-3 sm:px-6">
+        <div className="h-full w-full flex items-center justify-between gap-2 sm:gap-4 max-w-7xl mx-auto">
+          {/* Canto Esquerdo: Botão Toggle Hamburger (Desktop) + Logo Oficial Espectro */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={handleToggle}
               aria-label="Abrir ou fechar menu de navegação"
-              className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="hidden md:flex p-2 rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
-            <Link to="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-[20px]">grain</span>
+            <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+                E
               </div>
-              <span className="text-xl font-bold text-primary tracking-tight hidden sm:inline-block">
+              <span className="text-lg sm:text-xl font-bold text-on-surface tracking-tight">
                 Espectro
               </span>
             </Link>
           </div>
 
-          {/* Barra de Pesquisa Centralizada com Dropdown de Resultados Globais */}
-          <div ref={searchContainerRef} className="relative flex items-center flex-1 max-w-xl mx-auto px-2">
+          {/* Barra de Pesquisa Centralizada com Dropdown de Resultados Globais (Desktop: md:flex) */}
+          <div ref={searchContainerRef} className="hidden md:flex relative items-center flex-1 max-w-xl mx-auto px-2">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
                 search
@@ -301,8 +302,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             )}
           </div>
 
-          {/* Canto Direito: Ações (+ Criar, Mensagens, Notificações, Perfil) */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          {/* Canto Direito: Ações (+ Criar, Mensagens, Notificações, Tema, Perfil) */}
+          <div className="flex items-center gap-1 sm:gap-2.5 flex-shrink-0">
+            {/* Botão de Busca Mobile (abre o campo em tela cheia no mobile) */}
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(true)}
+              aria-label="Abrir pesquisa"
+              className="md:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              title="Pesquisar"
+            >
+              <span className="material-symbols-outlined text-[22px]">search</span>
+            </button>
             {user ? (
               <>
                 {/* Botão e Dropdown Criar */}
@@ -363,11 +374,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   )}
                 </div>
 
-                {/* Botão Mensagens com link para /mensagens e Badge real */}
+                {/* Botão Mensagens com link para /mensagens e Badge real (Desktop: md:flex) */}
                 <Link
                   to="/mensagens"
                   aria-label="Abrir mensagens privadas"
-                  className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
+                  className="hidden md:flex p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Mensagens Diretas"
                 >
                   <span className="material-symbols-outlined text-[22px]">chat_bubble</span>
@@ -390,18 +401,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               </>
             ) : (
               /* Deslogado: Botões de Ação Limpos */
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => navigate('/login')}
-                  className="px-4 py-1.5 rounded-full text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors cursor-pointer"
+                  className="px-3 sm:px-4 py-1.5 rounded-full text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors cursor-pointer"
                 >
                   Entrar
                 </button>
                 <button
                   type="button"
                   onClick={() => navigate('/login?tab=cadastro')}
-                  className="px-4 py-1.5 rounded-full bg-primary-container text-on-primary hover:bg-primary font-semibold text-xs shadow-xs transition-all cursor-pointer"
+                  className="px-3 sm:px-4 py-1.5 rounded-full bg-primary-container text-on-primary hover:bg-primary font-semibold text-xs shadow-xs transition-all cursor-pointer"
                 >
                   Cadastrar
                 </button>
@@ -420,8 +431,65 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 {isDark ? 'light_mode' : 'dark_mode'}
               </span>
             </button>
+
+            {/* Avatar Mobile do Usuário (Stitch Mobile Header) */}
+            {user && (
+              <Link
+                to="/perfil"
+                className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs shrink-0 ml-0.5 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+                title={`Meu perfil (@${user.username})`}
+              >
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.username}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                ) : (
+                  user.username.charAt(0)
+                )}
+              </Link>
+            )}
           </div>
         </div>
+
+        {/* Barra de Pesquisa Mobile Expandida (Overlay Stitch) */}
+        {mobileSearchOpen && (
+          <div className="md:hidden absolute inset-0 bg-surface-container-lowest z-50 flex items-center px-3 gap-2 animate-in fade-in duration-150">
+            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+                search
+              </span>
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Pesquisar pessoas, comunidades, posts..."
+                className="w-full pl-9 pr-8 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-xs focus:outline-none focus:ring-1 focus:ring-primary-container"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              )}
+            </form>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setShowSearchResults(false);
+              }}
+              className="px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg cursor-pointer"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
       </header>
 
       {/* Slide-in Contacts Drawer (Direct rápido) */}

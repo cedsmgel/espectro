@@ -202,10 +202,10 @@ export const ProfilePage: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
         }`}
       >
-        <main className="w-full bg-surface py-6">
-          <div className="w-full max-w-5xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col gap-8">
+        <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
+          <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex flex-col gap-6 sm:gap-8">
             {/* 1. Header do Perfil Público com Dados Reais */}
-            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 shadow-sm border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
               <div className="flex items-center gap-5 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
@@ -320,7 +320,7 @@ export const ProfilePage: React.FC = () => {
                 ) : userProfile?.is_friend ? (
                   /* Usuários Já São Amigos: Botão Enviar Mensagem Direta */
                   <Link
-                    to="/mensagens"
+                    to={`/mensagens?u=${encodeURIComponent(username || '')}`}
                     className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">chat_bubble</span>

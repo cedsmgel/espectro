@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CreatePostModal } from './components/CreatePostModal';
+import { BottomNav } from './components/BottomNav';
 import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
 import { Communities } from './pages/Communities';
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <GlobalCreatePostModal />
+        <BottomNav />
         </SidebarProvider>
       </ThemeProvider>
     </BrowserRouter>

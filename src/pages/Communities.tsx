@@ -58,7 +58,7 @@ export const Communities: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
         }`}
       >
-        <main className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 flex-1">
+        <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 flex-1">
           <section className="flex flex-col gap-6 max-w-5xl mx-auto min-w-0">
             {/* Header Banner */}
             <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant/30">

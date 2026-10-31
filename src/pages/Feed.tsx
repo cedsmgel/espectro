@@ -160,8 +160,8 @@ export const Feed: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-[72px]'
         }`}
       >
-        <main className="w-full bg-surface py-6">
-          <div className="w-full max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+        <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
+          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* FEED CENTRAL (Colunas 1 a 8) */}
               <section className="lg:col-span-8 flex flex-col gap-6 min-w-0">

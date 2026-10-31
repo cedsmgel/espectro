@@ -93,7 +93,7 @@ export const Videos: React.FC = () => {
           </div>
         </section>
 
-        <main className="max-w-7xl mx-auto w-full px-4 md:px-8 py-6 flex flex-col gap-10">
+        <main className="max-w-7xl mx-auto w-full px-3 sm:px-6 md:px-8 pt-4 pb-24 md:pb-8 flex flex-col gap-8 sm:gap-10">
           {/* Header Title Section */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
