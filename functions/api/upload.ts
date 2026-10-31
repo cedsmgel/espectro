@@ -7,7 +7,15 @@ export interface Env {
   DB?: D1Database;
 }
 
-type Kind = "image" | "video" | "file";
+type Kind = "image" | "video" | "file" | "audio";
+
+const AUDIO_EXT: Record<string, string> = {
+  webm: "audio/webm",
+  ogg: "audio/ogg",
+  m4a: "audio/mp4",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+};
 
 // Allowlist: extensão -> tipo canônico. O Content-Type enviado pelo cliente nunca é usado.
 const ALLOWED: Record<string, { mime: string; kind: Kind }> = {
@@ -91,7 +99,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const fileObj = file as File;
 
     const extFromName = fileObj.name.includes(".") ? fileObj.name.split(".").pop()!.toLowerCase() : "";
-    const allowed = ALLOWED[extFromName];
+    const isAudioUpload = uploadContext === "audio" && extFromName in AUDIO_EXT;
+    const allowed = isAudioUpload
+      ? { mime: AUDIO_EXT[extFromName], kind: "audio" as Kind }
+      : ALLOWED[extFromName];
     if (!allowed) {
       return errorResponse("Tipo de arquivo não permitido.", 415);
     }
@@ -126,7 +137,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("O conteúdo do arquivo não corresponde ao tipo informado.", 415);
     }
 
-    const folder = allowed.kind === "video" ? "videos" : allowed.kind === "image" ? "images" : "documents";
+    const folder = allowed.kind === "audio" ? "audio" : allowed.kind === "video" ? "videos" : allowed.kind === "image" ? "images" : "documents";
     const uniqueId = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
     const key = `${folder}/${uniqueId}.${extFromName}`;
 
