@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { accountApi } from '../../lib/api';
+import { accountApi, blocksApi, BlockedUser } from '../../lib/api';
 import { ChatFontSize, ChatPrefs } from '../../hooks/useChatPrefs';
 import type { PushState } from '../../hooks/usePush';
 import { ModalShell } from './ModalShell';
@@ -20,6 +20,33 @@ const FONT_OPTIONS: Array<{ id: ChatFontSize; label: string }> = [
 export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange, push, onClose }) => {
   const [showLastSeen, setShowLastSeen] = useState<boolean | null>(null);
   const [privacyError, setPrivacyError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<BlockedUser[]>([]);
+  const [unblockingId, setUnblockingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    blocksApi
+      .list()
+      .then((list) => {
+        if (!cancelled) setBlocked(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const unblock = async (person: BlockedUser) => {
+    setUnblockingId(person.id);
+    try {
+      await blocksApi.unblock(person.id);
+      setBlocked((prev) => prev.filter((b) => b.id !== person.id));
+    } catch (err: any) {
+      setPrivacyError(err?.message || 'Não foi possível desbloquear.');
+    } finally {
+      setUnblockingId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +182,32 @@ export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange,
         />
       </label>
       {privacyError && <p className="mt-2 text-[11px] text-error">{privacyError}</p>}
+
+      <div className="mt-5 pt-4 border-t border-outline-variant/30">
+        <span className="text-xs font-semibold text-on-surface">Usuários bloqueados</span>
+        {blocked.length === 0 ? (
+          <p className="mt-1 text-[11px] text-on-surface-variant">Você não bloqueou ninguém.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {blocked.map((person) => (
+              <li key={person.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-low">
+                <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
+                  {person.username.charAt(0)}
+                </div>
+                <span className="flex-1 min-w-0 text-xs font-semibold text-on-surface truncate">@{person.username}</span>
+                <button
+                  type="button"
+                  disabled={unblockingId === person.id}
+                  onClick={() => unblock(person)}
+                  className="px-3 py-1.5 rounded-full bg-surface-container text-on-surface text-[11px] font-semibold hover:bg-surface-container-high disabled:opacity-60 cursor-pointer"
+                >
+                  Desbloquear
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </ModalShell>
   );
 };

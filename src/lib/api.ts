@@ -485,6 +485,26 @@ export const suggestionsApi = {
     }),
 };
 
+export interface BlockedUser {
+  id: number;
+  username: string;
+  avatar_url?: string | null;
+  created_at: string;
+}
+
+export const blocksApi = {
+  list: () => apiRequest<BlockedUser[]>('/api/blocks', { method: 'GET' }),
+  block: (userId: number) =>
+    apiRequest<{ blocked: boolean }>('/api/blocks', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+  unblock: (userId: number) =>
+    apiRequest<{ blocked: boolean }>(`/api/blocks?user_id=${userId}`, { method: 'DELETE' }),
+};
+
+export const reportsApi = {
+  send: (params: { user_id: number; reason: string; details?: string; message_id?: number | null }) =>
+    apiRequest<{ reported: boolean }>('/api/reports', { method: 'POST', body: JSON.stringify(params) }),
+};
+
 export const conversationsApi = {
   list: () => apiRequest<Conversation[]>('/api/conversations', { method: 'GET' }),
 };
@@ -555,6 +575,7 @@ export interface UserProfile {
   friendship_status?: string | null;
   friendship_direction?: 'outgoing' | 'incoming' | null;
   friends_count?: number;
+  blocked_by_me?: boolean;
   created_at?: string;
 }
 

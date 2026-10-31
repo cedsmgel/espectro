@@ -7,6 +7,7 @@ import {
   sanitizeMediaUrl,
   serverError,
   rateLimit,
+  isBlockedBetween,
 } from "../_shared/auth";
 import { MESSAGE_COLUMNS, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 import { pushNewMessage, type PushEnv } from "../_shared/push";
@@ -150,9 +151,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Você não pode enviar mensagem direta para você mesmo.", 400);
     }
 
+    if (await isBlockedBetween(env.DB, user.id, targetId)) {
+      return errorResponse("Não foi possível enviar a mensagem.", 403);
+    }
+
     if (!(await areFriends(env.DB, user.id, targetId))) {
       return errorResponse("Você só pode enviar mensagens para seus amigos.", 403);
     }
+
+    const pairLimited = await rateLimit(env.DB, request, "dm-pair", 40, 60, `${user.id}:${targetId}`);
+    if (pairLimited) return pairLimited;
 
     // Reenvio da mesma mensagem: devolve a já gravada, sem duplicar nem notificar de novo
     if (clientId) {

@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   authStorage,
   Community,
+  blocksApi,
   friendsApi,
   Post,
   postsApi,
@@ -16,6 +17,8 @@ import { PostCard } from '../components/PostCard';
 import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import { ChatMenu } from '../components/chat/ChatMenu';
+import { ReportModal } from '../components/chat/ReportModal';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -31,6 +34,7 @@ export const ProfilePage: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [addingFriend, setAddingFriend] = useState(false);
   const [friendActionSuccess, setFriendActionSuccess] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   const targetUsername = username || (loggedUser ? loggedUser.username : null);
 
@@ -118,6 +122,37 @@ export const ProfilePage: React.FC = () => {
       alert(err.message || 'Erro ao adicionar amigo.');
     } finally {
       setAddingFriend(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!userProfile) return;
+    if (!window.confirm(`Bloquear @${userProfile.username}? Vocês deixam de ser amigos e não poderão se enviar mensagens ou pedidos.`)) {
+      return;
+    }
+    try {
+      await blocksApi.block(userProfile.id);
+      setUserProfile((prev) =>
+        prev
+          ? { ...prev, blocked_by_me: true, is_friend: false, friendship_status: null, friendship_direction: null }
+          : null
+      );
+      setFriendActionSuccess(`@${userProfile.username} foi bloqueado.`);
+      setTimeout(() => setFriendActionSuccess(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível bloquear.');
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!userProfile) return;
+    try {
+      await blocksApi.unblock(userProfile.id);
+      setUserProfile((prev) => (prev ? { ...prev, blocked_by_me: false } : null));
+      setFriendActionSuccess(`@${userProfile.username} foi desbloqueado.`);
+      setTimeout(() => setFriendActionSuccess(null), 4000);
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível desbloquear.');
     }
   };
 
@@ -226,6 +261,27 @@ export const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
+
+      {showReport && userProfile && (
+        <ReportModal
+          userId={userProfile.id}
+          username={userProfile.username}
+          alreadyBlocked={Boolean(userProfile.blocked_by_me)}
+          onClose={() => setShowReport(false)}
+          onDone={({ blocked }) => {
+            setShowReport(false);
+            if (blocked) {
+              setUserProfile((prev) =>
+                prev
+                  ? { ...prev, blocked_by_me: true, is_friend: false, friendship_status: null, friendship_direction: null }
+                  : null
+              );
+            }
+            setFriendActionSuccess(blocked ? 'Denúncia enviada e usuário bloqueado.' : 'Denúncia enviada. Obrigado por avisar.');
+            setTimeout(() => setFriendActionSuccess(null), 4000);
+          }}
+        />
+      )}
 
       {/* Toast Feedback */}
       {friendActionSuccess && (
@@ -342,7 +398,16 @@ export const ProfilePage: React.FC = () => {
 
               {/* Botões de Ação do Perfil: Amizade, Mensagem ou Edição */}
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                {isSelf ? (
+                {!isSelf && userProfile?.blocked_by_me ? (
+                  <button
+                    type="button"
+                    onClick={handleUnblock}
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface font-semibold text-xs border border-outline-variant/30 hover:bg-surface-container flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">lock_open</span>
+                    <span>Desbloquear</span>
+                  </button>
+                ) : isSelf ? (
                   <>
                     <Link
                       to="/settings/profile"
@@ -438,6 +503,25 @@ export const ProfilePage: React.FC = () => {
                     )}
                     <span>{addingFriend ? 'Adicionando...' : 'Adicionar Amigo'}</span>
                   </button>
+                )}
+
+                {!isSelf && userProfile && loggedUser && (
+                  <ChatMenu
+                    title="Mais opções"
+                    buttonClassName="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 flex items-center justify-center cursor-pointer"
+                    items={[
+                      {
+                        key: 'report',
+                        label: 'Denunciar',
+                        icon: 'flag',
+                        danger: true,
+                        onSelect: () => setShowReport(true),
+                      },
+                      userProfile.blocked_by_me
+                        ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', onSelect: handleUnblock }
+                        : { key: 'block', label: 'Bloquear', icon: 'block', danger: true, onSelect: handleBlock },
+                    ]}
+                  />
                 )}
               </div>
             </div>

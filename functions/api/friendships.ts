@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit, isBlockedBetween } from "../_shared/auth";
 import { pushFriendRequest, type PushEnv } from "../_shared/push";
 import { notify } from "../_shared/notifications";
 
@@ -43,11 +43,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           ) AS friendship_from
         FROM users u
         WHERE u.id != ? AND LOWER(u.username) LIKE ?
+          AND u.id NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = ?
+            UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?
+          )
         LIMIT 20
       `;
 
       const { results } = await env.DB.prepare(usersQuery)
-        .bind(user.id, user.id, user.id, user.id, user.id, q)
+        .bind(user.id, user.id, user.id, user.id, user.id, q, user.id, user.id)
         .all();
 
       return jsonResponse(results || []);
@@ -143,6 +147,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     if (!target) {
       return errorResponse("Usuário não encontrado.", 404);
+    }
+
+    if (await isBlockedBetween(env.DB, user.id, targetFriendId)) {
+      return errorResponse("Não foi possível enviar o pedido de amizade.", 403);
     }
 
     const existing = await env.DB.prepare(`

@@ -15,11 +15,13 @@ import {
   conversationSettingsApi,
   ConversationSettings,
   directMessagesApi,
+  blocksApi,
 } from '../lib/api';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
+import { ReportModal } from '../components/chat/ReportModal';
 import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
 import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
@@ -172,6 +174,7 @@ export const DirectMessages: React.FC = () => {
   const [conversations, setConversations] = useState<Record<number, Conversation>>({});
   const [showPrefs, setShowPrefs] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ messageId: number | null } | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [convSearchOpen, setConvSearchOpen] = useState(false);
   const [convSearch, setConvSearch] = useState('');
@@ -736,6 +739,26 @@ export const DirectMessages: React.FC = () => {
       setToastMessage('Conversa limpa.');
     } catch {
       setToastMessage('Não foi possível limpar a conversa.');
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!activeFriend) return;
+    if (
+      !window.confirm(
+        `Bloquear @${activeFriend.username}? Vocês deixam de ser amigos e nenhum dos dois consegue enviar mensagens ou pedidos. Você pode desbloquear depois.`
+      )
+    ) {
+      return;
+    }
+    try {
+      await blocksApi.block(activeFriend.friend_id);
+      setFriends((prev) => prev.filter((f) => f.friend_id !== activeFriend.friend_id));
+      setActiveFriend(null);
+      refreshConversations();
+      setToastMessage(`@${activeFriend.username} foi bloqueado.`);
+    } catch {
+      setToastMessage('Não foi possível bloquear.');
     }
   };
 
@@ -1318,6 +1341,20 @@ export const DirectMessages: React.FC = () => {
                               onSelect: handleClearConversation,
                             },
                             {
+                              key: 'report',
+                              label: 'Denunciar',
+                              icon: 'flag',
+                              danger: true,
+                              onSelect: () => setReportTarget({ messageId: null }),
+                            },
+                            {
+                              key: 'block',
+                              label: 'Bloquear',
+                              icon: 'block',
+                              danger: true,
+                              onSelect: handleBlockUser,
+                            },
+                            {
                               key: 'remove',
                               label: 'Remover amigo',
                               icon: 'person_remove',
@@ -1552,6 +1589,23 @@ export const DirectMessages: React.FC = () => {
                                         <span className="material-symbols-outlined text-[18px] text-on-surface-variant">info</span>
                                         <span className="font-medium">Dados da Mensagem</span>
                                       </button>
+
+                                      {!isMe && m.id && m.id > 0 && (
+                                        <>
+                                          <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setReportTarget({ messageId: m.id! });
+                                              setActiveKebabMessage(null);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">flag</span>
+                                            <span className="font-medium">Denunciar mensagem</span>
+                                          </button>
+                                        </>
+                                      )}
 
                                       {isMe && m.id && (
                                         <>
@@ -2244,6 +2298,24 @@ export const DirectMessages: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {reportTarget && activeFriend && (
+        <ReportModal
+          userId={activeFriend.friend_id}
+          username={activeFriend.username}
+          messageId={reportTarget.messageId}
+          onClose={() => setReportTarget(null)}
+          onDone={({ blocked }) => {
+            setReportTarget(null);
+            if (blocked) {
+              setFriends((prev) => prev.filter((f) => f.friend_id !== activeFriend.friend_id));
+              setActiveFriend(null);
+              refreshConversations();
+            }
+            setToastMessage(blocked ? 'Denúncia enviada e usuário bloqueado.' : 'Denúncia enviada. Obrigado por avisar.');
+          }}
+        />
       )}
 
       {showPrefs && <ChatPrefsModal prefs={prefs} onChange={updatePrefs} push={push} onClose={() => setShowPrefs(false)} />}

@@ -39,6 +39,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        WHERE u.id != ?1
          AND u.id NOT IN (SELECT rid FROM related)
          AND u.id NOT IN (SELECT suggested_id FROM dismissed_suggestions WHERE user_id = ?1)
+         AND u.id NOT IN (
+           SELECT blocked_id FROM blocks WHERE blocker_id = ?1
+           UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?1
+         )
        ORDER BY mutual_friends DESC, shared_communities DESC, u.id DESC
        LIMIT 12`
     )

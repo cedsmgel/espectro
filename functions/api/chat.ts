@@ -1,4 +1,4 @@
-import { verifyJWT, errorResponse, getJwtSecret, areFriends, serverError } from "../_shared/auth";
+import { verifyJWT, errorResponse, getJwtSecret, areFriends, serverError, isBlockedBetween } from "../_shared/auth";
 
 export interface Env {
   CHAT_ROOMS: DurableObjectNamespace;
@@ -66,6 +66,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // 5. Apenas amigos podem conversar
     const otherId = authUser.id === u1 ? u2 : u1;
+    if (await isBlockedBetween(env.DB, authUser.id, otherId)) {
+      return errorResponse("Você não pode conversar com este usuário.", 403);
+    }
     if (!(await areFriends(env.DB, authUser.id, otherId))) {
       return errorResponse("Você só pode conversar com seus amigos.", 403);
     }
