@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -33,7 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       },
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao buscar configurações: ${err.message || String(err)}`, 500);
+    return serverError(err, "users/settings");
   }
 };
 
@@ -90,17 +90,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       },
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao atualizar configurações: ${err.message || String(err)}`, 500);
+    return serverError(err, "users/settings");
   }
 };
 
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-};

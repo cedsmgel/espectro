@@ -1,37 +1,8 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, areFriends, sanitizeMediaUrl } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, areFriends, sanitizeMediaUrl, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
-}
-
-// Garante que a tabela direct_messages exista (self-healing)
-async function ensureMessagesTable(db: D1Database) {
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS direct_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        content TEXT NOT NULL,
-        message_type TEXT DEFAULT 'text',
-        media_url TEXT,
-        read_at DATETIME,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-    try {
-      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN message_type TEXT DEFAULT 'text';`).run();
-    } catch {}
-    try {
-      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN media_url TEXT;`).run();
-    } catch {}
-    try {
-      await db.prepare(`ALTER TABLE direct_messages ADD COLUMN reply_to_id INTEGER;`).run();
-    } catch {}
-  } catch (e) {
-    // ignore if already exists
-  }
 }
 
 // GET: busca mensagens privadas trocadas entre o usuário logado e um amigo
@@ -45,7 +16,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado. Faça login para ver mensagens.", 401);
     }
 
-    await ensureMessagesTable(env.DB);
 
     const url = new URL(request.url);
     const unreadParam = url.searchParams.get("unread");
@@ -108,8 +78,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return jsonResponse(results || []);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar mensagens privadas.";
-    return errorResponse(message, 500);
+    return serverError(err, "direct_messages");
   }
 };
 
@@ -124,7 +93,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado. Faça login para enviar mensagens.", 401);
     }
 
-    await ensureMessagesTable(env.DB);
+
+    const limited = await rateLimit(env.DB, request, "dm-send", 120, 60, user.id);
+    if (limited) return limited;
 
     let body: {
       receiver_id?: number;
@@ -201,7 +172,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao enviar mensagem privada.";
-    return errorResponse(message, 500);
+    return serverError(err, "direct_messages");
   }
 };

@@ -1,13 +1,18 @@
-import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
+import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
 }
 
+const DUMMY_HASH = `${"00".repeat(16)}:${"00".repeat(32)}`;
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
+
+    const limited = await rateLimit(env.DB, request, "login-ip", 20, 300);
+    if (limited) return limited;
 
     let body: { username?: string; password?: string };
     try {
@@ -18,21 +23,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const { username, password } = body;
 
-    if (!username || !password) {
+    if (!username || !password || typeof username !== "string" || typeof password !== "string") {
       return errorResponse("Username e senha são obrigatórios.", 400);
     }
 
+    if (username.length > 100 || password.length > 128) {
+      return errorResponse("Credenciais inválidas.", 401);
+    }
+
     const cleanUsername = username.trim().toLowerCase();
-    console.log("[LOGIN] env.DB:", env.DB ? "Conectado ao D1" : "MISSING", "cleanUsername:", cleanUsername);
+
+    const limitedUser = await rateLimit(env.DB, request, "login-user", 8, 300, cleanUsername);
+    if (limitedUser) return limitedUser;
 
     // Busca usuário no banco D1
     const user = await env.DB.prepare(
-      "SELECT id, username, password_hash FROM users WHERE username = ?"
+      "SELECT id, username, password_hash FROM users WHERE username = ? COLLATE NOCASE"
     )
       .bind(cleanUsername)
       .first<{ id: number; username: string; password_hash: string }>();
 
     if (!user) {
+      // Executa o mesmo custo de hash para não revelar se o usuário existe pelo tempo de resposta
+      await verifyPassword(password, DUMMY_HASH);
       return errorResponse("Credenciais inválidas.", 401);
     }
 
@@ -61,7 +74,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro interno no servidor.";
-    return errorResponse(message, 500);
+    return serverError(err, "login");
   }
 };

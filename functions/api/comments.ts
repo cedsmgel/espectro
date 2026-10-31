@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -36,8 +36,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return jsonResponse(results || []);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar comentários.";
-    return errorResponse(message, 500);
+    return serverError(err, "comments");
   }
 };
 
@@ -76,6 +75,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const cleanContent = content.trim();
+    if (cleanContent.length > 2000) {
+      return errorResponse("O comentário excede 2.000 caracteres.", 400);
+    }
+
+    const limited = await rateLimit(env.DB, request, "comment-create", 60, 600, user.id);
+    if (limited) return limited;
+
     const parentId = parent_id ? Number(parent_id) : null;
 
     // Valida se o post existe
@@ -121,7 +127,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao salvar comentário.";
-    return errorResponse(message, 500);
+    return serverError(err, "comments");
   }
 };

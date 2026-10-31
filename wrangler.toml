@@ -18,3 +18,6 @@ name = "CHAT_ROOMS"
 class_name = "ChatRoom"
 script_name = "espectro-chat"
 
+
+[observability]
+enabled = true

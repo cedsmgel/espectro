@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit } from "../_shared/auth";
 
 export interface Env {
   MEDIA_BUCKET?: R2Bucket;
@@ -63,6 +63,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const user = await getAuthUser(request, getJwtSecret(env));
     if (!user) {
       return errorResponse("Não autenticado. Faça login para enviar arquivos.", 401);
+    }
+
+    if (env.DB) {
+      const limited = await rateLimit(env.DB, request, "upload", 30, 600, user.id);
+      if (limited) return limited;
     }
 
     const bucket = env.MEDIA_BUCKET || env.BUCKET;

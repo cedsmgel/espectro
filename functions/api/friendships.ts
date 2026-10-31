@@ -1,26 +1,8 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
-}
-
-// Garante que a tabela friendships exista (self-healing)
-async function ensureFriendshipsTable(db: D1Database) {
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS friendships (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        friend_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        status TEXT DEFAULT 'accepted',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, friend_id)
-      )
-    `).run();
-  } catch (e) {
-    // ignore if already exists
-  }
 }
 
 // GET: lista amigos ou pesquisa usuários para adicionar
@@ -34,7 +16,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado. Faça login.", 401);
     }
 
-    await ensureFriendshipsTable(env.DB);
 
     const url = new URL(request.url);
     const search = url.searchParams.get("search");
@@ -101,8 +82,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return jsonResponse(results || []);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar amizades.";
-    return errorResponse(message, 500);
+    return serverError(err, "friendships");
   }
 };
 
@@ -117,7 +97,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Não autorizado. Faça login para adicionar amigos.", 401);
     }
 
-    await ensureFriendshipsTable(env.DB);
+
+    const limited = await rateLimit(env.DB, request, "friend-request", 30, 3600, user.id);
+    if (limited) return limited;
 
     let body: {
       friend_id?: number;
@@ -210,8 +192,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       friend: friendPayload("pending"),
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao adicionar amigo.";
-    return errorResponse(message, 500);
+    return serverError(err, "friendships");
   }
 };
 
@@ -243,7 +224,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
     return jsonResponse({ message: "Amizade removida com sucesso." });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao remover amizade.";
-    return errorResponse(message, 500);
+    return serverError(err, "friendships");
   }
 };

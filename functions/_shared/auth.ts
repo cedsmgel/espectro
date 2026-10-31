@@ -104,7 +104,13 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     256
   );
 
-  return buf2hex(derivedBits) === originalHashHex;
+  const computed = buf2hex(derivedBits);
+  if (computed.length !== originalHashHex.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computed.length; i++) {
+    diff |= computed.charCodeAt(i) ^ originalHashHex.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 // Gera JWT assinado com HMAC-SHA256
@@ -209,6 +215,76 @@ export function sanitizeMediaUrl(value: unknown): string | null {
   if (/^\/api\/media\/[\w\-./%]+$/.test(url) && !url.includes("..")) return url;
   if (/^https:\/\/[^\s<>"']+$/.test(url)) return url;
   return null;
+}
+
+// Rate limit por janela fixa usando D1. Retorna uma Response 429 quando excedido, senão null.
+// Se o D1 falhar, deixa passar (fail-open) para não derrubar o serviço.
+export async function rateLimit(
+  db: D1Database,
+  request: Request,
+  name: string,
+  limit: number,
+  windowSec: number,
+  subject?: string | number
+): Promise<Response | null> {
+  try {
+    const ip = request.headers.get("CF-Connecting-IP") || "local";
+    const now = Math.floor(Date.now() / 1000);
+    const bucket = Math.floor(now / windowSec) * windowSec;
+    const key = `${name}:${subject ?? ip}:${bucket}`;
+
+    const row = await db
+      .prepare(
+        "INSERT INTO rate_limits (key, window_start, count) VALUES (?, ?, 1) ON CONFLICT(key) DO UPDATE SET count = count + 1 RETURNING count"
+      )
+      .bind(key, bucket)
+      .first<{ count: number }>();
+
+    if (Math.random() < 0.01) {
+      await db.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(now - 86400).run();
+    }
+
+    if (row && row.count > limit) {
+      const retryAfter = Math.max(1, bucket + windowSec - now);
+      return new Response(JSON.stringify({ error: "Muitas requisições. Tente novamente em instantes." }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Retry-After": String(retryAfter),
+        },
+      });
+    }
+  } catch (err) {
+    console.error("rateLimit falhou:", err);
+  }
+  return null;
+}
+
+// Erro 500 genérico: detalhes ficam só nos logs do servidor
+export function serverError(err: unknown, context: string): Response {
+  console.error(`[${context}]`, err);
+  return errorResponse("Erro interno do servidor.", 500);
+}
+
+// Escapa curingas do LIKE (usar com ESCAPE '\')
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+// Autor com perfil privado só tem conteúdo visível para ele mesmo e amigos aceitos
+export async function canViewAuthorContent(
+  db: D1Database,
+  authorId: number,
+  viewerId: number | null
+): Promise<boolean> {
+  const author = await db
+    .prepare("SELECT is_private FROM users WHERE id = ?")
+    .bind(authorId)
+    .first<{ is_private: number }>();
+  if (!author || !author.is_private) return true;
+  if (viewerId === null) return false;
+  if (viewerId === authorId) return true;
+  return areFriends(db, viewerId, authorId);
 }
 
 // Respostas JSON formatadas

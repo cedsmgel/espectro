@@ -1,14 +1,20 @@
-import { jsonResponse, errorResponse } from "../_shared/auth";
+import { jsonResponse, errorResponse, serverError, escapeLike, rateLimit, getAuthUser, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
+  JWT_SECRET?: string;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
+    const limited = await rateLimit(env.DB, request, "search", 60, 60);
+    if (limited) return limited;
+
     const url = new URL(request.url);
-    const query = url.searchParams.get("q") || url.searchParams.get("query") || "";
+    const query = (url.searchParams.get("q") || url.searchParams.get("query") || "").slice(0, 100);
+    const viewer = await getAuthUser(request, getJwtSecret(env));
+    const viewerId = viewer ? viewer.id : -1;
 
     if (!query.trim()) {
       return jsonResponse({
@@ -19,23 +25,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const trimmed = query.trim();
-    const term = `%${trimmed.toLowerCase()}%`;
+    const term = `%${escapeLike(trimmed.toLowerCase())}%`;
+    const prefix = `${escapeLike(trimmed.toLowerCase())}%`;
 
     // 1. users: por username ou nome
     const usersPromise = env.DB.prepare(`
       SELECT id, username, name, avatar_url, bio
       FROM users
-      WHERE LOWER(username) LIKE ? OR (name IS NOT NULL AND LOWER(name) LIKE ?)
+      WHERE LOWER(username) LIKE ? ESCAPE '\\' OR (name IS NOT NULL AND LOWER(name) LIKE ? ESCAPE '\\')
       ORDER BY 
         CASE 
           WHEN LOWER(username) = LOWER(?) THEN 0
-          WHEN LOWER(username) LIKE ? THEN 1
+          WHEN LOWER(username) LIKE ? ESCAPE '\\' THEN 1
           ELSE 2 
         END,
         id DESC
       LIMIT 8
     `)
-      .bind(term, term, trimmed, `${trimmed.toLowerCase()}%`)
+      .bind(term, term, trimmed, prefix)
       .all<any>();
 
     // 2. communities: por name ou slug
@@ -43,17 +50,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       SELECT id, name, slug, description, icon_color,
              (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = communities.id) AS members_count
       FROM communities
-      WHERE LOWER(name) LIKE ? OR (slug IS NOT NULL AND LOWER(slug) LIKE ?)
+      WHERE LOWER(name) LIKE ? ESCAPE '\\' OR (slug IS NOT NULL AND LOWER(slug) LIKE ? ESCAPE '\\')
       ORDER BY 
         CASE 
           WHEN LOWER(name) = LOWER(?) THEN 0
-          WHEN LOWER(name) LIKE ? THEN 1
+          WHEN LOWER(name) LIKE ? ESCAPE '\\' THEN 1
           ELSE 2 
         END,
         id DESC
       LIMIT 8
     `)
-      .bind(term, term, trimmed, `${trimmed.toLowerCase()}%`)
+      .bind(term, term, trimmed, prefix)
       .all<any>();
 
     // 3. posts: pelo title ou content
@@ -64,11 +71,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN communities c ON p.community_id = c.id
-      WHERE (p.title IS NOT NULL AND LOWER(p.title) LIKE ?) OR LOWER(p.content) LIKE ?
+      WHERE ((p.title IS NOT NULL AND LOWER(p.title) LIKE ? ESCAPE '\\') OR LOWER(p.content) LIKE ? ESCAPE '\\')
+        AND (
+          COALESCE(u.is_private, 0) = 0
+          OR u.id = ?
+          OR EXISTS (
+            SELECT 1 FROM friendships f
+            WHERE f.status = 'accepted'
+              AND ((f.user_id = u.id AND f.friend_id = ?) OR (f.user_id = ? AND f.friend_id = u.id))
+          )
+        )
       ORDER BY p.id DESC
       LIMIT 8
     `)
-      .bind(term, term)
+      .bind(term, term, viewerId, viewerId, viewerId)
       .all<any>();
 
     const [usersRes, communitiesRes, postsRes] = await Promise.all([
@@ -83,6 +99,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       posts: postsRes.results || [],
     });
   } catch (err: any) {
-    return errorResponse(`Erro na busca global: ${err.message || String(err)}`, 500);
+    return serverError(err, "search");
   }
 };

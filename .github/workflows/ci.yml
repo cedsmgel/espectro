@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (frontend + functions)
+        run: npm run check
+      - name: Typecheck (chat-worker)
+        run: npm run check:chat
+      - name: Build
+        run: npm run build
+      - name: Audit (somente dependências de produção)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

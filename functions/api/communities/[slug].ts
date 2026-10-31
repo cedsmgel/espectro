@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -49,7 +49,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       is_member: Boolean((community as any).is_member),
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar detalhes da comunidade.";
-    return errorResponse(message, 500);
+    return serverError(err, "communities/[slug]");
   }
 };

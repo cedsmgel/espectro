@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "check:chat": "tsc --noEmit -p chat-worker/tsconfig.json",
+    "deploy:chat": "npm --prefix chat-worker run deploy",
+    "db:migrate:local": "wrangler d1 migrations apply espectro --local",
+    "db:migrate:remote": "wrangler d1 migrations apply espectro --remote"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",

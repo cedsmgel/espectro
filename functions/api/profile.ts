@@ -1,4 +1,4 @@
-import { getAuthUser, signJWT, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
+import { getAuthUser, signJWT, jsonResponse, errorResponse, getJwtSecret, serverError, sanitizeMediaUrl } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -75,7 +75,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       },
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao recuperar perfil: ${err.message || String(err)}`, 500);
+    return serverError(err, "profile");
   }
 };
 
@@ -96,11 +96,46 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return errorResponse("Corpo da requisição inválido.", 400);
     }
 
+    const current = await env.DB.prepare(
+      "SELECT name, bio, avatar_url, music FROM users WHERE id = ?"
+    )
+      .bind(auth.id)
+      .first<{ name: string | null; bio: string | null; avatar_url: string | null; music: string | null }>();
+    if (!current) {
+      return errorResponse("Conta de usuário não encontrada.", 404);
+    }
+
+    const textField = (value: unknown, previous: string | null, max: number, label: string) => {
+      if (value === undefined) return { value: previous };
+      if (value === null || value === "") return { value: null };
+      const text = String(value).trim();
+      if (text.length > max) return { error: `${label} deve ter no máximo ${max} caracteres.` };
+      return { value: text || null };
+    };
+
     const rawUsername = body.username ? String(body.username).trim() : auth.username;
-    const rawName = body.name !== undefined ? (body.name ? String(body.name).trim() : null) : null;
-    const rawBio = body.bio !== undefined ? (body.bio ? String(body.bio).trim() : null) : null;
-    const rawAvatarUrl = body.avatar_url !== undefined ? (body.avatar_url ? String(body.avatar_url).trim() : null) : null;
-    const rawMusic = body.music !== undefined ? (body.music ? String(body.music).trim() : null) : null;
+    const nameField = textField(body.name, current.name, 50, "O nome");
+    const bioField = textField(body.bio, current.bio, 200, "A bio");
+    const musicField = textField(body.music, current.music, 200, "A música");
+    const fieldError = nameField.error || bioField.error || musicField.error;
+    if (fieldError) {
+      return errorResponse(fieldError, 400);
+    }
+    const rawName = nameField.value ?? null;
+    const rawBio = bioField.value ?? null;
+    const rawMusic = musicField.value ?? null;
+
+    let rawAvatarUrl: string | null = current.avatar_url;
+    if (body.avatar_url !== undefined) {
+      if (!body.avatar_url) {
+        rawAvatarUrl = null;
+      } else {
+        rawAvatarUrl = sanitizeMediaUrl(body.avatar_url);
+        if (!rawAvatarUrl) {
+          return errorResponse("URL do avatar inválida.", 400);
+        }
+      }
+    }
 
     // 3. Validação do nome de usuário
     if (!rawUsername || rawUsername.length < 3 || rawUsername.length > 30) {
@@ -149,17 +184,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       token: newToken,
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao atualizar perfil: ${err.message || String(err)}`, 500);
+    return serverError(err, "profile");
   }
 };
 
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-};

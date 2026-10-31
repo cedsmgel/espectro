@@ -1,4 +1,4 @@
-import { verifyJWT, errorResponse, getJwtSecret, areFriends } from "../_shared/auth";
+import { verifyJWT, errorResponse, getJwtSecret, areFriends, serverError } from "../_shared/auth";
 
 export interface Env {
   CHAT_ROOMS: DurableObjectNamespace;
@@ -85,7 +85,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const id = env.CHAT_ROOMS.idFromName(conversationId);
     return env.CHAT_ROOMS.get(id).fetch(forwarded);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro interno ao conectar com a sala de chat.";
-    return errorResponse(message, 500);
+    return serverError(err, "chat");
   }
 };

@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, canViewAuthorContent } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -49,10 +49,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Publicação não encontrada.", 404);
     }
 
+    const viewer = await getAuthUser(context.request, getJwtSecret(env));
+    const allowed = await canViewAuthorContent(
+      env.DB,
+      (post as { author_id: number }).author_id,
+      viewer ? viewer.id : null
+    );
+    if (!allowed) {
+      return errorResponse("Publicação não encontrada.", 404);
+    }
+
     return jsonResponse(post);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao buscar publicação.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/[id]");
   }
 };
 
@@ -98,6 +107,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return errorResponse("O conteúdo da publicação não pode ser vazio.", 400);
     }
 
+    if (cleanContent.length > 10000) {
+      return errorResponse("O conteúdo da publicação excede 10.000 caracteres.", 400);
+    }
+    if (body.title && String(body.title).trim().length > 200) {
+      return errorResponse("O título excede 200 caracteres.", 400);
+    }
+
     const cleanTitle = body.title !== undefined ? (body.title ? String(body.title).trim() : null) : post.title;
 
     // 3. Atualiza no D1
@@ -141,8 +157,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       post: updatedPost,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao atualizar publicação.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/[id]");
   }
 };
 
@@ -213,18 +228,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       deleted_id: numericPostId,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao excluir publicação.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/[id]");
   }
 };
 
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-};

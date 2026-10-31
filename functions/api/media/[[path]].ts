@@ -1,4 +1,4 @@
-import { errorResponse } from "../../_shared/auth";
+import { errorResponse, serverError } from "../../_shared/auth";
 
 export interface Env {
   MEDIA_BUCKET?: R2Bucket;
@@ -105,7 +105,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       headers,
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao transmitir mídia: ${err.message || String(err)}`, 500);
+    return serverError(err, "media/[[path]]");
   }
 };
 

@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -17,20 +17,10 @@ function generateSlug(text: string): string {
   );
 }
 
-// Garante que a coluna icon_color exista na tabela communities
-async function ensureCommunitiesTable(db: D1Database) {
-  try {
-    await db.prepare("ALTER TABLE communities ADD COLUMN icon_color TEXT DEFAULT '#712ae2'").run();
-  } catch {
-    // ignore se já existe
-  }
-}
-
 // GET: lista todas as comunidades ou busca uma única por slug/id
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    await ensureCommunitiesTable(env.DB);
     const url = new URL(request.url);
     const slug = url.searchParams.get("slug");
     const id = url.searchParams.get("id");
@@ -102,8 +92,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return jsonResponse(formatted);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar comunidades.";
-    return errorResponse(message, 500);
+    return serverError(err, "communities/index");
   }
 };
 
@@ -179,8 +168,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           members_count: countResult ? countResult.total : 1,
         });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Erro ao entrar na comunidade.";
-        return errorResponse(msg, 500);
+        return serverError(err, "communities/index");
       }
     }
 
@@ -215,8 +203,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const cleanName = name.trim();
     const cleanDesc = description ? description.trim() : "";
+    if (cleanName.length > 50) {
+      return errorResponse("O nome da comunidade deve ter no máximo 50 caracteres.", 400);
+    }
+    if (cleanDesc.length > 500) {
+      return errorResponse("A descrição deve ter no máximo 500 caracteres.", 400);
+    }
     const cleanSlug = body.slug?.trim() ? generateSlug(body.slug) : generateSlug(cleanName);
-    const cleanColor = typeof icon_color === "string" && icon_color.trim().startsWith("#") ? icon_color.trim() : "#712ae2";
+    const cleanColor = typeof icon_color === "string" && icon_color.trim().startsWith("#") && /^#[0-9a-fA-F]{3,8}$/.test(icon_color.trim()) ? icon_color.trim() : "#712ae2";
 
     // Verifica se já existe com esse nome ou slug
     const existing = await env.DB.prepare(
@@ -229,7 +223,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Já existe uma comunidade com este nome ou slug.", 409);
     }
 
-    await ensureCommunitiesTable(env.DB);
 
     // Insere comunidade com slug e icon_color
     const insertResult = await env.DB.prepare(
@@ -262,7 +255,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao processar comunidade.";
-    return errorResponse(message, 500);
+    return serverError(err, "communities/index");
   }
 };

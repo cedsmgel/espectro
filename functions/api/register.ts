@@ -1,4 +1,4 @@
-import { hashPassword, jsonResponse, errorResponse } from "../_shared/auth";
+import { hashPassword, jsonResponse, errorResponse, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -9,6 +9,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
 
+    const limited = await rateLimit(env.DB, request, "register", 10, 3600);
+    if (limited) return limited;
+
     let body: { username?: string; email?: string; password?: string };
     try {
       body = await request.json();
@@ -18,16 +21,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const { username, email, password } = body;
 
-    if (!username || typeof username !== "string" || username.trim().length < 3) {
-      return errorResponse("Username deve ter no mínimo 3 caracteres.", 400);
+    if (!username || typeof username !== "string" || !/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) {
+      return errorResponse("Username deve ter de 3 a 30 caracteres, apenas letras, números e underline.", 400);
     }
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
+    if (
+      !email ||
+      typeof email !== "string" ||
+      email.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       return errorResponse("Email inválido.", 400);
     }
 
-    if (!password || typeof password !== "string" || password.length < 6) {
-      return errorResponse("Senha deve ter no mínimo 6 caracteres.", 400);
+    if (!password || typeof password !== "string" || password.length < 8 || password.length > 128) {
+      return errorResponse("Senha deve ter entre 8 e 128 caracteres.", 400);
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -50,17 +58,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Hash da senha com PBKDF2 (Web Crypto)
     const passwordHash = await hashPassword(password);
 
-    // Inserção no D1
-    console.log("[REGISTER] env.DB:", env.DB ? "Conectado ao D1" : "MISSING", "cleanUsername:", cleanUsername);
-    const insertResult = await env.DB.prepare(
+    // Inserção no D1    const insertResult = await env.DB.prepare(
       "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)"
     )
       .bind(cleanUsername, cleanEmail, passwordHash)
       .run();
 
     const newId = insertResult.meta.last_row_id;
-    console.log("[REGISTER] Usuário registrado com sucesso. newId:", newId);
-
     return jsonResponse(
       {
         id: newId,
@@ -69,7 +73,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro interno no servidor.";
-    return errorResponse(message, 500);
+    return serverError(err, "register");
   }
 };

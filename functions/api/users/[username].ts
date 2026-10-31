@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -75,6 +75,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       communities: communities || [],
     });
   } catch (err: any) {
-    return errorResponse(`Erro ao recuperar usuário: ${err.message || String(err)}`, 500);
+    return serverError(err, "users/[username]");
   }
 };

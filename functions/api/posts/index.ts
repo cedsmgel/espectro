@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl, serverError, rateLimit } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -7,34 +7,10 @@ export interface Env {
   BUCKET?: R2Bucket;
 }
 
-// Garante que a tabela posts e todas as suas colunas existam (self-healing no D1)
-async function ensurePostsTable(db: D1Database) {
-  try {
-    await db.prepare(`
-      CREATE TABLE IF NOT EXISTS posts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        author_id INTEGER NOT NULL REFERENCES users(id),
-        community_id INTEGER REFERENCES communities(id),
-        content TEXT NOT NULL,
-        title TEXT,
-        media_url TEXT,
-        media_type TEXT,
-        post_type TEXT DEFAULT 'scrap',
-        upvotes INTEGER DEFAULT 0,
-        downvotes INTEGER DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `).run();
-  } catch {
-    // ignore
-  }
-}
-
 // GET: lista os posts com filtros opcionais (community_id, community_slug, post_type, feed)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    await ensurePostsTable(env.DB);
     const url = new URL(request.url);
     const communityId = url.searchParams.get("community_id");
     const communitySlug = url.searchParams.get("community_slug");
@@ -71,6 +47,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     `;
 
     const params: unknown[] = [];
+
+    // Posts de perfis privados só aparecem para o próprio autor e amigos aceitos
+    const viewerId = authUser ? authUser.id : -1;
+    query += ` AND (
+      COALESCE(u.is_private, 0) = 0
+      OR u.id = ?
+      OR EXISTS (
+        SELECT 1 FROM friendships f
+        WHERE f.status = 'accepted'
+          AND ((f.user_id = u.id AND f.friend_id = ?) OR (f.user_id = ? AND f.friend_id = u.id))
+      )
+    )`;
+    params.push(viewerId, viewerId, viewerId);
 
     if (authorId || authorName) {
       // 1. Verifica se o autor possui perfil privado (is_private)
@@ -131,8 +120,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     return jsonResponse(results || []);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao carregar posts.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/index");
   }
 };
 
@@ -140,7 +128,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    await ensurePostsTable(env.DB);
     const secret = getJwtSecret(env);
 
     // Validação do JWT
@@ -224,6 +211,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     // Criação de Post
+    const limited = await rateLimit(env.DB, request, "post-create", 30, 600, user.id);
+    if (limited) return limited;
+
     const { content, title, community_id, community_slug, media_url, media_type, post_type } = body;
 
     const cleanMediaUrl = sanitizeMediaUrl(media_url);
@@ -232,6 +222,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
     const cleanContent = content && typeof content === "string" ? content.trim() : "";
     const cleanTitle = title && typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
+
+    if (cleanContent.length > 10000) {
+      return errorResponse("O conteúdo da postagem excede 10.000 caracteres.", 400);
+    }
+    if (cleanTitle && cleanTitle.length > 200) {
+      return errorResponse("O título excede 200 caracteres.", 400);
+    }
 
     // Se o post não tiver conteúdo nem mídia, rejeita
     if (!cleanContent && !cleanMediaUrl) {
@@ -338,8 +335,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       201
     );
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao processar post.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/index");
   }
 };
 
@@ -410,18 +406,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       deleted_id: numericPostId,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Erro ao deletar publicação.";
-    return errorResponse(message, 500);
+    return serverError(err, "posts/index");
   }
 };
 
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-};
