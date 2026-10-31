@@ -22,6 +22,15 @@ npx wrangler pages dev dist
 
 O `JWT_SECRET` precisa ter 32+ caracteres; sem ele a API recusa todas as requisições.
 
+## Notificações push
+
+Precisam de um par de chaves VAPID. Gere com `node scripts/generate-vapid.mjs` e:
+
+- local: cole `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT` no `.dev.vars`
+- produção: `wrangler pages secret put VAPID_PUBLIC_KEY --project-name espectro` (e o mesmo para `VAPID_PRIVATE_KEY` e `VAPID_SUBJECT`)
+
+Sem as chaves, o servidor simplesmente não envia push. No iPhone o site precisa estar instalado na tela inicial.
+
 ## Deploy
 
 1. Secret (uma vez): `wrangler pages secret put JWT_SECRET --project-name espectro`
