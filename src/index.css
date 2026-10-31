@@ -86,6 +86,28 @@
     padding: 0;
     min-height: 100vh;
     min-height: 100dvh;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+
+  /* Previne zoom automático agressivo do iOS Safari ao focar inputs/textarea/select com fonte < 16px */
+  @media screen and (max-width: 768px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Desativa duplo toque para zoom acidental em links, botões e campos */
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  summary {
+    touch-action: manipulation;
   }
 
   body {
