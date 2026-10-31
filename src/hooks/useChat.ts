@@ -208,6 +208,8 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
       };
 
       ws.onmessage = (event) => {
+        // Ignora eventos de um socket que já foi substituído (troca de conversa)
+        if (socketRef.current !== ws) return;
         try {
           const data = JSON.parse(event.data);
 
@@ -269,6 +271,11 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
       };
 
       ws.onclose = () => {
+        // Um socket antigo (já trocado ou fechado de propósito) não pode disparar reconexão:
+        // isso fechava o socket novo e gerava um ciclo infinito de "Reconectando..."
+        if (socketRef.current !== ws) return;
+        socketRef.current = null;
+
         if (pingIntervalRef.current) {
           window.clearInterval(pingIntervalRef.current);
           pingIntervalRef.current = null;
