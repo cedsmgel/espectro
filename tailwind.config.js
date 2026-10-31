@@ -8,41 +8,41 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Visible Spectrum Social Design System (Stitch M3 Tokens)
-        "primary": "#3525cd",
-        "primary-container": "#4f46e5",
-        "on-primary": "#ffffff",
-        "on-primary-container": "#dad7ff",
+        // Visible Spectrum Social Design System (Tokens Dinâmicos via CSS Custom Properties)
+        "primary": "rgb(var(--color-primary) / <alpha-value>)",
+        "primary-container": "rgb(var(--color-primary-container) / <alpha-value>)",
+        "on-primary": "rgb(var(--color-on-primary) / <alpha-value>)",
+        "on-primary-container": "rgb(var(--color-on-primary-container) / <alpha-value>)",
         "primary-fixed": "#e2dfff",
         "primary-fixed-dim": "#c3c0ff",
 
-        "secondary": "#712ae2",
-        "secondary-container": "#8a4cfc",
-        "on-secondary": "#ffffff",
+        "secondary": "rgb(var(--color-secondary) / <alpha-value>)",
+        "secondary-container": "rgb(var(--color-secondary-container) / <alpha-value>)",
+        "on-secondary": "rgb(var(--color-on-secondary) / <alpha-value>)",
         "on-secondary-container": "#fffbff",
         "secondary-fixed": "#eaddff",
         "secondary-fixed-dim": "#d2bbff",
 
-        "tertiary": "#00505f",
-        "tertiary-container": "#006a7c",
+        "tertiary": "rgb(var(--color-tertiary) / <alpha-value>)",
+        "tertiary-container": "rgb(var(--color-tertiary-container) / <alpha-value>)",
         "on-tertiary": "#ffffff",
         "tertiary-fixed": "#acedff",
         "tertiary-fixed-dim": "#4cd7f6",
 
-        "surface": "#faf8ff",
-        "surface-bright": "#faf8ff",
-        "surface-dim": "#d2d9f4",
+        "surface": "rgb(var(--color-surface) / <alpha-value>)",
+        "surface-bright": "rgb(var(--color-surface-bright) / <alpha-value>)",
+        "surface-dim": "rgb(var(--color-surface-dim) / <alpha-value>)",
         "surface-tint": "#4d44e3",
-        "surface-container-lowest": "#ffffff",
-        "surface-container-low": "#f2f3ff",
-        "surface-container": "#eaedff",
-        "surface-container-high": "#e2e7ff",
-        "surface-container-highest": "#dae2fd",
+        "surface-container-lowest": "rgb(var(--color-surface-container-lowest) / <alpha-value>)",
+        "surface-container-low": "rgb(var(--color-surface-container-low) / <alpha-value>)",
+        "surface-container": "rgb(var(--color-surface-container) / <alpha-value>)",
+        "surface-container-high": "rgb(var(--color-surface-container-high) / <alpha-value>)",
+        "surface-container-highest": "rgb(var(--color-surface-container-highest) / <alpha-value>)",
 
-        "on-surface": "#131b2e",
-        "on-surface-variant": "#464555",
-        "outline": "#777587",
-        "outline-variant": "#c7c4d8",
+        "on-surface": "rgb(var(--color-on-surface) / <alpha-value>)",
+        "on-surface-variant": "rgb(var(--color-on-surface-variant) / <alpha-value>)",
+        "outline": "rgb(var(--color-outline) / <alpha-value>)",
+        "outline-variant": "rgb(var(--color-outline-variant) / <alpha-value>)",
 
         "error": "#ba1a1a",
         "error-container": "#ffdad6",
@@ -50,9 +50,9 @@ export default {
 
         // Dark compatibility tokens
         dark: {
-          bg: "#0d0f14",
-          surface: "#13161f",
-          card: "rgba(22, 27, 38, 0.7)",
+          bg: "#0b0d14",
+          surface: "#121520",
+          card: "rgba(20, 24, 36, 0.7)",
           border: "rgba(255, 255, 255, 0.08)",
         },
         brand: {

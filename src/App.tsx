@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { CreatePostModal } from './components/CreatePostModal';
 import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
@@ -27,8 +28,9 @@ const GlobalCreatePostModal: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <SidebarProvider>
-        <Routes>
+      <ThemeProvider>
+        <SidebarProvider>
+          <Routes>
           <Route path="/" element={<Feed />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/:username" element={<ProfilePage />} />
@@ -52,7 +54,8 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <GlobalCreatePostModal />
-      </SidebarProvider>
+        </SidebarProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 };

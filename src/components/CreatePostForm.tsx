@@ -373,9 +373,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
             className="bg-transparent text-xs text-on-surface font-semibold focus:outline-none cursor-pointer"
           >
-            <option value="">Publicar no Feed Geral</option>
+            <option value="" className="bg-surface-container-lowest text-on-surface">Publicar no Feed Geral</option>
             {communities.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.id} className="bg-surface-container-lowest text-on-surface">
                 c/{c.name}
               </option>
             ))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, directMessagesApi, searchApi, SearchResults } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
+import { useTheme } from '../context/ThemeContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
 
@@ -12,6 +13,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const { toggleSidebar } = useSidebar();
+  const { isDark, toggleTheme } = useTheme();
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
   const userId = user?.id;
@@ -405,6 +407,19 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 </button>
               </div>
             )}
+
+            {/* Botão de Alternância de Tema (Light / Dark Mode) */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              title={isDark ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
+              className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all duration-200 cursor-pointer flex items-center justify-center relative group"
+            >
+              <span className="material-symbols-outlined text-[22px] transition-transform duration-300 group-hover:rotate-45">
+                {isDark ? 'light_mode' : 'dark_mode'}
+              </span>
+            </button>
           </div>
         </div>
       </header>

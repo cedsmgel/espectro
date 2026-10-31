@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface SidebarNavProps {
   onOpenCreateModal?: () => void;
@@ -12,6 +13,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const navigate = useNavigate();
   const user = authStorage.getUser();
   const { isExpanded, openCreatePostModal } = useSidebar();
+  const { isDark, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {
@@ -204,6 +206,23 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                     <span className="material-symbols-outlined text-[18px] text-tertiary">shield</span>
                     <span>Privacidade & Conta</span>
                   </Link>
+
+                  {/* Alternar Tema Light / Dark */}
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-[18px] text-primary">
+                        {isDark ? 'light_mode' : 'dark_mode'}
+                      </span>
+                      <span>Tema</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-on-surface-variant">
+                      {isDark ? 'Escuro' : 'Claro'}
+                    </span>
+                  </button>
 
                   <button
                     type="button"

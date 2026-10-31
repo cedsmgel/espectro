@@ -3,15 +3,87 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* MODO CLARO (Default / Light Mode) - Fundos suaves (slate-50), textos escuros (slate-900) e roxo */
+    --color-surface: 248 250 252; /* #f8fafc (slate-50) */
+    --color-surface-dim: 241 245 249; /* #f1f5f9 (slate-100) */
+    --color-surface-bright: 255 255 255; /* #ffffff */
+    --color-surface-tint: 79 70 229;
+
+    --color-surface-container-lowest: 255 255 255; /* #ffffff - Cards, modais e containers */
+    --color-surface-container-low: 241 245 249; /* #f1f5f9 - Inputs e campos de busca */
+    --color-surface-container: 226 232 240; /* #e2e8f0 - Hover e divisores */
+    --color-surface-container-high: 203 213 225; /* #cbd5e1 - Badges */
+    --color-surface-container-highest: 148 163 184; /* #94a3b8 */
+
+    --color-on-surface: 15 23 42; /* #0f172a (slate-900) - Texto primário */
+    --color-on-surface-variant: 71 85 105; /* #475569 (slate-600) - Texto secundário */
+    --color-outline: 148 163 184; /* #94a3b8 (slate-400) */
+    --color-outline-variant: 203 213 225; /* #cbd5e1 (slate-300) - Bordas nítidas para não ficar chapado */
+
+    --color-primary: 79 70 229; /* #4f46e5 (indigo/roxo vibrante) */
+    --color-primary-container: 99 102 241; /* #6366f1 */
+    --color-on-primary: 255 255 255;
+    --color-on-primary-container: 238 242 255;
+
+    --color-secondary: 126 34 206; /* #7e22ce (roxo) */
+    --color-secondary-container: 147 51 234; /* #9333ea */
+    --color-on-secondary: 255 255 255;
+
+    --color-tertiary: 14 116 144; /* #0e7490 */
+    --color-tertiary-container: 6 182 212; /* #06b6d4 */
+
+    --color-error: 220 38 38;
+    --color-error-container: 254 226 226;
+    --color-on-error: 255 255 255;
+  }
+
+  html.dark {
+    /* MODO ESCURO (Dark Mode) - Fundos escuros profundos, textos claros e roxo elétrico */
+    --color-surface: 15 17 23; /* #0f1117 - Fundo noturno suave */
+    --color-surface-dim: 10 12 18; /* #0a0c12 */
+    --color-surface-bright: 26 30 42; /* #1a1e2a */
+    --color-surface-tint: 99 102 241;
+
+    --color-surface-container-lowest: 20 24 35; /* #141823 - Cards, modais e containers */
+    --color-surface-container-low: 26 31 46; /* #1a1f2e - Inputs e containers baixos */
+    --color-surface-container: 34 40 59; /* #22283b - Hover e seleções */
+    --color-surface-container-high: 44 52 75; /* #2c344b - Badges */
+    --color-surface-container-highest: 55 65 92; /* #37415c */
+
+    --color-on-surface: 241 245 249; /* #f1f5f9 (slate-100) - Texto primário claro */
+    --color-on-surface-variant: 148 163 184; /* #94a3b8 (slate-400) - Texto secundário */
+    --color-outline: 100 116 139; /* #64748b */
+    --color-outline-variant: 51 65 85; /* #334155 (slate-700) - Bordas sutis */
+
+    --color-primary: 99 102 241; /* #6366f1 (roxo elétrico) */
+    --color-primary-container: 79 70 229; /* #4f46e5 */
+    --color-on-primary: 255 255 255;
+    --color-on-primary-container: 224 231 255;
+
+    --color-secondary: 168 85 247; /* #a855f7 */
+    --color-secondary-container: 147 51 234; /* #9333ea */
+    --color-on-secondary: 255 255 255;
+
+    --color-tertiary: 6 182 212; /* #06b6d4 */
+    --color-tertiary-container: 8 145 178; /* #0891b2 */
+
+    --color-error: 239 68 68;
+    --color-error-container: 69 10 10;
+    --color-on-error: 255 255 255;
+  }
+
   html, body {
     margin: 0;
     padding: 0;
-  }
-  body {
-    background-color: #faf8ff;
-    color: #131b2e;
     min-height: 100vh;
+  }
+
+  body {
+    background-color: rgb(var(--color-surface));
+    color: rgb(var(--color-on-surface));
     font-family: 'Inter', sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
@@ -43,26 +115,30 @@
   scrollbar-width: none;
 }
 
-/* Glass & Clean Surface Utilities */
+/* Glass & Clean Surface Utilities - com suporte para light e dark mode */
 .surface-card {
-  background-color: #ffffff;
-  border: 1px solid rgba(199, 196, 216, 0.4);
-  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.03);
+  background-color: rgb(var(--color-surface-container-lowest));
+  border: 1px solid rgb(var(--color-outline-variant) / 0.5);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+html.dark .surface-card {
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.35);
 }
 
 .surface-hover:hover {
-  background-color: #f2f3ff;
+  background-color: rgb(var(--color-surface-container-low));
 }
 
 /* Primary and Accent interactive buttons */
 .btn-primary {
-  background-color: #4f46e5;
+  background-color: rgb(var(--color-primary-container));
   color: #ffffff;
   box-shadow: 0 1px 4px rgba(79, 70, 229, 0.25);
   transition: all 0.15s ease-in-out;
 }
 .btn-primary:hover {
-  background-color: #3525cd;
+  background-color: rgb(var(--color-primary));
 }
 
 .btn-primary-blue:active {
@@ -74,7 +150,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
+  color: rgb(var(--color-on-surface));
   transition: all 0.15s ease-in-out;
 }
 
@@ -93,7 +169,7 @@
   animation: wavePulse 1.4s ease-in-out infinite;
 }
 
-/* Smooth Scrollbar */
+/* Smooth Scrollbar adaptativa */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -102,9 +178,15 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 9999px;
 }
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(148, 163, 184, 0.5);
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
