@@ -66,9 +66,26 @@ export interface DirectMessage {
   id: number;
   sender_id: number;
   receiver_id: number;
-  sender_name: string;
+  sender_username: string;
   content: string;
+  message_type: 'text' | 'image' | 'video' | 'file' | 'location' | 'gif' | 'sticker';
+  media_url: string | null;
+  reply_to_id: number | null;
+  client_id: string | null;
+  status: 'sent' | 'delivered' | 'read';
   created_at: string;
+}
+
+export interface Conversation {
+  friend_id: number;
+  username: string;
+  avatar_url?: string | null;
+  last_message_id: number;
+  last_sender_id: number;
+  last_content: string;
+  last_message_type: DirectMessage['message_type'];
+  last_created_at: string;
+  unread_count: number;
 }
 
 export interface CreatePostData {
@@ -321,15 +338,40 @@ export const friendsApi = {
 };
 
 export const directMessagesApi = {
-  list: (friendId: number) =>
-    apiRequest<DirectMessage[]>(`/api/direct_messages?friend_id=${friendId}`, { method: 'GET' }),
+  list: (friendId: number, options?: { beforeId?: number; limit?: number }) => {
+    const params = new URLSearchParams({ friend_id: String(friendId) });
+    if (options?.beforeId) params.set('before_id', String(options.beforeId));
+    if (options?.limit) params.set('limit', String(options.limit));
+    return apiRequest<{ messages: DirectMessage[]; has_more: boolean }>(
+      `/api/direct_messages?${params.toString()}`,
+      { method: 'GET' }
+    );
+  },
   getUnreadCount: () =>
     apiRequest<{ unread_count: number }>('/api/direct_messages?unread=count', { method: 'GET' }),
-  send: (params: { receiver_id: number; content: string }) =>
-    apiRequest<DirectMessage>('/api/direct_messages', {
+  send: (params: {
+    receiver_id: number;
+    content: string;
+    message_type?: DirectMessage['message_type'];
+    media_url?: string | null;
+    reply_to_id?: number | null;
+    client_id?: string;
+  }) =>
+    apiRequest<{ message: DirectMessage; duplicate?: boolean }>('/api/direct_messages', {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+  remove: (messageId: number) =>
+    apiRequest<{ success: boolean }>(`/api/direct_messages?id=${messageId}`, { method: 'DELETE' }),
+  markRead: (friendId: number) =>
+    apiRequest<{ marked: number }>('/api/direct_messages/read', {
+      method: 'POST',
+      body: JSON.stringify({ friend_id: friendId }),
+    }),
+};
+
+export const conversationsApi = {
+  list: () => apiRequest<Conversation[]>('/api/conversations', { method: 'GET' }),
 };
 
 export interface UploadResponse {

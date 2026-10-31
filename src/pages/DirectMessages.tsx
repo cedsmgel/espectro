@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
-import { authStorage, friendsApi, Friend, uploadApi } from '../lib/api';
+import { authStorage, friendsApi, Friend, uploadApi, conversationsApi, Conversation } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
 import { useVisualViewport } from '../hooks/useVisualViewport';
@@ -149,7 +149,30 @@ export const DirectMessages: React.FC = () => {
     return () => clearTimeout(t);
   }, [toastMessage]);
 
-  // Hook customizado de WebSocket para Chat em tempo real via Durable Objects
+  // Conversas: última mensagem e não lidas vêm do servidor (D1)
+  const [conversations, setConversations] = useState<Record<number, Conversation>>({});
+  const refreshConversations = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const list = await conversationsApi.list();
+      setConversations(Object.fromEntries(list.map((c) => [c.friend_id, c])));
+    } catch {}
+  }, [userId]);
+
+  useEffect(() => {
+    refreshConversations();
+    const timer = window.setInterval(refreshConversations, 15000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshConversations();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refreshConversations]);
+
+  // Hook customizado: histórico via HTTP (D1) e tempo real via Durable Objects
   const {
     messages,
     sendMessage,
@@ -161,9 +184,14 @@ export const DirectMessages: React.FC = () => {
     loadingHistory,
     reconnect,
     markAsRead,
+    retrySend,
+    loadOlder,
+    hasMore,
+    loadingOlder,
   } = useChat({
     activeFriendId: activeFriend?.friend_id,
     activeFriendUsername: activeFriend?.username,
+    onActivity: refreshConversations,
   });
 
   // Marca como lido quando o usuário foca na janela/aba
@@ -244,9 +272,11 @@ export const DirectMessages: React.FC = () => {
   const [searchingUsers, setSearchingUsers] = useState(false);
 
   // Auto-scroll para a mensagem mais recente
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageKey = lastMessage ? lastMessage.client_id || String(lastMessage.id) : '';
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isOtherUserTyping]);
+  }, [lastMessageKey, isOtherUserTyping]);
 
   // Controle de visibilidade da BottomNav no chat mobile (tela cheia)
   useEffect(() => {
@@ -468,6 +498,7 @@ export const DirectMessages: React.FC = () => {
 
   // Ações de Mensagens (Hover Menu - Tarefa 3)
   const handleStartReply = (m: ChatMessage) => {
+    if (!m.id || m.id < 0) return;
     setReplyingTo(m);
     inputRef.current?.focus();
   };
@@ -652,9 +683,45 @@ export const DirectMessages: React.FC = () => {
     setUserSearchQuery('');
   };
 
-  const filteredConversations = friends.filter((c) =>
-    c.username.toLowerCase().includes(searchConv.toLowerCase())
-  );
+  const filteredConversations = friends
+    .filter((c) => c.username.toLowerCase().includes(searchConv.toLowerCase()))
+    .sort((a, b) => {
+      const ca = conversations[a.friend_id]?.last_message_id ?? 0;
+      const cb = conversations[b.friend_id]?.last_message_id ?? 0;
+      if (ca !== cb) return cb - ca;
+      return a.username.localeCompare(b.username);
+    });
+
+  const conversationPreview = (c: Conversation, myId: number): string => {
+    const prefix = c.last_sender_id === myId ? 'Você: ' : '';
+    switch (c.last_message_type) {
+      case 'image':
+        return `${prefix}📷 Foto`;
+      case 'video':
+        return `${prefix}🎥 Vídeo`;
+      case 'file':
+        return `${prefix}📎 ${c.last_content || 'Arquivo'}`;
+      case 'location':
+        return `${prefix}📍 Localização`;
+      case 'gif':
+        return `${prefix}GIF`;
+      case 'sticker':
+        return `${prefix}Figurinha`;
+      default:
+        return `${prefix}${c.last_content}`;
+    }
+  };
+
+  const formatConversationTime = (iso: string): string => {
+    const date = new Date(iso);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    }
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
+    if (diffDays < 7) return date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
 
   // Renderizador rico de mensagens por tipo (Tarefa 3)
   // Renderizador rico de mensagens por tipo e verificação de media_url (Tarefa 2)
@@ -963,20 +1030,48 @@ export const DirectMessages: React.FC = () => {
                           <div className="w-11 h-11 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm uppercase">
                             {c.username.charAt(0)}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-olive rounded-full ring-2 ring-surface-container-lowest" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-on-surface truncate">
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={`text-xs truncate ${
+                                (conversations[c.friend_id]?.unread_count ?? 0) > 0 && activeFriend?.friend_id !== c.friend_id
+                                  ? 'font-bold text-on-surface'
+                                  : 'font-semibold text-on-surface'
+                              }`}
+                            >
                               @{c.username}
                             </span>
-                            <span className="text-[11px] text-emerald-600 font-medium">
-                              online
-                            </span>
+                            {conversations[c.friend_id] && (
+                              <span className="text-[11px] text-on-surface-variant flex-shrink-0">
+                                {formatConversationTime(conversations[c.friend_id].last_created_at)}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs text-on-surface-variant truncate mt-0.5">
-                            {c.mood || 'Disponível no Direct'}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <p
+                              className={`text-xs truncate ${
+                                (conversations[c.friend_id]?.unread_count ?? 0) > 0 && activeFriend?.friend_id !== c.friend_id
+                                  ? 'text-on-surface font-semibold'
+                                  : 'text-on-surface-variant'
+                              }`}
+                            >
+                              {conversations[c.friend_id]
+                                ? conversationPreview(conversations[c.friend_id], user.id)
+                                : 'Diga um oi!'}
+                            </p>
+                            {(conversations[c.friend_id]?.unread_count ?? 0) > 0 &&
+                              activeFriend?.friend_id !== c.friend_id && (
+                                <span
+                                  className="flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold flex items-center justify-center"
+                                  aria-label={`${conversations[c.friend_id].unread_count} mensagens não lidas`}
+                                >
+                                  {conversations[c.friend_id].unread_count > 99
+                                    ? '99+'
+                                    : conversations[c.friend_id].unread_count}
+                                </span>
+                              )}
+                          </div>
                         </div>
                       </div>
                     ))
@@ -1090,9 +1185,22 @@ export const DirectMessages: React.FC = () => {
                     <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 min-h-0 overscroll-contain">
                       <div className="flex items-center justify-center">
                         <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full uppercase tracking-wider font-medium">
-                          Conversa privada criptografada
+                          Conversa privada
                         </span>
                       </div>
+
+                      {hasMore && !loadingHistory && (
+                        <div className="flex justify-center">
+                          <button
+                            type="button"
+                            onClick={loadOlder}
+                            disabled={loadingOlder}
+                            className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer disabled:opacity-60"
+                          >
+                            {loadingOlder ? 'Carregando...' : 'Carregar mensagens anteriores'}
+                          </button>
+                        </div>
+                      )}
 
                       {loadingHistory ? (
                         <div className="text-center py-8 text-xs text-on-surface-variant">
@@ -1327,7 +1435,24 @@ export const DirectMessages: React.FC = () => {
                                       })}
                                     </span>
                                     {isMe && (
-                                      m.status === 'read' ? (
+                                      m.status === 'failed' ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => m.client_id && retrySend(m.client_id)}
+                                          className="inline-flex items-center gap-0.5 text-error font-semibold cursor-pointer"
+                                          title="Falha ao enviar. Toque para reenviar"
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">error</span>
+                                          <span>Reenviar</span>
+                                        </button>
+                                      ) : m.status === 'sending' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Enviando"
+                                        >
+                                          schedule
+                                        </span>
+                                      ) : m.status === 'read' ? (
                                         <span
                                           className="material-symbols-outlined text-[15px] text-blue-500 font-bold select-none inline-flex items-center"
                                           title="Lida"

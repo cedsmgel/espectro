@@ -1,22 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
-import { authStorage, directMessagesApi } from '../lib/api';
+import { authStorage } from '../lib/api';
+import { useUnreadDms } from '../hooks/useUnreadDms';
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { openCreatePostModal, hideBottomNav } = useSidebar();
   const user = authStorage.getUser();
-  const [unreadDms, setUnreadDms] = useState(0);
-
-  useEffect(() => {
-    if (user?.id) {
-      directMessagesApi
-        .getUnreadCount()
-        .then((res) => setUnreadDms(res.unread_count || 0))
-        .catch(() => setUnreadDms(0));
-    }
-  }, [user?.id, location.pathname]);
+  const unreadDms = useUnreadDms(user?.id);
 
   if (hideBottomNav) {
     return null;
