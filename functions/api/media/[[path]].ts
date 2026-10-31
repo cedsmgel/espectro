@@ -5,6 +5,31 @@ export interface Env {
   BUCKET?: R2Bucket;
 }
 
+const SAFE_INLINE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/ogg",
+]);
+
+// Impede que conteúdo enviado por usuários seja executado na origem do site (XSS via HTML/SVG)
+function applySecurityHeaders(headers: Headers) {
+  const type = (headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  headers.set("X-Content-Type-Options", "nosniff");
+  headers.set("Content-Security-Policy", "default-src 'none'; sandbox");
+  headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  if (!SAFE_INLINE_TYPES.has(type)) {
+    headers.set("Content-Type", "application/octet-stream");
+    headers.set("Content-Disposition", "attachment");
+  }
+}
+
+const KEY_PATTERN = /^(images|videos|documents)\/[\w.-]+$/;
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env, params } = context;
@@ -17,8 +42,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const pathParam = params.path;
     const key = Array.isArray(pathParam) ? pathParam.join("/") : (pathParam || "");
 
-    if (!key) {
-      return errorResponse("Caminho do arquivo não informado.", 400);
+    if (!key || !KEY_PATTERN.test(key)) {
+      return errorResponse("Caminho do arquivo inválido.", 400);
     }
 
     // Suporte a HTTP Range requests para streaming suave e seeking de vídeos
@@ -49,6 +74,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       else if (lowerKey.endsWith(".webp")) headers.set("content-type", "image/webp");
       else if (lowerKey.endsWith(".gif")) headers.set("content-type", "image/gif");
     }
+
+    applySecurityHeaders(headers);
 
     // Se objeto não tem body (ex: 304 Not Modified por conditional request)
     if (!("body" in object)) {
@@ -94,7 +121,7 @@ export const onRequestHead: PagesFunction<Env> = async (context) => {
     const pathParam = params.path;
     const key = Array.isArray(pathParam) ? pathParam.join("/") : (pathParam || "");
 
-    if (!key) {
+    if (!key || !KEY_PATTERN.test(key)) {
       return new Response(null, { status: 400 });
     }
 
@@ -109,6 +136,7 @@ export const onRequestHead: PagesFunction<Env> = async (context) => {
     headers.set("Accept-Ranges", "bytes");
     headers.set("Content-Length", String(object.size));
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    applySecurityHeaders(headers);
 
     return new Response(null, {
       status: 200,

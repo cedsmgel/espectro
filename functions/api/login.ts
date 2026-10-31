@@ -1,4 +1,4 @@
-import { verifyPassword, signJWT, jsonResponse, errorResponse } from "../_shared/auth";
+import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -42,7 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Credenciais inválidas.", 401);
     }
 
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // Gera o token JWT
     const token = await signJWT(

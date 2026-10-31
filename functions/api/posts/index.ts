@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -42,7 +42,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const authorName = url.searchParams.get("author_name");
     const postType = url.searchParams.get("post_type");
     const feed = url.searchParams.get("feed"); // 'home' | 'all'
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const authUser = await getAuthUser(request, secret);
 
     let query = `
@@ -141,7 +141,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
     await ensurePostsTable(env.DB);
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // Validação do JWT
     const user = await getAuthUser(request, secret);
@@ -159,12 +159,57 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Ação de Voto (Upvote / Downvote)
     if (body.action === "vote" && body.post_id) {
       const postId = Number(body.post_id);
-      const isUp = body.vote_type === "up";
-      const column = isUp ? "upvotes" : "downvotes";
+      if (!Number.isInteger(postId) || postId <= 0 || !["up", "down"].includes(body.vote_type)) {
+        return errorResponse("Voto inválido.", 400);
+      }
+      const newVote = body.vote_type === "up" ? 1 : -1;
 
-      await env.DB.prepare(`UPDATE posts SET ${column} = ${column} + 1 WHERE id = ?`)
-        .bind(postId)
-        .run();
+      const post = await env.DB.prepare("SELECT id FROM posts WHERE id = ?").bind(postId).first();
+      if (!post) {
+        return errorResponse("Publicação não encontrada.", 404);
+      }
+
+      const previous = await env.DB.prepare(
+        "SELECT vote FROM post_votes WHERE user_id = ? AND post_id = ?"
+      )
+        .bind(user.id, postId)
+        .first<{ vote: number }>();
+
+      // Mesmo voto novamente remove o voto; voto oposto troca; sem voto prévio cria
+      let finalVote: number | null = newVote;
+      let upDelta = 0;
+      let downDelta = 0;
+      if (previous && previous.vote === newVote) {
+        finalVote = null;
+        if (newVote === 1) upDelta = -1;
+        else downDelta = -1;
+      } else if (previous) {
+        if (newVote === 1) {
+          upDelta = 1;
+          downDelta = -1;
+        } else {
+          upDelta = -1;
+          downDelta = 1;
+        }
+      } else if (newVote === 1) {
+        upDelta = 1;
+      } else {
+        downDelta = 1;
+      }
+
+      const writeVote =
+        finalVote === null
+          ? env.DB.prepare("DELETE FROM post_votes WHERE user_id = ? AND post_id = ?").bind(user.id, postId)
+          : env.DB.prepare(
+              "INSERT INTO post_votes (user_id, post_id, vote) VALUES (?, ?, ?) ON CONFLICT(user_id, post_id) DO UPDATE SET vote = excluded.vote"
+            ).bind(user.id, postId, finalVote);
+
+      await env.DB.batch([
+        writeVote,
+        env.DB.prepare(
+          "UPDATE posts SET upvotes = MAX(0, COALESCE(upvotes, 0) + ?), downvotes = MAX(0, COALESCE(downvotes, 0) + ?) WHERE id = ?"
+        ).bind(upDelta, downDelta, postId),
+      ]);
 
       const updated = await env.DB.prepare(
         "SELECT id, upvotes, downvotes FROM posts WHERE id = ?"
@@ -172,13 +217,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         .bind(postId)
         .first();
 
-      return jsonResponse(updated || { id: postId });
+      return jsonResponse({
+        ...(updated || { id: postId }),
+        user_vote: finalVote === 1 ? "up" : finalVote === -1 ? "down" : null,
+      });
     }
 
     // Criação de Post
     const { content, title, community_id, community_slug, media_url, media_type, post_type } = body;
 
-    const cleanMediaUrl = media_url && typeof media_url === "string" ? media_url.trim() : null;
+    const cleanMediaUrl = sanitizeMediaUrl(media_url);
+    if (media_url && !cleanMediaUrl) {
+      return errorResponse("URL de mídia inválida.", 400);
+    }
     const cleanContent = content && typeof content === "string" ? content.trim() : "";
     const cleanTitle = title && typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
 
@@ -296,7 +347,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {

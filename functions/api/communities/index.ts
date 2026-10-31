@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const url = new URL(request.url);
     const slug = url.searchParams.get("slug");
     const id = url.searchParams.get("id");
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     const authUser = await getAuthUser(request, secret);
     const authUserId = authUser ? authUser.id : -1;
@@ -111,7 +111,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // Validação JWT
     const user = await getAuthUser(request, secret);

@@ -1,4 +1,4 @@
-import { getAuthUser, signJWT, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, signJWT, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
     const url = new URL(request.url);
     const targetUsername = url.searchParams.get("username");
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // 1. Busca perfil público por nome de usuário (?username=...)
     if (targetUsername) {
@@ -82,7 +82,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // 1. Validação do JWT
     const auth = await getAuthUser(request, secret);

@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -27,7 +27,7 @@ async function ensureFriendshipsTable(db: D1Database) {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {
@@ -65,6 +65,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return jsonResponse(results || []);
     }
 
+    // Pedidos de amizade recebidos aguardando aceite
+    if (url.searchParams.get("pending") === "1") {
+      const { results } = await env.DB.prepare(`
+        SELECT f.id AS friendship_id, f.created_at, u.id AS friend_id, u.username, u.avatar_url, f.status
+        FROM friendships f
+        JOIN users u ON f.user_id = u.id
+        WHERE f.friend_id = ? AND f.status = 'pending'
+        ORDER BY f.id DESC
+      `)
+        .bind(user.id)
+        .all();
+      return jsonResponse(results || []);
+    }
+
     // Lista de amigos do usuário logado
     const friendsQuery = `
       SELECT 
@@ -96,7 +110,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {
@@ -142,22 +156,58 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Usuário não encontrado.", 404);
     }
 
-    // Insere ou atualiza status da amizade para 'accepted'
-    await env.DB.prepare(`
-      INSERT INTO friendships (user_id, friend_id, status)
-      VALUES (?, ?, 'accepted')
-      ON CONFLICT(user_id, friend_id) DO UPDATE SET status = 'accepted'
+    const existing = await env.DB.prepare(`
+      SELECT id, user_id, status FROM friendships
+      WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)
+      LIMIT 1
     `)
+      .bind(user.id, targetFriendId, targetFriendId, user.id)
+      .first<{ id: number; user_id: number; status: string }>();
+
+    const friendPayload = (status: string) => ({
+      id: target.id,
+      username: target.username,
+      status,
+    });
+
+    if (existing?.status === "accepted") {
+      return jsonResponse({
+        message: `Você já é amigo de @${target.username}.`,
+        friend: friendPayload("accepted"),
+      });
+    }
+
+    if (existing?.status === "blocked") {
+      return errorResponse("Não foi possível enviar o pedido de amizade.", 403);
+    }
+
+    // O alvo já havia pedido amizade: este POST é o aceite
+    if (existing && existing.user_id === targetFriendId) {
+      await env.DB.prepare("UPDATE friendships SET status = 'accepted' WHERE id = ?")
+        .bind(existing.id)
+        .run();
+      return jsonResponse({
+        message: `Você agora é amigo de @${target.username}!`,
+        friend: friendPayload("accepted"),
+      });
+    }
+
+    if (existing) {
+      return jsonResponse({
+        message: `Pedido de amizade para @${target.username} já enviado. Aguardando aceite.`,
+        friend: friendPayload("pending"),
+      });
+    }
+
+    await env.DB.prepare(
+      "INSERT INTO friendships (user_id, friend_id, status) VALUES (?, ?, 'pending')"
+    )
       .bind(user.id, targetFriendId)
       .run();
 
     return jsonResponse({
-      message: `Você agora é amigo de @${target.username}!`,
-      friend: {
-        id: target.id,
-        username: target.username,
-        status: "accepted",
-      },
+      message: `Pedido de amizade enviado para @${target.username}. Aguardando aceite.`,
+      friend: friendPayload("pending"),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro ao adicionar amigo.";
@@ -169,7 +219,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {

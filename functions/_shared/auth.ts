@@ -6,6 +6,15 @@ export interface UserPayload {
   exp?: number;
 }
 
+// Segredo do JWT: sem fallback. Falha se não estiver configurado ou for fraco.
+export function getJwtSecret(env: { JWT_SECRET?: string }): string {
+  const secret = env.JWT_SECRET;
+  if (!secret || secret.length < 32 || secret === "troque-este-segredo") {
+    throw new Error("Configuração do servidor incompleta.");
+  }
+  return secret;
+}
+
 // Converte ArrayBuffer para string Hexadecimal
 function buf2hex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
@@ -136,6 +145,9 @@ export async function verifyJWT(token: string, secret: string): Promise<UserPayl
     const [encodedHeader, encodedPayload, encodedSignature] = parts;
     const dataToSign = `${encodedHeader}.${encodedPayload}`;
 
+    const header = JSON.parse(base64UrlDecode(encodedHeader));
+    if (header.alg !== "HS256") return null;
+
     const key = await crypto.subtle.importKey(
       "raw",
       new TextEncoder().encode(secret),
@@ -176,6 +188,27 @@ export async function getAuthUser(request: Request, secret: string): Promise<Use
   }
   const token = authHeader.substring(7).trim();
   return verifyJWT(token, secret);
+}
+
+// Verifica se dois usuários têm amizade aceita (em qualquer direção)
+export async function areFriends(db: D1Database, a: number, b: number): Promise<boolean> {
+  const row = await db
+    .prepare(
+      "SELECT id FROM friendships WHERE status = 'accepted' AND ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) LIMIT 1"
+    )
+    .bind(a, b, b, a)
+    .first();
+  return Boolean(row);
+}
+
+// Aceita apenas URLs de mídia do próprio site (/api/media/...) ou https; descarta o resto (javascript:, data:, etc.)
+export function sanitizeMediaUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const url = value.trim();
+  if (!url || url.length > 2048) return null;
+  if (/^\/api\/media\/[\w\-./%]+$/.test(url) && !url.includes("..")) return url;
+  if (/^https:\/\/[^\s<>"']+$/.test(url)) return url;
+  return null;
 }
 
 // Respostas JSON formatadas

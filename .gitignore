@@ -12,6 +12,8 @@ _worker.bundle
 .env
 .env.local
 .env.*.local
+.dev.vars
+.dev.vars.*
 
 # Logs
 npm-debug.log*

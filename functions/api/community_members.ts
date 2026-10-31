@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
     const url = new URL(request.url);
     const communityId = url.searchParams.get("community_id");
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     if (!communityId) {
       return errorResponse("O parâmetro community_id é obrigatório.", 400);
@@ -65,7 +65,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     // Validação de autenticação
     const user = await getAuthUser(request, secret);
@@ -139,7 +139,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     const user = await getAuthUser(request, secret);
     if (!user) {

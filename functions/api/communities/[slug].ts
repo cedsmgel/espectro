@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -13,7 +13,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Slug ou ID da comunidade não informado.", 400);
     }
 
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const authUser = await getAuthUser(request, secret);
     const authUserId = authUser ? authUser.id : -1;
 

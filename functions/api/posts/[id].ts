@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -66,7 +66,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
     const numericPostId = Number(postId);
 
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
     if (!user) {
       return errorResponse("Não autorizado. Faça login para editar esta publicação.", 401);
@@ -156,7 +156,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     }
     const numericPostId = Number(postId);
 
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
     if (!user) {
       return errorResponse("Não autorizado. Faça login para excluir.", 401);

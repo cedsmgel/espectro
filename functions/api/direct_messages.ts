@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, areFriends, sanitizeMediaUrl } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -38,7 +38,7 @@ async function ensureMessagesTable(db: D1Database) {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {
@@ -70,6 +70,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const fid = Number(friendId);
+    if (!Number.isInteger(fid) || fid <= 0) {
+      return errorResponse("friend_id inválido.", 400);
+    }
 
     // Consulta histórico ordenado cronologicamente
     const query = `
@@ -114,7 +117,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     const user = await getAuthUser(request, secret);
 
     if (!user) {
@@ -138,8 +141,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const content = body.content || "";
-    const messageType = body.message_type || "text";
-    const mediaUrl = body.media_url ? String(body.media_url).trim() : null;
+    const allowedTypes = ["text", "image", "video", "file", "location", "gif", "sticker"];
+    const messageType = allowedTypes.includes(body.message_type || "") ? (body.message_type as string) : "text";
+    const mediaUrl = sanitizeMediaUrl(body.media_url);
+    if (body.media_url && !mediaUrl) {
+      return errorResponse("URL de mídia inválida.", 400);
+    }
 
     if (!content.trim() && !mediaUrl) {
       return errorResponse("O conteúdo da mensagem ou mídia é obrigatório.", 400);
@@ -162,7 +169,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Você não pode enviar mensagem direta para você mesmo.", 400);
     }
 
+    if (!(await areFriends(env.DB, user.id, targetId))) {
+      return errorResponse("Você só pode enviar mensagens para seus amigos.", 403);
+    }
+
     const cleanContent = content.trim();
+    if (cleanContent.length > 4000) {
+      return errorResponse("Mensagem muito longa (máximo 4000 caracteres).", 400);
+    }
 
     const insertResult = await env.DB.prepare(`
       INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url)

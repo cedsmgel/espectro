@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../_shared/auth";
 
 export interface Env {
   MEDIA_BUCKET?: R2Bucket;
@@ -7,14 +7,67 @@ export interface Env {
   DB?: D1Database;
 }
 
+type Kind = "image" | "video" | "file";
+
+// Allowlist: extensão -> tipo canônico. O Content-Type enviado pelo cliente nunca é usado.
+const ALLOWED: Record<string, { mime: string; kind: Kind }> = {
+  jpg: { mime: "image/jpeg", kind: "image" },
+  jpeg: { mime: "image/jpeg", kind: "image" },
+  png: { mime: "image/png", kind: "image" },
+  gif: { mime: "image/gif", kind: "image" },
+  webp: { mime: "image/webp", kind: "image" },
+  mp4: { mime: "video/mp4", kind: "video" },
+  m4v: { mime: "video/mp4", kind: "video" },
+  webm: { mime: "video/webm", kind: "video" },
+  mov: { mime: "video/quicktime", kind: "video" },
+  ogg: { mime: "video/ogg", kind: "video" },
+  pdf: { mime: "application/pdf", kind: "file" },
+  txt: { mime: "text/plain", kind: "file" },
+  csv: { mime: "text/csv", kind: "file" },
+  zip: { mime: "application/zip", kind: "file" },
+  doc: { mime: "application/msword", kind: "file" },
+  docx: { mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", kind: "file" },
+  xls: { mime: "application/vnd.ms-excel", kind: "file" },
+  xlsx: { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", kind: "file" },
+  ppt: { mime: "application/vnd.ms-powerpoint", kind: "file" },
+  pptx: { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", kind: "file" },
+};
+
+function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
+  return signature.every((b, i) => bytes[offset + i] === b);
+}
+
+// Confere os primeiros bytes para imagens e PDF, evitando HTML/SVG renomeado
+function magicBytesMatch(ext: string, bytes: Uint8Array): boolean {
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return startsWith(bytes, [0xff, 0xd8, 0xff]);
+    case "png":
+      return startsWith(bytes, [0x89, 0x50, 0x4e, 0x47]);
+    case "gif":
+      return startsWith(bytes, [0x47, 0x49, 0x46, 0x38]);
+    case "webp":
+      return startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8);
+    case "pdf":
+      return startsWith(bytes, [0x25, 0x50, 0x44, 0x46]);
+    default:
+      return true;
+  }
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
 
-    // Autenticação: apenas usuários autenticados podem enviar arquivos
-    const user = await getAuthUser(request, env.JWT_SECRET || "troque-este-segredo");
+    const user = await getAuthUser(request, getJwtSecret(env));
     if (!user) {
       return errorResponse("Não autenticado. Faça login para enviar arquivos.", 401);
+    }
+
+    const bucket = env.MEDIA_BUCKET || env.BUCKET;
+    if (!bucket) {
+      return errorResponse("Armazenamento de mídia indisponível.", 503);
     }
 
     const contentType = request.headers.get("content-type") || "";
@@ -31,14 +84,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const fileObj = file as File;
-    const mimeType = fileObj.type || "application/octet-stream";
-    const isVideo = mimeType.startsWith("video/") || /\.(mp4|webm|mov|ogg|m4v)$/i.test(fileObj.name);
-    const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fileObj.name);
-    const isFile = !isVideo && !isImage;
 
-    // Limite específico para Chat: máximo de 10MB por arquivo
+    const extFromName = fileObj.name.includes(".") ? fileObj.name.split(".").pop()!.toLowerCase() : "";
+    const allowed = ALLOWED[extFromName];
+    if (!allowed) {
+      return errorResponse("Tipo de arquivo não permitido.", 415);
+    }
+
+    const declared = (fileObj.type || "").toLowerCase();
+    if (declared && declared !== "application/octet-stream") {
+      const declaredKind = declared.split("/")[0];
+      const expectedKind = allowed.kind === "file" ? declaredKind : allowed.kind;
+      if (declaredKind !== expectedKind) {
+        return errorResponse("O tipo do arquivo não corresponde à extensão.", 415);
+      }
+    }
+
     if (uploadContext === "chat") {
-      const MAX_CHAT_SIZE = 10 * 1024 * 1024; // 10MB
+      const MAX_CHAT_SIZE = 10 * 1024 * 1024;
       if (fileObj.size > MAX_CHAT_SIZE) {
         const sizeMb = (fileObj.size / (1024 * 1024)).toFixed(1);
         return errorResponse(
@@ -48,73 +111,46 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
     }
 
-    // Limite geral de tamanho: 100MB
     const MAX_SIZE = 100 * 1024 * 1024;
     if (fileObj.size > MAX_SIZE) {
       return errorResponse("Arquivo excede o tamanho máximo permitido de 100MB.", 400);
     }
 
-    const extFromName = fileObj.name.includes(".") ? fileObj.name.split(".").pop() : "";
-    const ext = extFromName ? extFromName.toLowerCase() : (isVideo ? "mp4" : isImage ? "jpg" : "bin");
-    const folder = isVideo ? "videos" : isImage ? "images" : "documents";
-    const uniqueId = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-    const key = `${folder}/${uniqueId}.${ext}`;
-
-    const mediaType = isVideo ? "video" : isImage ? "image" : "file";
-
-    const bucket = env.MEDIA_BUCKET || env.BUCKET;
-
-    const origin = new URL(request.url).origin;
-    const fullUrl = `${origin}/api/media/${key}`;
-
-    if (bucket) {
-      await bucket.put(key, fileObj.stream(), {
-        httpMetadata: {
-          contentType: mimeType,
-        },
-        customMetadata: {
-          originalName: fileObj.name,
-          size: String(fileObj.size),
-          uploadedBy: String(user.id),
-          uploaderName: user.username,
-          uploadedAt: new Date().toISOString(),
-        },
-      });
-
-      return jsonResponse({
-        url: fullUrl,
-        relative_url: `/api/media/${key}`,
-        key,
-        media_type: mediaType,
-        filename: fileObj.name,
-        size: fileObj.size,
-        content_type: mimeType,
-      });
+    const head = new Uint8Array(await fileObj.slice(0, 16).arrayBuffer());
+    if (!magicBytesMatch(extFromName, head)) {
+      return errorResponse("O conteúdo do arquivo não corresponde ao tipo informado.", 415);
     }
 
-    // Fallback se R2 não estiver configurado no ambiente local
+    const folder = allowed.kind === "video" ? "videos" : allowed.kind === "image" ? "images" : "documents";
+    const uniqueId = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    const key = `${folder}/${uniqueId}.${extFromName}`;
+
+    await bucket.put(key, fileObj.stream(), {
+      httpMetadata: {
+        contentType: allowed.mime,
+      },
+      customMetadata: {
+        originalName: fileObj.name.slice(0, 200),
+        size: String(fileObj.size),
+        uploadedBy: String(user.id),
+        uploaderName: user.username,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
+    const origin = new URL(request.url).origin;
+
     return jsonResponse({
-      url: fullUrl,
+      url: `${origin}/api/media/${key}`,
       relative_url: `/api/media/${key}`,
       key,
-      media_type: mediaType,
+      media_type: allowed.kind,
       filename: fileObj.name,
       size: fileObj.size,
-      content_type: mimeType,
-      warning: "Bucket R2 não configurado no ambiente. URL gerada para visualização.",
+      content_type: allowed.mime,
     });
-  } catch (err: any) {
-    return errorResponse(`Erro ao processar upload: ${err.message || String(err)}`, 500);
+  } catch (err: unknown) {
+    console.error("Erro no upload:", err);
+    return errorResponse("Erro ao processar upload.", 500);
   }
-};
-
-export const onRequestOptions: PagesFunction = async () => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
 };

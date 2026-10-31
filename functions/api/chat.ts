@@ -1,7 +1,8 @@
-import { verifyJWT, errorResponse } from "../_shared/auth";
+import { verifyJWT, errorResponse, getJwtSecret, areFriends } from "../_shared/auth";
 
 export interface Env {
   CHAT_ROOMS: DurableObjectNamespace;
+  DB: D1Database;
   JWT_SECRET: string;
 }
 
@@ -26,7 +27,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     // 2. Autenticação via JWT (suporta Header Authorization, Query param ?token= ou Sec-WebSocket-Protocol)
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
     let token: string | null = null;
 
     const authHeader = request.headers.get("Authorization");
@@ -63,9 +64,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Binding CHAT_ROOMS não configurado no ambiente.", 500);
     }
 
-    // 5. Redirecionamento da requisição para o Durable Object correspondente
+    // 5. Apenas amigos podem conversar
+    const otherId = authUser.id === u1 ? u2 : u1;
+    if (!(await areFriends(env.DB, authUser.id, otherId))) {
+      return errorResponse("Você só pode conversar com seus amigos.", 403);
+    }
+
+    // 6. Repassa ao Durable Object com a identidade vinda do JWT (nunca do cliente)
+    const forwardHeaders = new Headers(request.headers);
+    forwardHeaders.delete("X-Chat-User-Id");
+    forwardHeaders.delete("X-Chat-Username");
+    forwardHeaders.delete("Authorization");
+    forwardHeaders.set("X-Chat-User-Id", String(authUser.id));
+    forwardHeaders.set("X-Chat-Username", authUser.username);
+    forwardHeaders.set("X-Chat-Peer-Id", String(otherId));
+
+    url.searchParams.delete("token");
+    const forwarded = new Request(url.toString(), { method: "GET", headers: forwardHeaders });
+
     const id = env.CHAT_ROOMS.idFromName(conversationId);
-    return env.CHAT_ROOMS.get(id).fetch(request);
+    return env.CHAT_ROOMS.get(id).fetch(forwarded);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro interno ao conectar com a sala de chat.";
     return errorResponse(message, 500);

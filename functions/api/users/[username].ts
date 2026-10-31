@@ -1,4 +1,4 @@
-import { getAuthUser, jsonResponse, errorResponse } from "../../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret } from "../../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -9,7 +9,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env, params } = context;
     const targetUsername = typeof params.username === "string" ? params.username : "";
-    const secret = env.JWT_SECRET || "troque-este-segredo";
+    const secret = getJwtSecret(env);
 
     if (!targetUsername.trim()) {
       return errorResponse("Nome de usuário não informado.", 400);
