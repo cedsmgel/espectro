@@ -40,7 +40,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const targetId = Number(body.user_id);
 
     const systemMessage = (text: string) =>
-      env.DB.prepare("INSERT INTO chat_group_messages (group_id, sender_id, content) VALUES (?, ?, ?)")
+      env.DB.prepare("INSERT INTO chat_group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'system')")
         .bind(groupId, user.id, text)
         .run();
 
@@ -128,7 +128,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           ...toAdd.map((p) =>
             env.DB.prepare("INSERT OR IGNORE INTO chat_group_members (group_id, user_id, role) VALUES (?, ?, 'member')").bind(groupId, p.id)
           ),
-          env.DB.prepare("INSERT INTO chat_group_messages (group_id, sender_id, content) VALUES (?, ?, ?)").bind(
+          env.DB.prepare("INSERT INTO chat_group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'system')").bind(
             groupId,
             user.id,
             `@${user.username} adicionou ${toAdd.map((p) => `@${p.username}`).join(", ")}`

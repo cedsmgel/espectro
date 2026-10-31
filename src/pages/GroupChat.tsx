@@ -8,8 +8,12 @@ import {
   GroupMessage,
   groupsApi,
 } from '../lib/api';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ModalShell } from '../components/chat/ModalShell';
+import { MediaPicker } from '../components/chat/MediaPicker';
+import { useTheme } from '../context/ThemeContext';
 
 type Detail = {
   group: { id: number; name: string; description: string | null; only_admins_send: boolean };
@@ -22,6 +26,7 @@ export const GroupChat: React.FC = () => {
   const groupId = Number(id);
   const navigate = useNavigate();
   const user = authStorage.getUser();
+  const { isDark: isDarkTheme } = useTheme();
 
   const [detail, setDetail] = useState<Detail | null>(null);
   const [messages, setMessages] = useState<GroupMessage[]>([]);
@@ -29,7 +34,10 @@ export const GroupChat: React.FC = () => {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showManage, setShowManage] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -39,7 +47,7 @@ export const GroupChat: React.FC = () => {
     }
   }, [groupId]);
 
-  // Primeira página, e depois novas mensagens a cada 4 segundos
+  // Primeira página e novas mensagens a cada 4 segundos
   const loadLatest = useCallback(async () => {
     try {
       const res = await groupsApi.messages(groupId);
@@ -55,9 +63,7 @@ export const GroupChat: React.FC = () => {
   useEffect(() => {
     void loadDetail();
     void loadLatest();
-    const timer = window.setInterval(() => {
-      void loadLatest();
-    }, 4000);
+    const timer = window.setInterval(() => void loadLatest(), 4000);
     const detailTimer = window.setInterval(() => void loadDetail(), 30000);
     return () => {
       window.clearInterval(timer);
@@ -79,21 +85,26 @@ export const GroupChat: React.FC = () => {
     } catch {}
   };
 
-  const send = async () => {
-    const content = text.trim();
-    if (!content) return;
-    setText('');
+  const sendPayload = async (payload: { content?: string; message_type?: 'gif' | 'sticker'; media_url?: string }) => {
     try {
-      const res = await groupsApi.send(groupId, content);
-      setMessages((prev) => [...prev, res.message]);
+      const res = await groupsApi.send(groupId, payload);
+      setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
     } catch (err: any) {
-      setText(content);
       setError(err?.message || 'Não foi possível enviar.');
     }
   };
 
+  const sendText = async () => {
+    const content = text.trim();
+    if (!content) return;
+    setText('');
+    setShowEmoji(false);
+    await sendPayload({ content });
+    inputRef.current?.focus();
+  };
+
   const leave = async () => {
-    if (!window.confirm('Sair deste grupo? Você não verá as mensagens novas.')) return;
+    if (!window.confirm('Sair deste grupo? Você deixará de ver as mensagens novas.')) return;
     try {
       await groupsApi.manage(groupId, { action: 'leave' });
       navigate('/mensagens');
@@ -112,62 +123,106 @@ export const GroupChat: React.FC = () => {
       </div>
     );
   }
-  if (!detail) return <div className="min-h-screen flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
+  if (!detail) {
+    return <div className="min-h-screen flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
+  }
 
   const isAdmin = detail.my_role === 'admin';
   const canSend = isAdmin || !detail.group.only_admins_send;
+  const roleOf = new Map(detail.members.map((m) => [m.id, m]));
 
   return (
-    <div className="h-dvh flex flex-col bg-surface text-on-surface">
-      <header className="px-3 sm:px-6 py-3 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center gap-3">
-        <Link to="/mensagens" className="p-1.5 rounded-full hover:bg-surface-container" aria-label="Voltar">
-          <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-        </Link>
-        <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold">
-          {detail.group.name.charAt(0).toUpperCase()}
+    <div className="h-dvh flex flex-col bg-surface text-on-surface overflow-hidden">
+      {/* Cabeçalho: mesmo padrão do chat privado */}
+      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to="/mensagens" className="p-1.5 rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Voltar">
+            <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+          </Link>
+          <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
+            {detail.group.name.charAt(0)}
+          </div>
+          <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
+            <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
+            <span className="block text-[11px] text-on-surface-variant truncate">
+              {detail.members.map((m) => `@${m.username}`).join(', ')}
+            </span>
+          </button>
         </div>
-        <button type="button" onClick={() => setShowManage(true)} className="flex-1 min-w-0 text-left cursor-pointer">
-          <span className="block text-sm font-semibold truncate">{detail.group.name}</span>
-          <span className="block text-[11px] text-on-surface-variant">
-            {detail.members.length} membros{detail.group.only_admins_send ? ' · só admins enviam' : ''}
-          </span>
-        </button>
         <ChatMenu
           title="Opções do grupo"
           items={[
-            { key: 'manage', label: 'Gerenciar grupo', icon: 'settings', onSelect: () => setShowManage(true) },
+            { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
             { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
           ]}
         />
-      </header>
+      </div>
 
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-2">
+      {/* Histórico */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
         {hasMore && (
-          <div className="flex justify-center">
+          <div className="flex justify-center mb-2">
             <button type="button" onClick={loadOlder} className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low">
               Carregar mensagens anteriores
             </button>
           </div>
         )}
+
         {messages.length === 0 && (
-          <p className="text-center text-xs text-on-surface-variant py-8">Nenhuma mensagem ainda.</p>
+          <div className="text-center text-xs text-on-surface-variant py-10">
+            <p className="font-semibold text-on-surface">Nenhuma mensagem ainda</p>
+            <p>Diga um oi para o grupo.</p>
+          </div>
         )}
-        {messages.map((m) => {
+
+        {messages.map((m, idx) => {
+          if (m.message_type === 'system') {
+            return (
+              <div key={m.id} className="flex justify-center my-2">
+                <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">{m.content}</span>
+              </div>
+            );
+          }
+
           const mine = m.sender_id === user?.id;
-          const system = m.sender_id === null;
+          const prev = messages[idx - 1];
+          const sameAsPrev = prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
+          const sender = m.sender_id ? roleOf.get(m.sender_id) : undefined;
+          const bare = m.message_type === 'gif' || m.message_type === 'sticker';
+
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs whitespace-pre-wrap ${
-                  mine
-                    ? 'bg-primary-container text-on-primary'
-                    : 'bg-surface-container-low text-on-surface border border-outline-variant/30'
-                }`}
-              >
-                {!mine && !system && (
-                  <span className="block text-[11px] font-bold text-primary mb-0.5">@{m.sender_username}</span>
+            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${sameAsPrev ? 'mt-0.5' : 'mt-3'}`}>
+              <div className={`flex flex-col max-w-[85%] sm:max-w-md ${mine ? 'items-end' : 'items-start'}`}>
+                {!mine && !sameAsPrev && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold mb-0.5 ml-1" style={{ color: nameColor(m.sender_id) }}>
+                    @{m.sender_username}
+                    {sender?.role === 'admin' && (
+                      <span className="text-[9px] px-1.5 rounded-full bg-primary/15 text-primary font-semibold">admin</span>
+                    )}
+                  </span>
                 )}
-                {m.content}
+                <div
+                  className={
+                    bare
+                      ? ''
+                      : `px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words rounded-2xl ${
+                          mine
+                            ? 'bg-primary-container text-on-primary rounded-br-md'
+                            : 'bg-surface-container-low text-on-surface border border-outline-variant/30 rounded-bl-md'
+                        }`
+                  }
+                >
+                  {m.message_type === 'gif' && m.media_url && (
+                    <img src={m.media_url} alt="GIF" className="max-w-[240px] rounded-lg" />
+                  )}
+                  {m.message_type === 'sticker' && m.media_url && (
+                    <img src={m.media_url} alt="Figurinha" className="max-w-[160px]" />
+                  )}
+                  {!bare && m.content}
+                </div>
+                <span className="text-[10px] text-on-surface-variant mt-0.5 mx-1">
+                  {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
             </div>
           );
@@ -176,36 +231,91 @@ export const GroupChat: React.FC = () => {
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-xs text-error bg-error-container/60" onClick={() => setError(null)}>
+        <div className="px-4 py-2 text-xs text-error bg-error-container/60 cursor-pointer" onClick={() => setError(null)}>
           {error}
         </div>
       )}
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send();
-        }}
-        className="p-3 bg-surface-container-lowest border-t border-outline-variant/30 flex items-center gap-2"
-      >
+      {/* Entrada: emojis, GIFs e figurinhas, texto e enviar */}
+      <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 relative">
+        {showEmoji && (
+          <div className="absolute bottom-20 left-3 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl">
+            <Picker
+              data={data}
+              onEmojiSelect={(e: any) => setText((t) => t + e.native)}
+              theme={isDarkTheme ? 'dark' : 'light'}
+              locale="pt"
+              previewPosition="none"
+              skinTonePosition="none"
+              navPosition="top"
+              maxFrequentRows={2}
+              perLine={8}
+            />
+          </div>
+        )}
+        {showMedia && (
+          <div className="absolute bottom-20 left-3 sm:left-12 z-30">
+            <MediaPicker
+              onClose={() => setShowMedia(false)}
+              onSelect={(c) => {
+                setShowMedia(false);
+                void sendPayload({ message_type: c.type, media_url: c.url });
+              }}
+            />
+          </div>
+        )}
+
         {canSend ? (
-          <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void sendText();
+            }}
+            className="flex items-center gap-1 sm:gap-2 bg-surface-container-low rounded-full px-2 py-1.5"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmoji((v) => !v);
+                setShowMedia(false);
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+                showEmoji ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+              }`}
+              title="Emojis"
+            >
+              <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMedia((v) => !v);
+                setShowEmoji(false);
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[11px] font-bold ${
+                showMedia ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+              }`}
+              title="GIFs e figurinhas"
+            >
+              GIF
+            </button>
             <input
+              ref={inputRef}
               type="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Mensagem para o grupo..."
               maxLength={2000}
-              className="flex-1 h-10 px-3 rounded-full bg-surface-container-low text-xs outline-none"
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`Mensagem para ${detail.group.name}...`}
+              className="flex-1 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
             />
-            <button type="submit" disabled={!text.trim()} className="w-10 h-10 rounded-full flex items-center justify-center text-primary disabled:opacity-40">
-              <span className="material-symbols-outlined">send</span>
+            <button type="submit" disabled={!text.trim()} className="w-8 h-8 rounded-full flex items-center justify-center text-primary disabled:opacity-40 hover:bg-surface-container cursor-pointer" title="Enviar">
+              <span className="material-symbols-outlined text-[20px]">send</span>
             </button>
-          </>
+          </form>
         ) : (
-          <p className="flex-1 text-center text-xs text-on-surface-variant py-2">Só os administradores podem enviar mensagens.</p>
+          <p className="text-center text-xs text-on-surface-variant py-2">Só os administradores podem enviar mensagens neste grupo.</p>
         )}
-      </form>
+      </div>
 
       {showManage && (
         <ManageGroupModal
@@ -221,6 +331,11 @@ export const GroupChat: React.FC = () => {
     </div>
   );
 };
+
+const NAME_COLORS = ['#f97316', '#22c55e', '#06b6d4', '#a855f7', '#ec4899', '#eab308', '#3b82f6', '#ef4444'];
+function nameColor(senderId: number | null): string {
+  return NAME_COLORS[Math.abs(senderId || 0) % NAME_COLORS.length];
+}
 
 interface ManageProps {
   groupId: number;
