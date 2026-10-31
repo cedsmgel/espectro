@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { authStorage } from '../lib/api';
+import { authStorage, directMessagesApi, DirectMessage } from '../lib/api';
+import { notifyUnreadChanged } from './useUnreadDms';
 
 export type ChatMessageType =
   | 'text'
@@ -10,10 +11,11 @@ export type ChatMessageType =
   | 'gif'
   | 'sticker';
 
-export type MessageStatus = 'sent' | 'delivered' | 'read';
+export type MessageStatus = 'sending' | 'failed' | 'sent' | 'delivered' | 'read';
 
 export interface ChatMessage {
   id?: number;
+  client_id?: string | null;
   sender_id: number;
   sender_username?: string;
   content: string;
@@ -36,13 +38,59 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecti
 export interface UseChatOptions {
   activeFriendId: number | null | undefined;
   activeFriendUsername?: string;
+  onActivity?: () => void;
 }
 
-export function useChat({ activeFriendId }: UseChatOptions) {
+const PAGE_SIZE = 30;
+const STATUS_RANK: Record<string, number> = { sending: 0, failed: 0, sent: 1, delivered: 2, read: 3 };
+
+function newClientId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Junta uma mensagem recebida do servidor à lista: troca a otimista (mesmo client_id) ou atualiza a existente
+function mergeMessage(list: ChatMessage[], incoming: ChatMessage): ChatMessage[] {
+  const index = list.findIndex(
+    (m) =>
+      (incoming.id !== undefined && m.id === incoming.id) ||
+      (!!incoming.client_id && m.client_id === incoming.client_id)
+  );
+  if (index === -1) return [...list, incoming];
+
+  const current = list[index];
+  const keepStatus =
+    (STATUS_RANK[current.status || 'sent'] ?? 1) > (STATUS_RANK[incoming.status || 'sent'] ?? 1) &&
+    current.status !== 'sending' &&
+    current.status !== 'failed';
+  const merged = { ...incoming, status: keepStatus ? current.status : incoming.status };
+  const next = [...list];
+  next[index] = merged;
+  return next;
+}
+
+function toChatMessage(m: DirectMessage): ChatMessage {
+  return {
+    id: m.id,
+    client_id: m.client_id,
+    sender_id: m.sender_id,
+    sender_username: m.sender_username,
+    content: m.content,
+    message_type: m.message_type,
+    media_url: m.media_url,
+    reply_to_id: m.reply_to_id,
+    status: m.status,
+    created_at: m.created_at,
+  };
+}
+
+export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -50,13 +98,17 @@ export function useChat({ activeFriendId }: UseChatOptions) {
   const typingTimeoutRef = useRef<number | null>(null);
   const pingIntervalRef = useRef<number | null>(null);
   const isManuallyClosedRef = useRef(false);
+  const activeFriendRef = useRef<number | null>(null);
+  const outboxRef = useRef<Map<string, { friendId: number; draft: Omit<ChatMessage, 'status'> }>>(new Map());
+  const tempIdRef = useRef(0);
+  const onActivityRef = useRef(onActivity);
+  onActivityRef.current = onActivity;
 
   const user = authStorage.getUser();
   const userId = user?.id;
   const username = user?.username || 'Usuário';
   const token = authStorage.getToken();
 
-  // Função para montar a URL do WebSocket
   const getWsUrl = useCallback((u1: number, u2: number, jwtToken?: string | null) => {
     const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
     const isLocalhost =
@@ -74,20 +126,42 @@ export function useChat({ activeFriendId }: UseChatOptions) {
     return url;
   }, []);
 
-  // Envia evento avisando que as mensagens foram lidas (Tarefa 3)
+  // Persiste a leitura no servidor (que avisa o outro lado em tempo real)
   const markAsRead = useCallback(() => {
-    if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    try {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'read',
-          reader_id: userId,
-        })
-      );
-    } catch {}
+    const friendId = activeFriendRef.current;
+    if (!userId || !friendId) return;
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+    directMessagesApi
+      .markRead(friendId)
+      .then(() => {
+        onActivityRef.current?.();
+        notifyUnreadChanged();
+      })
+      .catch(() => {});
   }, [userId]);
+
+  // Carrega (ou atualiza após reconexão) as mensagens mais recentes
+  const syncLatest = useCallback(
+    async (friendId: number, initial: boolean) => {
+      try {
+        const res = await directMessagesApi.list(friendId, { limit: PAGE_SIZE });
+        if (activeFriendRef.current !== friendId) return;
+        const fetched = res.messages.map(toChatMessage);
+        setMessages((prev) => {
+          let next = initial ? prev.filter((m) => m.status === 'sending' || m.status === 'failed') : prev;
+          for (const m of fetched) next = mergeMessage(next, m);
+          return next;
+        });
+        if (initial) setHasMore(res.has_more);
+        if (fetched.some((m) => m.sender_id !== userId && m.status !== 'read')) markAsRead();
+      } catch (err: any) {
+        if (activeFriendRef.current === friendId) setError(err?.message || 'Falha ao carregar mensagens.');
+      } finally {
+        if (activeFriendRef.current === friendId) setLoadingHistory(false);
+      }
+    },
+    [userId, markAsRead]
+  );
 
   const connect = useCallback(() => {
     if (!userId || !activeFriendId || !token) {
@@ -95,13 +169,11 @@ export function useChat({ activeFriendId }: UseChatOptions) {
       return;
     }
 
-    // Limpa timeouts anteriores
     if (reconnectTimeoutRef.current) {
       window.clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
 
-    // Fecha socket existente se houver
     if (socketRef.current) {
       isManuallyClosedRef.current = true;
       try {
@@ -112,25 +184,19 @@ export function useChat({ activeFriendId }: UseChatOptions) {
 
     isManuallyClosedRef.current = false;
     setConnectionStatus((prev) => (prev === 'connected' ? 'reconnecting' : 'connecting'));
-    setError(null);
 
     const wsUrl = getWsUrl(userId, activeFriendId, token);
 
     try {
-      // Abre a conexão WebSocket passando o token tanto na query string quanto no Sec-WebSocket-Protocol
       const ws = new WebSocket(wsUrl, token ? [token] : undefined);
       socketRef.current = ws;
 
       ws.onopen = () => {
         setConnectionStatus('connected');
         setError(null);
+        // Recupera o que chegou enquanto estávamos desconectados
+        syncLatest(activeFriendId, false);
 
-        // Ao abrir a conversa, avisa que as mensagens anteriores foram lidas
-        try {
-          ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
-        } catch {}
-
-        // Ping periódico a cada 25 segundos para manter a conexão ativa
         if (pingIntervalRef.current) window.clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = window.setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -145,81 +211,44 @@ export function useChat({ activeFriendId }: UseChatOptions) {
         try {
           const data = JSON.parse(event.data);
 
-          if (data.type === 'history') {
-            // Histórico das últimas 50 mensagens salvas no SQLite interno com status
-            const list: ChatMessage[] = Array.isArray(data.messages) ? data.messages : [];
-            setMessages(list);
-            setLoadingHistory(false);
-
-            // Se houver mensagens não lidas de outro remetente, avisa que lemos
-            if (list.some((m) => m.sender_id !== userId && m.status !== 'read')) {
-              try {
-                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
-              } catch {}
+          if (data.type === 'message' && data.message) {
+            const incoming = toChatMessage(data.message as DirectMessage);
+            setMessages((prev) => mergeMessage(prev, incoming));
+            onActivityRef.current?.();
+            notifyUnreadChanged();
+            if (incoming.sender_id !== userId) {
+              setIsOtherUserTyping(false);
+              markAsRead();
             }
           } else if (data.type === 'read') {
-            // O outro usuário leu nossas mensagens: atualiza ticks para 'read' (Azul)
-            const readerId = Number(data.reader_id || 0);
-            if (readerId && readerId !== userId) {
+            if (Number(data.reader_id) !== userId) {
               setMessages((prev) =>
-                prev.map((m) => (m.sender_id === userId ? { ...m, status: 'read' } : m))
+                prev.map((m) =>
+                  m.sender_id === userId && m.status !== 'sending' && m.status !== 'failed'
+                    ? { ...m, status: 'read' }
+                    : m
+                )
               );
             }
-          } else if (data.type === 'message' && data.message) {
-            // Nova mensagem recebida em tempo real
-            const newMsg: ChatMessage = data.message;
-            setMessages((prev) => {
-              if (newMsg.id && prev.some((m) => m.id === newMsg.id)) {
-                return prev.map((m) => (m.id === newMsg.id ? newMsg : m));
-              }
-              return [...prev, newMsg];
-            });
-
-            // Se a mensagem for do outro usuário e estamos com a sala aberta, marca como lida imediatamente
-            if (newMsg.sender_id !== userId) {
-              setIsOtherUserTyping(false);
-              try {
-                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
-              } catch {}
-            }
-          } else if (data.type === 'media' || data.media_url) {
-            // Suporte para quando a mensagem chega com type: 'media'
-            const mediaMsg: ChatMessage = {
-              id: data.id || (data.message && data.message.id) || Date.now(),
-              sender_id: data.sender_id || (data.message && data.message.sender_id) || 0,
-              sender_username: data.sender_username || (data.message && data.message.sender_username) || '',
-              content: data.content || data.filename || (data.message && data.message.content) || '',
-              message_type: data.message_type || (data.message && data.message.message_type) || 'image',
-              media_url: data.media_url || (data.message && data.message.media_url) || null,
-              reply_to_id: data.reply_to_id || (data.message && data.message.reply_to_id) || null,
-              status: data.status || (data.message && data.message.status) || 'sent',
-              created_at: data.created_at || (data.message && data.message.created_at) || new Date().toISOString(),
-            };
-            setMessages((prev) => {
-              if (mediaMsg.id && prev.some((m) => m.id === mediaMsg.id)) {
-                return prev.map((m) => (m.id === mediaMsg.id ? mediaMsg : m));
-              }
-              return [...prev, mediaMsg];
-            });
-
-            if (mediaMsg.sender_id !== userId) {
-              setIsOtherUserTyping(false);
-              try {
-                ws.send(JSON.stringify({ type: 'read', reader_id: userId }));
-              } catch {}
-            }
+          } else if (data.type === 'status') {
+            const messageId = Number(data.message_id);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId && (STATUS_RANK[m.status || 'sent'] ?? 1) < (STATUS_RANK[data.status] ?? 1)
+                  ? { ...m, status: data.status }
+                  : m
+              )
+            );
           } else if (data.type === 'delete') {
-            // Remoção de mensagem deletada em tempo real
             const deletedId = Number(data.message_id || data.messageId || data.id);
             if (deletedId) {
               setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+              onActivityRef.current?.();
             }
           } else if (data.type === 'typing') {
-            // Indicador de digitação do outro usuário
             if (data.sender_id === activeFriendId) {
               setIsOtherUserTyping(!!data.is_typing);
 
-              // Auto-reseta após 3 segundos caso não receba atualização
               if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
               if (data.is_typing) {
                 typingTimeoutRef.current = window.setTimeout(() => {
@@ -227,6 +256,8 @@ export function useChat({ activeFriendId }: UseChatOptions) {
                 }, 3000);
               }
             }
+          } else if (data.type === 'error' && data.error) {
+            setError(String(data.error));
           }
         } catch (err) {
           console.error('Erro ao processar mensagem do WebSocket:', err);
@@ -243,7 +274,6 @@ export function useChat({ activeFriendId }: UseChatOptions) {
           pingIntervalRef.current = null;
         }
 
-        // Se o fechamento não foi manual (ex: troca de conversa ou logout), tenta reconectar em 3s
         if (!isManuallyClosedRef.current) {
           setConnectionStatus('reconnecting');
           reconnectTimeoutRef.current = window.setTimeout(() => {
@@ -260,17 +290,23 @@ export function useChat({ activeFriendId }: UseChatOptions) {
         connect();
       }, 3000);
     }
-  }, [userId, activeFriendId, token, getWsUrl]);
+  }, [userId, activeFriendId, token, getWsUrl, syncLatest, markAsRead]);
 
-  // Efeito para conectar quando o amigo ativo muda
+  // Troca de conversa: histórico via HTTP (fonte da verdade) + tempo real via WebSocket
   useEffect(() => {
+    activeFriendRef.current = activeFriendId ?? null;
+
     if (activeFriendId && userId) {
       setLoadingHistory(true);
       setMessages([]);
+      setHasMore(false);
+      setError(null);
       setIsOtherUserTyping(false);
+      syncLatest(activeFriendId, true);
       connect();
     } else {
       setMessages([]);
+      setHasMore(false);
       setConnectionStatus('idle');
       if (socketRef.current) {
         isManuallyClosedRef.current = true;
@@ -302,28 +338,104 @@ export function useChat({ activeFriendId }: UseChatOptions) {
         socketRef.current = null;
       }
     };
-  }, [activeFriendId, userId, connect]);
+  }, [activeFriendId, userId, connect, syncLatest]);
 
-  // Função para avisar status de digitação
+  const loadOlder = useCallback(async () => {
+    const friendId = activeFriendRef.current;
+    if (!friendId || loadingOlder || !hasMore) return;
+    const oldest = messages.find((m) => typeof m.id === 'number' && m.id > 0);
+    if (!oldest?.id) return;
+
+    setLoadingOlder(true);
+    try {
+      const res = await directMessagesApi.list(friendId, { beforeId: oldest.id, limit: PAGE_SIZE });
+      if (activeFriendRef.current !== friendId) return;
+      const older = res.messages.map(toChatMessage);
+      setMessages((prev) => {
+        const known = new Set(prev.map((m) => m.id));
+        return [...older.filter((m) => !known.has(m.id)), ...prev];
+      });
+      setHasMore(res.has_more);
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao carregar mensagens anteriores.');
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [messages, hasMore, loadingOlder]);
+
   const sendTyping = useCallback(
     (isTyping: boolean) => {
       if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
         return;
       }
       try {
-        socketRef.current.send(
-          JSON.stringify({
-            type: 'typing',
-            sender_id: userId,
-            is_typing: isTyping,
-          })
-        );
+        socketRef.current.send(JSON.stringify({ type: 'typing', is_typing: isTyping }));
       } catch {}
     },
     [userId]
   );
 
-  // Função para enviar nova mensagem
+  // Envia ao servidor; em caso de falha a mensagem fica "failed" e pode ser reenviada
+  const dispatchSend = useCallback(
+    async (clientId: string) => {
+      const entry = outboxRef.current.get(clientId);
+      if (!entry) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.client_id === clientId ? { ...m, status: 'sending' } : m))
+      );
+      try {
+        const res = await directMessagesApi.send({
+          receiver_id: entry.friendId,
+          content: entry.draft.content,
+          message_type: entry.draft.message_type,
+          media_url: entry.draft.media_url,
+          reply_to_id: entry.draft.reply_to_id,
+          client_id: clientId,
+        });
+        outboxRef.current.delete(clientId);
+        if (activeFriendRef.current === entry.friendId) {
+          setMessages((prev) => mergeMessage(prev, toChatMessage(res.message)));
+        }
+        onActivityRef.current?.();
+      } catch (err: any) {
+        setError(err?.message || 'Não foi possível enviar a mensagem.');
+        setMessages((prev) =>
+          prev.map((m) => (m.client_id === clientId ? { ...m, status: 'failed' } : m))
+        );
+      }
+    },
+    []
+  );
+
+  const enqueue = useCallback(
+    (content: string, type: ChatMessageType, mediaUrl: string | null, replyToId: number | null) => {
+      const friendId = activeFriendRef.current;
+      if (!userId || !friendId) return false;
+      if (!content && !mediaUrl) return false;
+
+      const clientId = newClientId();
+      tempIdRef.current -= 1;
+      const draft: Omit<ChatMessage, 'status'> = {
+        id: tempIdRef.current,
+        client_id: clientId,
+        sender_id: userId,
+        sender_username: username,
+        content,
+        message_type: type,
+        media_url: mediaUrl,
+        reply_to_id: replyToId && replyToId > 0 ? replyToId : null,
+        created_at: new Date().toISOString(),
+      };
+
+      outboxRef.current.set(clientId, { friendId, draft });
+      setMessages((prev) => [...prev, { ...draft, status: 'sending' }]);
+      sendTyping(false);
+      void dispatchSend(clientId);
+      return true;
+    },
+    [userId, username, sendTyping, dispatchSend]
+  );
+
   const sendMessage = useCallback(
     (
       textOrOptions: string | SendMessageOptions,
@@ -343,101 +455,70 @@ export function useChat({ activeFriendId }: UseChatOptions) {
           ? textOrOptions.reply_to_id
           : extraOptions?.reply_to_id || null;
 
-      const trimmed = text.trim();
-      if (!trimmed && !mediaUrl) {
-        return false;
-      }
-      if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        return false;
-      }
-
-      const payload = {
-        type: mediaUrl ? 'media' : 'message',
-        message_type: msgType,
-        sender_id: userId,
-        sender_username: username,
-        content: trimmed,
-        text: trimmed,
-        media_url: mediaUrl,
-        reply_to_id: replyToId || null,
-        created_at: new Date().toISOString(),
-      };
-
-      try {
-        socketRef.current.send(JSON.stringify(payload));
-        sendTyping(false);
-        return true;
-      } catch (err) {
-        console.error('Erro ao enviar mensagem pelo WebSocket:', err);
-        return false;
-      }
+      return enqueue(text.trim(), msgType, mediaUrl, replyToId ?? null);
     },
-    [userId, username, sendTyping]
+    [enqueue]
   );
 
-  // Envio de mídia pelo WebSocket com suporte a resposta
   const sendMediaMessage = useCallback(
     (options: {
       media_url: string;
       message_type: 'image' | 'video' | 'file';
       filename?: string;
       reply_to_id?: number | null;
-    }) => {
-      if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        return false;
-      }
-
-      const payload = {
-        type: 'media',
-        media_url: options.media_url,
-        message_type: options.message_type,
-        sender_id: userId,
-        sender_username: username,
-        filename: options.filename || '',
-        content: options.filename || '',
-        reply_to_id: options.reply_to_id || null,
-        created_at: new Date().toISOString(),
-      };
-
-      try {
-        socketRef.current.send(JSON.stringify(payload));
-        sendTyping(false);
-        return true;
-      } catch (err) {
-        console.error('Erro ao enviar mídia pelo WebSocket:', err);
-        return false;
-      }
-    },
-    [userId, username, sendTyping]
+    }) => enqueue(options.filename || '', options.message_type, options.media_url, options.reply_to_id ?? null),
+    [enqueue]
   );
 
-  // Deletar mensagem no Durable Object
-  const deleteMessage = useCallback((messageId: number) => {
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      return false;
-    }
-    try {
-      socketRef.current.send(
-        JSON.stringify({
-          type: 'delete',
-          message_id: messageId,
-          messageId: messageId,
-        })
-      );
-      // Atualização otimista local
+  const retrySend = useCallback(
+    (clientId: string) => {
+      void dispatchSend(clientId);
+    },
+    [dispatchSend]
+  );
+
+  // Reenvia automaticamente o que falhou quando a internet volta
+  useEffect(() => {
+    const retryAll = () => {
+      for (const clientId of outboxRef.current.keys()) void dispatchSend(clientId);
+    };
+    window.addEventListener('online', retryAll);
+    return () => window.removeEventListener('online', retryAll);
+  }, [dispatchSend]);
+
+  const deleteMessage = useCallback(
+    (messageId: number) => {
+      // Mensagem que nunca chegou ao servidor: só descarta localmente
+      if (messageId < 0) {
+        const entry = messages.find((m) => m.id === messageId);
+        if (entry?.client_id) outboxRef.current.delete(entry.client_id);
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        return true;
+      }
+
+      const friendId = activeFriendRef.current;
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      directMessagesApi
+        .remove(messageId)
+        .then(() => onActivityRef.current?.())
+        .catch((err: any) => {
+          setError(err?.message || 'Não foi possível excluir a mensagem.');
+          if (friendId) void syncLatest(friendId, false);
+        });
       return true;
-    } catch (err) {
-      console.error('Erro ao deletar mensagem pelo WebSocket:', err);
-      return false;
-    }
-  }, []);
+    },
+    [messages, syncLatest]
+  );
 
   return {
     messages,
     sendMessage,
     sendMediaMessage,
     deleteMessage,
+    retrySend,
+    loadOlder,
+    hasMore,
+    loadingOlder,
     sendTyping,
     markAsRead,
     isOtherUserTyping,

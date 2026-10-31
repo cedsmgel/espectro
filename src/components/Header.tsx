@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authStorage, directMessagesApi, searchApi, SearchResults } from '../lib/api';
+import { authStorage, searchApi, SearchResults } from '../lib/api';
+import { useUnreadDms } from '../hooks/useUnreadDms';
 import { useSidebar } from '../context/SidebarContext';
 import { parseScrap } from '../lib/scrapStyle';
 import { ContactsDrawer } from './ContactsDrawer';
@@ -26,17 +27,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
   const [showCommunityModal, setShowCommunityModal] = useState(false);
-  const [unreadDms, setUnreadDms] = useState(0);
+  const unreadDms = useUnreadDms(userId);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  useEffect(() => {
-    if (userId) {
-      directMessagesApi
-        .getUnreadCount()
-        .then((res) => setUnreadDms(res.unread_count || 0))
-        .catch(() => setUnreadDms(0));
-    }
-  }, [userId]);
 
   // Debounce de 300ms na pesquisa global para não sobrecarregar o D1
   useEffect(() => {

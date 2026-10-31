@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authStorage, directMessagesApi } from '../lib/api';
+import { authStorage } from '../lib/api';
+import { useUnreadDms } from '../hooks/useUnreadDms';
 import { useSidebar } from '../context/SidebarContext';
 import { useTheme } from '../context/ThemeContext';
 import { RightSidebarSearch } from './RightSidebarSearch';
@@ -17,16 +18,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const { isDark, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [unreadDms, setUnreadDms] = useState(0);
-
-  useEffect(() => {
-    if (user?.id) {
-      directMessagesApi
-        .getUnreadCount()
-        .then((res) => setUnreadDms(res.unread_count || 0))
-        .catch(() => setUnreadDms(0));
-    }
-  }, [user?.id]);
+  const unreadDms = useUnreadDms(user?.id);
 
   const handleLogout = () => {
     authStorage.clear();

@@ -1,98 +1,93 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, areFriends, sanitizeMediaUrl, serverError, rateLimit } from "../_shared/auth";
+import {
+  getAuthUser,
+  jsonResponse,
+  errorResponse,
+  getJwtSecret,
+  areFriends,
+  sanitizeMediaUrl,
+  serverError,
+  rateLimit,
+} from "../_shared/auth";
+import { MESSAGE_COLUMNS, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 
-export interface Env {
+export interface Env extends ChatEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
 
-// GET: busca mensagens privadas trocadas entre o usuário logado e um amigo
+const MESSAGE_TYPES = ["text", "image", "video", "file", "location", "gif", "sticker"];
+const CLIENT_ID_PATTERN = /^[\w-]{8,64}$/;
+
+async function fetchMessage(db: D1Database, id: number): Promise<DirectMessageRow | null> {
+  return db
+    .prepare(`SELECT ${MESSAGE_COLUMNS} FROM direct_messages dm JOIN users u ON u.id = dm.sender_id WHERE dm.id = ?`)
+    .bind(id)
+    .first<DirectMessageRow>();
+}
+
+// GET: histórico paginado com um amigo (?friend_id=&before_id=&limit=) ou contagem de não lidas (?unread=count)
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = getJwtSecret(env);
-    const user = await getAuthUser(request, secret);
+    const user = await getAuthUser(request, getJwtSecret(env));
 
     if (!user) {
       return errorResponse("Não autorizado. Faça login para ver mensagens.", 401);
     }
 
-
     const url = new URL(request.url);
-    const unreadParam = url.searchParams.get("unread");
 
-    // Retorna a contagem real de mensagens não lidas recebidas pelo usuário logado
-    if (unreadParam === "count") {
-      const countRes = await env.DB.prepare(`
-        SELECT COUNT(*) AS unread_count 
-        FROM direct_messages 
-        WHERE receiver_id = ? AND read_at IS NULL
-      `)
+    if (url.searchParams.get("unread") === "count") {
+      const countRes = await env.DB.prepare(
+        "SELECT COUNT(*) AS unread_count FROM direct_messages WHERE receiver_id = ? AND read_at IS NULL"
+      )
         .bind(user.id)
         .first<{ unread_count: number }>();
 
       return jsonResponse({ unread_count: countRes?.unread_count || 0 });
     }
 
-    const friendId = url.searchParams.get("friend_id");
-
-    if (!friendId) {
+    const friendId = Number(url.searchParams.get("friend_id"));
+    if (!Number.isInteger(friendId) || friendId <= 0) {
       return errorResponse("O parâmetro friend_id é obrigatório.", 400);
     }
 
-    const fid = Number(friendId);
-    if (!Number.isInteger(fid) || fid <= 0) {
-      return errorResponse("friend_id inválido.", 400);
-    }
+    const limitParam = Number(url.searchParams.get("limit"));
+    const limit = Number.isInteger(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : 30;
+    const beforeParam = Number(url.searchParams.get("before_id"));
+    const beforeId = Number.isInteger(beforeParam) && beforeParam > 0 ? beforeParam : null;
 
-    // Consulta histórico ordenado cronologicamente
-    const query = `
-      SELECT 
-        dm.id,
-        dm.sender_id,
-        dm.receiver_id,
-        dm.content,
-        COALESCE(dm.message_type, 'text') AS message_type,
-        dm.media_url,
-        dm.created_at,
-        u.username AS sender_name
-      FROM direct_messages dm
-      JOIN users u ON dm.sender_id = u.id
-      WHERE (dm.sender_id = ? AND dm.receiver_id = ?)
-         OR (dm.sender_id = ? AND dm.receiver_id = ?)
-      ORDER BY dm.id ASC
-      LIMIT 100
-    `;
+    const { results } = await env.DB.prepare(
+      `SELECT ${MESSAGE_COLUMNS}
+       FROM direct_messages dm
+       JOIN users u ON u.id = dm.sender_id
+       WHERE ((dm.sender_id = ? AND dm.receiver_id = ?) OR (dm.sender_id = ? AND dm.receiver_id = ?))
+         AND (? IS NULL OR dm.id < ?)
+       ORDER BY dm.id DESC
+       LIMIT ?`
+    )
+      .bind(user.id, friendId, friendId, user.id, beforeId, beforeId, limit + 1)
+      .all<DirectMessageRow>();
 
-    const { results } = await env.DB.prepare(query)
-      .bind(user.id, fid, fid, user.id)
-      .all();
+    const rows = results || [];
+    const hasMore = rows.length > limit;
+    const messages = rows.slice(0, limit).reverse();
 
-    // Marca mensagens recebidas como lidas
-    await env.DB.prepare(`
-      UPDATE direct_messages 
-      SET read_at = CURRENT_TIMESTAMP 
-      WHERE sender_id = ? AND receiver_id = ? AND read_at IS NULL
-    `)
-      .bind(fid, user.id)
-      .run();
-
-    return jsonResponse(results || []);
+    return jsonResponse({ messages, has_more: hasMore });
   } catch (err: unknown) {
     return serverError(err, "direct_messages");
   }
 };
 
-// POST: envia uma nova mensagem privada direta
+// POST: envia uma mensagem. `client_id` torna o envio idempotente (reenvios não duplicam).
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const secret = getJwtSecret(env);
-    const user = await getAuthUser(request, secret);
+    const user = await getAuthUser(request, getJwtSecret(env));
 
     if (!user) {
       return errorResponse("Não autorizado. Faça login para enviar mensagens.", 401);
     }
-
 
     const limited = await rateLimit(env.DB, request, "dm-send", 120, 60, user.id);
     if (limited) return limited;
@@ -103,6 +98,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       content?: string;
       message_type?: string;
       media_url?: string;
+      reply_to_id?: number | null;
+      client_id?: string;
     };
 
     try {
@@ -111,28 +108,38 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Corpo da requisição inválido. Esperado JSON.", 400);
     }
 
-    const content = body.content || "";
-    const allowedTypes = ["text", "image", "video", "file", "location", "gif", "sticker"];
-    const messageType = allowedTypes.includes(body.message_type || "") ? (body.message_type as string) : "text";
+    const content = typeof body.content === "string" ? body.content.trim() : "";
+    const messageType = MESSAGE_TYPES.includes(body.message_type || "") ? (body.message_type as string) : "text";
     const mediaUrl = sanitizeMediaUrl(body.media_url);
     if (body.media_url && !mediaUrl) {
       return errorResponse("URL de mídia inválida.", 400);
     }
 
-    if (!content.trim() && !mediaUrl) {
+    if (!content && !mediaUrl) {
       return errorResponse("O conteúdo da mensagem ou mídia é obrigatório.", 400);
+    }
+    if (content.length > 4000) {
+      return errorResponse("Mensagem muito longa (máximo 4000 caracteres).", 400);
+    }
+
+    let clientId: string | null = null;
+    if (body.client_id !== undefined && body.client_id !== null) {
+      if (typeof body.client_id !== "string" || !CLIENT_ID_PATTERN.test(body.client_id)) {
+        return errorResponse("client_id inválido.", 400);
+      }
+      clientId = body.client_id;
     }
 
     let targetId = body.receiver_id ? Number(body.receiver_id) : null;
 
     if (!targetId && body.receiver_username) {
       const targetUser = await env.DB.prepare("SELECT id FROM users WHERE LOWER(username) = ?")
-        .bind(body.receiver_username.trim().toLowerCase())
+        .bind(String(body.receiver_username).trim().toLowerCase())
         .first<{ id: number }>();
       if (targetUser) targetId = targetUser.id;
     }
 
-    if (!targetId) {
+    if (!targetId || !Number.isInteger(targetId)) {
       return errorResponse("Destinatário é obrigatório.", 400);
     }
 
@@ -144,33 +151,93 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Você só pode enviar mensagens para seus amigos.", 403);
     }
 
-    const cleanContent = content.trim();
-    if (cleanContent.length > 4000) {
-      return errorResponse("Mensagem muito longa (máximo 4000 caracteres).", 400);
+    // Reenvio da mesma mensagem: devolve a já gravada, sem duplicar nem notificar de novo
+    if (clientId) {
+      const existing = await env.DB.prepare(
+        "SELECT id FROM direct_messages WHERE sender_id = ? AND client_id = ?"
+      )
+        .bind(user.id, clientId)
+        .first<{ id: number }>();
+      if (existing) {
+        const row = await fetchMessage(env.DB, existing.id);
+        return jsonResponse({ message: row, duplicate: true });
+      }
     }
 
-    const insertResult = await env.DB.prepare(`
-      INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url)
-      VALUES (?, ?, ?, ?, ?)
-    `)
-      .bind(user.id, targetId, cleanContent, messageType, mediaUrl)
+    let replyToId: number | null = null;
+    if (body.reply_to_id) {
+      const replyId = Number(body.reply_to_id);
+      const target = Number.isInteger(replyId)
+        ? await env.DB.prepare(
+            "SELECT id FROM direct_messages WHERE id = ? AND ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))"
+          )
+            .bind(replyId, user.id, targetId, targetId, user.id)
+            .first()
+        : null;
+      if (target) replyToId = replyId;
+    }
+
+    const insertResult = await env.DB.prepare(
+      `INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url, reply_to_id, client_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(user.id, targetId, content, messageType, mediaUrl, replyToId, clientId)
       .run();
 
-    const newId = insertResult.meta.last_row_id;
+    const newId = Number(insertResult.meta.last_row_id);
+    let message = (await fetchMessage(env.DB, newId)) as DirectMessageRow;
 
-    return jsonResponse(
-      {
-        id: newId,
-        sender_id: user.id,
-        receiver_id: targetId,
-        sender_name: user.username,
-        content: cleanContent,
-        message_type: messageType,
-        media_url: mediaUrl,
-        created_at: new Date().toISOString(),
-      },
-      201
-    );
+    // Entrega em tempo real; se o destinatário está conectado, marca como entregue
+    const { delivered } = await notifyRoom(env, user.id, targetId, { type: "message", message }, targetId);
+    if (delivered) {
+      await env.DB.prepare("UPDATE direct_messages SET delivered_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(newId)
+        .run();
+      message = { ...message, status: "delivered" };
+      await notifyRoom(env, user.id, targetId, { type: "status", message_id: newId, status: "delivered" });
+    }
+
+    return jsonResponse({ message }, 201);
+  } catch (err: unknown) {
+    return serverError(err, "direct_messages");
+  }
+};
+
+// DELETE: remove uma mensagem enviada pelo próprio usuário (?id=)
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  try {
+    const { request, env } = context;
+    const user = await getAuthUser(request, getJwtSecret(env));
+    if (!user) {
+      return errorResponse("Não autorizado.", 401);
+    }
+
+    const messageId = Number(new URL(request.url).searchParams.get("id"));
+    if (!Number.isInteger(messageId) || messageId <= 0) {
+      return errorResponse("ID da mensagem é obrigatório.", 400);
+    }
+
+    const row = await env.DB.prepare(
+      "SELECT id, sender_id, receiver_id FROM direct_messages WHERE id = ?"
+    )
+      .bind(messageId)
+      .first<{ id: number; sender_id: number; receiver_id: number }>();
+
+    if (!row) {
+      return errorResponse("Mensagem não encontrada.", 404);
+    }
+    if (row.sender_id !== user.id) {
+      return errorResponse("Você só pode excluir suas próprias mensagens.", 403);
+    }
+
+    await env.DB.prepare("DELETE FROM direct_messages WHERE id = ?").bind(messageId).run();
+    await notifyRoom(env, row.sender_id, row.receiver_id, {
+      type: "delete",
+      message_id: messageId,
+      messageId,
+    });
+
+    return jsonResponse({ success: true, deleted_id: messageId });
   } catch (err: unknown) {
     return serverError(err, "direct_messages");
   }
