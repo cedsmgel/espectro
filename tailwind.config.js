@@ -9,6 +9,7 @@ export default {
     extend: {
       colors: {
         // Visible Spectrum Social Design System (Tokens Dinâmicos via CSS Custom Properties)
+        "olive": "rgb(var(--color-brand) / <alpha-value>)",
         "primary": "rgb(var(--color-primary) / <alpha-value>)",
         "primary-container": "rgb(var(--color-primary-container) / <alpha-value>)",
         "on-primary": "rgb(var(--color-on-primary) / <alpha-value>)",
@@ -79,7 +80,7 @@ export default {
       boxShadow: {
         "xs": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
         "glass": "0 8px 32px 0 rgba(0, 0, 0, 0.06)",
-        "glow-primary": "0 0 20px -3px rgba(79, 70, 229, 0.35)",
+        "glow-primary": "0 0 20px -3px rgba(37, 99, 235, 0.35)",
         "glow-blue": "0 0 20px -3px rgba(59, 130, 246, 0.4)",
       }
     }

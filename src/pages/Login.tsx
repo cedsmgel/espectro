@@ -51,12 +51,12 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-surface text-on-surface">
+    <div className="theme-brand min-h-screen flex items-center justify-center py-12 px-4 bg-surface text-on-surface">
       <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-md max-w-md w-full p-8 md:p-10 flex flex-col gap-6">
         {/* Card Header with Espectro Logo */}
         <div className="text-center flex flex-col items-center gap-2">
           <Link to="/" className="inline-flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined text-[24px]">grain</span>
             </div>
             <span className="text-2xl font-bold tracking-tight text-primary">

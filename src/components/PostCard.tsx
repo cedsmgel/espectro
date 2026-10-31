@@ -353,7 +353,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
                 aria-label="Upvote"
                 className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
                   userVote === 'up'
-                    ? 'text-primary bg-primary-fixed shadow-xs'
+                    ? 'text-olive bg-olive/15 shadow-xs'
                     : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
                 }`}
               >

@@ -908,7 +908,7 @@ export const DirectMessages: React.FC = () => {
                           <div className="w-11 h-11 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm uppercase">
                             {c.username.charAt(0)}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-olive rounded-full ring-2 ring-surface-container-lowest" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
@@ -969,7 +969,7 @@ export const DirectMessages: React.FC = () => {
                           <span
                             className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ring-2 ring-surface-container-lowest ${
                               connectionStatus === 'connected'
-                                ? 'bg-emerald-500'
+                                ? 'bg-olive'
                                 : connectionStatus === 'reconnecting'
                                 ? 'bg-amber-500 animate-pulse'
                                 : 'bg-gray-400'
@@ -987,8 +987,8 @@ export const DirectMessages: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2 text-[11px]">
                             {connectionStatus === 'connected' ? (
-                              <span className="text-emerald-600 font-medium flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              <span className="text-olive font-medium flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-olive" />
                                 Em tempo real
                               </span>
                             ) : connectionStatus === 'reconnecting' ? (

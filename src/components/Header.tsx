@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
             <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 rounded-xl bg-olive flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
                 E
               </div>
               <span className="text-lg sm:text-xl font-bold text-on-surface tracking-tight">

@@ -185,7 +185,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                 <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs">
                   {selectedFriend.username.charAt(0)}
                 </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-olive rounded-full ring-2 ring-surface-container-lowest" />
               </div>
               <div className="min-w-0 flex flex-col">
                 <span className="text-xs font-bold text-on-surface truncate">
@@ -287,7 +287,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                   Conversa privada com @{selectedFriend.username}
                 </span>
                 {connectionStatus === 'connected' && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" title="Conectado em tempo real" />
+                  <span className="w-2 h-2 rounded-full bg-olive" title="Conectado em tempo real" />
                 )}
               </div>
 
@@ -460,7 +460,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs">
                             {friend.username.charAt(0)}
                           </div>
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-surface-container-lowest" />
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-olive rounded-full ring-2 ring-surface-container-lowest" />
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors truncate">

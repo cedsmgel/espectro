@@ -21,8 +21,8 @@
     --color-outline: 148 163 184; /* #94a3b8 (slate-400) */
     --color-outline-variant: 203 213 225; /* #cbd5e1 (slate-300) - Bordas nítidas para não ficar chapado */
 
-    --color-primary: 79 70 229; /* #4f46e5 (indigo/roxo vibrante) */
-    --color-primary-container: 99 102 241; /* #6366f1 */
+    --color-primary: 30 58 138; /* #1E3A8A (azul profundo - UI logada) */
+    --color-primary-container: 37 99 235; /* #2563EB */
     --color-on-primary: 255 255 255;
     --color-on-primary-container: 238 242 255;
 
@@ -56,10 +56,10 @@
     --color-outline: 82 82 91; /* #52525b (zinc-600) */
     --color-outline-variant: 39 39 42; /* #27272a (zinc-800) - Bordas neutras sem azul */
 
-    --color-primary: 168 85 247; /* #a855f7 (roxo neon vibrante) */
-    --color-primary-container: 147 51 234; /* #9333ea */
+    --color-primary: 59 130 246; /* #3B82F6 (azul - legível sobre preto) */
+    --color-primary-container: 37 99 235; /* #2563EB */
     --color-on-primary: 255 255 255;
-    --color-on-primary-container: 243 232 255;
+    --color-on-primary-container: 219 234 254;
 
     --color-secondary: 192 132 252; /* #c084fc */
     --color-secondary-container: 168 85 247; /* #a855f7 */
@@ -71,6 +71,14 @@
     --color-error: 248 113 113; /* #f87171 */
     --color-error-container: 69 10 10;
     --color-on-error: 255 255 255;
+  }
+
+  /* Identidade da Marca (Verde Oliva) - Landing/Login sem sessão */
+  :root, html.dark { --color-brand: 107 142 35; /* #6B8E23 */ }
+  .theme-brand, html.dark .theme-brand {
+    --color-primary: 107 142 35; /* #6B8E23 */
+    --color-primary-container: 107 142 35;
+    --color-on-primary: 255 255 255;
   }
 
   html, body {

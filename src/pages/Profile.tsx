@@ -147,7 +147,7 @@ export const Profile: React.FC = () => {
                       {initialLetter}
                     </div>
                   )}
-                  <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 rounded-full ring-4 ring-surface-container-lowest" />
+                  <span className="absolute bottom-1 right-1 w-4 h-4 bg-olive rounded-full ring-4 ring-surface-container-lowest" />
                 </div>
 
                 <div className="flex flex-col min-w-0">
