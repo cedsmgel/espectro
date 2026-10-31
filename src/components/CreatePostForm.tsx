@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { ImageCropperModal } from './ImageCropperModal';
 import { authStorage, Community, CreatePostData, uploadApi } from '../lib/api';
 import { VideoPlayer } from './VideoPlayer';
 import {
@@ -63,6 +65,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [fileAccept, setFileAccept] = useState('image/*,video/*');
   const [locationTag, setLocationTag] = useState<string | null>(null);
+
+  // Estados para Drag & Drop e Recorte Profissional (Tarefas 1, 2, 3 e 4)
+  const [pendingCropImage, setPendingCropImage] = useState<{ src: string; fileName: string } | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const [videoFileName, setVideoFileName] = useState<string | null>(null);
 
   // Modais / Popovers flutuantes da barra inferior
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -139,6 +146,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     setContent('');
     setMediaUrl('');
     setMediaType(null);
+    setLocalPreviewUrl(null);
+    setVideoFileName(null);
     setLocationTag(null);
     setIsDraftRestored(false);
   };
@@ -233,17 +242,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     setError('Envio cancelado.');
   };
 
-  // Manipulação de Upload com barra de progresso amigável
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setError(null);
+  // Upload direto para o Cloudflare R2 (/api/upload)
+  const uploadFileDirectly = async (file: File, type: 'image' | 'video') => {
     setUploading(true);
     setUploadProgress(0);
-
-    const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg|m4v)$/i.test(file.name);
-    setUploadMessage(isVid ? 'Enviando seu vídeo...' : 'Enviando sua foto...');
+    setUploadMessage(type === 'video' ? 'Enviando seu vídeo para o R2...' : 'Enviando foto otimizada para o R2...');
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -257,14 +260,16 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       });
 
       setMediaUrl(response.url);
-      setMediaType(response.media_type);
+      setMediaType(response.media_type || type);
       setUploadProgress(100);
     } catch (err: any) {
       if (err.message?.includes('cancelado')) {
         setError('Envio cancelado.');
       } else {
-        setError(err.message || 'Falha ao enviar arquivo.');
+        setError(err.message || 'Falha ao enviar arquivo para o R2.');
       }
+      setLocalPreviewUrl(null);
+      setVideoFileName(null);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -275,6 +280,73 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       }
     }
   };
+
+  // Processa arquivo selecionado (seja por clique ou drag-and-drop)
+  const processSelectedFile = (file: File) => {
+    setError(null);
+
+    // Validação de limite máximo de 10MB (Tarefa 1)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('O arquivo excede o limite máximo permitido de 10MB.');
+      return;
+    }
+
+    const isVid = file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg|m4v)$/i.test(file.name);
+
+    if (isVid) {
+      // Tarefa 4: Para vídeos, não faz recorte. Mostra miniatura com play e envia direto
+      setVideoFileName(file.name);
+      setMediaType('video');
+      uploadFileDirectly(file, 'video');
+    } else {
+      // Tarefa 2: Para imagens, abre o modal de recorte com react-easy-crop
+      const objectUrl = URL.createObjectURL(file);
+      setPendingCropImage({
+        src: objectUrl,
+        fileName: file.name,
+      });
+    }
+  };
+
+  // Confirmação do recorte: recebe imagem recortada e comprimida (Tarefas 2 e 3)
+  const handleConfirmCrop = async (croppedFile: File, previewUrl: string) => {
+    setPendingCropImage(null);
+    setLocalPreviewUrl(previewUrl);
+    setVideoFileName(null);
+    await uploadFileDirectly(croppedFile, 'image');
+  };
+
+  // Seletor nativo de arquivos
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processSelectedFile(file);
+  };
+
+  // Configuração do react-dropzone para arrastar e soltar (Tarefa 1)
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    noClick: true,
+    noKeyboard: true,
+    maxSize: 10 * 1024 * 1024, // 10MB
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.svg'],
+      'video/*': ['.mp4', '.webm', '.mov', '.ogg', '.m4v'],
+    },
+    onDropAccepted: (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        processSelectedFile(acceptedFiles[0]);
+      }
+    },
+    onDropRejected: (fileRejections) => {
+      const first = fileRejections[0];
+      const isTooLarge = first?.errors?.some((e) => e.code === 'file-too-large');
+      if (isTooLarge) {
+        setError('O arquivo excede o limite máximo permitido de 10MB.');
+      } else {
+        setError('Formato não suportado. Envie imagens ou vídeos até 10MB.');
+      }
+    },
+  });
 
   // Busca rápida de GIFs na API do Giphy com fallback
   useEffect(() => {
@@ -424,8 +496,14 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col justify-between overflow-hidden bg-surface-container-lowest">
-      {/* Input de arquivo nativo invisível */}
+    <div
+      {...getRootProps()}
+      className="w-full h-full flex flex-col justify-between overflow-hidden bg-surface-container-lowest relative"
+    >
+      {/* react-dropzone input invisível */}
+      <input {...getInputProps()} />
+
+      {/* Input de arquivo nativo invisível para os botões Foto/Vídeo */}
       <input
         type="file"
         ref={fileInputRef}
@@ -433,6 +511,32 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Overlay de Drag and Drop (Tarefa 1) */}
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 rounded-2xl bg-black/85 backdrop-blur-sm border-2 border-dashed border-blue-500 flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-400 animate-bounce">
+            <span className="material-symbols-outlined text-4xl">cloud_upload</span>
+          </div>
+          <div className="text-center">
+            <p className="font-bold text-base sm:text-lg">Solte a mídia aqui</p>
+            <p className="text-xs text-zinc-300 mt-0.5">Fotos ou vídeos até 10MB</p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Recorte de Imagem (Tarefa 2 & 3) */}
+      {pendingCropImage && (
+        <ImageCropperModal
+          imageSrc={pendingCropImage.src}
+          originalFileName={pendingCropImage.fileName}
+          onConfirmCrop={handleConfirmCrop}
+          onCancel={() => {
+            URL.revokeObjectURL(pendingCropImage.src);
+            setPendingCropImage(null);
+          }}
+        />
+      )}
 
       {/* 1. TOPO FIXO (Header do Modal): Botão X à esquerda e título "Criar Publicação" */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-zinc-800/80 bg-surface-container-lowest shrink-0 z-10">
@@ -743,33 +847,48 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           </div>
         </div>
 
-        {/* MINIATURA (Thumbnail) da Mídia acima da barra inferior com botão X */}
-        {mediaUrl && (
-          <div className="relative mt-2 max-w-md w-full rounded-2xl overflow-hidden border border-zinc-800 bg-black/50 shadow-md group">
+        {/* MINIATURA DA MÍDIA (Imagem recortada ou Vídeo) (Tarefas 3 & 4) */}
+        {(mediaUrl || localPreviewUrl) && (
+          <div className="relative mt-2 max-w-md w-full rounded-2xl overflow-hidden border border-zinc-800 bg-black/60 shadow-md group">
             {/* Botão X para remover a miniatura */}
             <button
               type="button"
               onClick={() => {
                 setMediaUrl('');
                 setMediaType(null);
+                setLocalPreviewUrl(null);
+                setVideoFileName(null);
               }}
-              className="absolute top-2.5 right-2.5 z-20 w-8 h-8 rounded-full bg-black/75 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer shadow-lg"
+              className="absolute top-2.5 right-2.5 z-20 w-7 h-7 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center transition-colors cursor-pointer shadow-lg"
               title="Remover mídia"
               aria-label="Remover mídia"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <span className="material-symbols-outlined text-[16px]">close</span>
             </button>
 
-            {mediaType === 'video' || /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(mediaUrl) || mediaUrl.includes('/videos/') ? (
-              <div className="w-full">
-                <VideoPlayer src={mediaUrl} title="Prévia do vídeo" />
+            {mediaType === 'video' || (videoFileName && !localPreviewUrl) ? (
+              /* Tarefa 4: Miniatura de vídeo com ícone de play e nome do arquivo */
+              <div className="p-4 flex items-center gap-3.5 bg-zinc-950/90">
+                <div className="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                  <span className="material-symbols-outlined text-[30px]">play_circle</span>
+                </div>
+                <div className="flex flex-col min-w-0 pr-8">
+                  <span className="text-xs font-semibold text-white truncate">
+                    {videoFileName || 'Vídeo anexado'}
+                  </span>
+                  <span className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    Vídeo pronto para publicação
+                  </span>
+                </div>
               </div>
             ) : (
-              <div className="relative w-full aspect-video max-h-56 bg-zinc-950 flex items-center justify-center">
+              /* Tarefa 3: Miniatura da imagem já recortada e comprimida */
+              <div className="relative w-full max-h-64 bg-zinc-950 flex items-center justify-center overflow-hidden">
                 <img
-                  src={mediaUrl}
-                  alt="Miniatura anexada"
-                  className="w-full h-full object-cover"
+                  src={localPreviewUrl || mediaUrl}
+                  alt="Miniatura recortada"
+                  className="w-full h-auto max-h-64 object-cover"
                 />
               </div>
             )}
