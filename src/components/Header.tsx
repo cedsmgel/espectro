@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, directMessagesApi, searchApi, SearchResults } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
+import { parseScrap } from '../lib/scrapStyle';
 import { useTheme } from '../context/ThemeContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
@@ -12,7 +13,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, openCreatePostModal } = useSidebar();
   const { isDark, toggleTheme } = useTheme();
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
@@ -252,7 +253,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                           {searchResults.posts.map((p) => (
                             <Link
                               key={p.id}
-                              to={`/?q=${encodeURIComponent(p.title || p.content.slice(0, 30))}`}
+                              to={`/?q=${encodeURIComponent(p.title || parseScrap(p.content).body.slice(0, 30))}`}
                               onClick={() => setShowSearchResults(false)}
                               className="flex items-start gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
                             >
@@ -261,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                               </span>
                               <div className="flex flex-col min-w-0 flex-1">
                                 <span className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors line-clamp-1">
-                                  {p.title || p.content}
+                                  {p.title || parseScrap(p.content).body}
                                 </span>
                                 <span className="text-[10px] text-on-surface-variant truncate">
                                   por @{p.author_name} {p.community_name ? `em c/${p.community_name}` : ''}
@@ -318,15 +319,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <>
                 {/* Botão e Dropdown Criar */}
                 <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateDropdown((prev) => !prev)}
-                    className="hidden md:flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-primary-container text-on-primary font-medium text-sm shadow-xs hover:bg-primary transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">add</span>
-                    <span>Criar</span>
-                    <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                  </button>
+                  <div className="hidden md:flex items-center shadow-xs">
+                    <button
+                      type="button"
+                      onClick={openCreatePostModal}
+                      className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-l-full bg-primary-container text-on-primary font-medium text-sm hover:bg-primary transition-all cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add</span>
+                      <span>Criar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateDropdown((prev) => !prev)}
+                      aria-label="Mais opções de criação"
+                      className="py-1.5 pr-2.5 pl-1 rounded-r-full bg-primary-container text-on-primary hover:bg-primary border-l border-white/20 transition-all cursor-pointer flex items-center"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                    </button>
+                  </div>
 
                   {showCreateDropdown && (
                     <>
@@ -339,12 +349,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                           type="button"
                           onClick={() => {
                             setShowCreateDropdown(false);
-                            const composer = document.getElementById('composer-textarea');
-                            if (composer) {
-                              composer.focus();
-                            } else {
-                              navigate('/');
-                            }
+                            openCreatePostModal();
                           }}
                           className="px-4 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer text-left transition-colors"
                         >

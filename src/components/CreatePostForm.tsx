@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { authStorage, Community, CreatePostData, uploadApi } from '../lib/api';
 import { VideoPlayer } from './VideoPlayer';
+import {
+  DEFAULT_SCRAP_STYLE,
+  SCRAP_FONTS,
+  SCRAP_INK_COLORS,
+  SCRAP_PAPERS,
+  SCRAP_SIZES,
+  ScrapFont,
+  ScrapPaper,
+  ScrapSize,
+  ScrapStyle,
+  encodeScrap,
+  scrapPaperStyle,
+} from '../lib/scrapStyle';
 
 interface CreatePostFormProps {
   onPostCreated: (data: CreatePostData) => Promise<void>;
@@ -26,6 +39,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
   const [postType, setPostType] = useState<'discussion' | 'scrap'>('discussion');
   const [title, setTitle] = useState('');
+  const [scrapStyle, setScrapStyle] = useState<ScrapStyle>(DEFAULT_SCRAP_STYLE);
   const [content, setContent] = useState('');
   const [communityId, setCommunityId] = useState<number | ''>(defaultCommunityId || '');
   const [mediaUrl, setMediaUrl] = useState('');
@@ -270,7 +284,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
       await onPostCreated({
         title: postType === 'discussion' ? title.trim() : undefined,
-        content: content.trim(),
+        content: postType === 'scrap' ? encodeScrap(scrapStyle, content.trim()) : content.trim(),
         post_type: postType,
         community_id: communityId === '' ? undefined : Number(communityId),
         media_url: mediaUrl.trim() || undefined,
@@ -543,15 +557,106 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               </div>
             </div>
 
-            <textarea
-              id="composer-textarea"
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="O que está acontecendo no seu espectro hoje? (Suporta **negrito**, *itálico* e [links](url))"
-              rows={3}
-              className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
-            />
+            {/* Personalização da grafia do Scrap (fonte, tamanho, tinta e papel) */}
+            {postType === 'scrap' && (
+              <div className="flex flex-col gap-2.5 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-on-surface-variant w-14">Letra</span>
+                  {(Object.keys(SCRAP_FONTS) as ScrapFont[]).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setScrapStyle((s) => ({ ...s, f: k }))}
+                      style={{ fontFamily: SCRAP_FONTS[k].family }}
+                      className={`px-3 py-1 rounded-full text-sm transition-all cursor-pointer border ${
+                        scrapStyle.f === k
+                          ? 'border-primary-container bg-primary-container/15 text-on-surface'
+                          : 'border-outline-variant/40 text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {SCRAP_FONTS[k].label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-on-surface-variant w-14">Tamanho</span>
+                    {(Object.keys(SCRAP_SIZES) as ScrapSize[]).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setScrapStyle((s) => ({ ...s, s: k }))}
+                        className={`w-9 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                          scrapStyle.s === k
+                            ? 'border-primary-container bg-primary-container/15 text-on-surface'
+                            : 'border-outline-variant/40 text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        {SCRAP_SIZES[k].label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-on-surface-variant">Tinta</span>
+                    {SCRAP_INK_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        aria-label={`Tinta ${color}`}
+                        onClick={() => setScrapStyle((s) => ({ ...s, c: color }))}
+                        style={{ backgroundColor: color }}
+                        className={`w-6 h-6 rounded-full cursor-pointer transition-transform ${
+                          scrapStyle.c === color ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-on-surface scale-110' : 'hover:scale-110'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-on-surface-variant">Papel</span>
+                    {(Object.keys(SCRAP_PAPERS) as ScrapPaper[]).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        title={SCRAP_PAPERS[k].label}
+                        aria-label={`Papel ${SCRAP_PAPERS[k].label}`}
+                        onClick={() => setScrapStyle((s) => ({ ...s, p: k }))}
+                        style={{ backgroundColor: SCRAP_PAPERS[k].bg }}
+                        className={`w-6 h-6 rounded-md cursor-pointer transition-transform ${
+                          scrapStyle.p === k ? 'ring-2 ring-offset-2 ring-offset-surface-container-low ring-on-surface scale-110' : 'hover:scale-110'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {postType === 'scrap' ? (
+              /* O próprio campo vira o "recado" — o que você vê é o que será publicado */
+              <div className="relative mt-2 -rotate-[0.6deg]">
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm z-10 pointer-events-none" />
+                <textarea
+                  id="composer-textarea"
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Deixe um recado..."
+                  rows={4}
+                  style={scrapPaperStyle(scrapStyle)}
+                  className="w-full rounded-sm px-5 pt-7 pb-5 shadow-[0_8px_20px_rgba(0,0,0,0.35)] focus:outline-none resize-none placeholder:opacity-50 placeholder:text-current"
+                />
+              </div>
+            ) : (
+              <textarea
+                id="composer-textarea"
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="O que está acontecendo no seu espectro hoje? (Suporta **negrito**, *itálico* e [links](url))"
+                rows={4}
+                className="w-full bg-surface-container-low rounded-xl px-4 py-3 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
+              />
+            )}
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Post, Comment, commentsApi, postsApi, authStorage } from '../lib/api';
 import { renderMarkdown } from '../lib/markdown';
 import { VideoPlayer } from './VideoPlayer';
+import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
 
 interface PostCardProps {
   post: Post;
@@ -145,13 +146,16 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
 
     setIsSavingEdit(true);
     setEditError(null);
+    // Preserva a personalização do Scrap ao editar
+    const existingStyle = parseScrap(content).style;
+    const finalContent = existingStyle ? encodeScrap(existingStyle, editContent.trim()) : editContent.trim();
     try {
       const res = await postsApi.update(post.id, {
         title: editTitle.trim() || null,
-        content: editContent.trim(),
+        content: finalContent,
       });
 
-      setContent(editContent.trim());
+      setContent(finalContent);
       setTitle(editTitle.trim());
       setIsEditing(false);
 
@@ -263,7 +267,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
                       onClick={() => {
                         setShowMenu(false);
                         setEditTitle(title);
-                        setEditContent(content);
+                        setEditContent(parseScrap(content).body);
                         setEditError(null);
                         setIsEditing(true);
                       }}
@@ -305,15 +309,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
           )}
 
           {post.post_type === 'scrap' ? (
-            <div className="relative p-4 rounded-xl bg-surface-container-low border-l-4 border-secondary flex flex-col gap-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-secondary flex items-center gap-1">
-                <span className="material-symbols-outlined text-[15px]">auto_stories</span>
-                Scrap Nostálgico
-              </span>
-              <div className="text-sm italic text-on-surface font-serif">
-                "{renderMarkdown(content)}"
-              </div>
-            </div>
+            (() => {
+              const { style, body } = parseScrap(content);
+              const s = style || DEFAULT_SCRAP_STYLE;
+              return (
+                <div className="relative mx-1 my-2 px-5 pt-7 pb-5 rounded-sm shadow-[0_8px_20px_rgba(0,0,0,0.35)] -rotate-[0.6deg]" style={scrapPaperStyle(s)}>
+                  {/* Fita adesiva do recado */}
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm" />
+                  <div className="whitespace-pre-wrap break-words">{renderMarkdown(body)}</div>
+                  <p className="mt-3 text-right text-[0.6em] opacity-70">— @{post.author_name}</p>
+                </div>
+              );
+            })()
           ) : (
             <div className="text-sm text-on-surface leading-relaxed">
               {renderMarkdown(content)}
@@ -361,7 +368,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
               </button>
               <span
                 className={`px-2 text-xs font-bold ${
-                  score > 0 ? 'text-primary' : score < 0 ? 'text-error' : 'text-on-surface'
+                  score > 0 ? (userVote === 'up' ? 'text-olive' : 'text-primary') : score < 0 ? 'text-error' : 'text-on-surface'
                 }`}
               >
                 {score > 0 ? `+${score}` : score}

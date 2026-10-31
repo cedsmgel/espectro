@@ -4,7 +4,6 @@ import { postsApi, communitiesApi, Post, Community, CreatePostData, authStorage 
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
-import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
 import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
@@ -13,7 +12,7 @@ import { CreateCommunityModal } from '../components/CreateCommunityModal';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isExpanded } = useSidebar();
+  const { isExpanded, openCreatePostModal } = useSidebar();
   const user = authStorage.getUser();
   const [posts, setPosts] = useState<Post[]>([]);
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -164,134 +163,95 @@ export const Feed: React.FC = () => {
           <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* FEED CENTRAL (Colunas 1 a 8) */}
-              <section className="lg:col-span-8 flex flex-col gap-6 min-w-0">
-                {/* Momentos do Espectro (Stories / Canais Vivos) */}
-                <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 overflow-hidden">
-                  <div className="flex items-center justify-between pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-secondary-container animate-pulse" />
-                      <h2 className="font-semibold text-sm text-on-surface">
-                        Momentos & Canais
-                      </h2>
-                    </div>
-                    <Link to="/comunidades" className="text-on-surface-variant text-xs hover:text-primary">
-                      Ver catálogo
-                    </Link>
-                  </div>
-                  <div className="flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none">
-                    {/* Criar Story / Seu Momento */}
-                    <div className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group">
-                      <div className="relative w-14 h-14 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-105 transition-transform border border-outline-variant/20">
-                        <span className="material-symbols-outlined text-[24px] text-primary">account_circle</span>
-                        <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs shadow-md font-bold">
+              <section className="lg:col-span-8 flex flex-col gap-4 min-w-0">
+                {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
+                <div className="-mx-3 sm:mx-0">
+                  <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
+                    {/* Seu Momento: abre o modal de criação */}
+                    <button
+                      type="button"
+                      onClick={openCreatePostModal}
+                      className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
+                    >
+                      <div className="relative w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <span className="text-lg font-bold text-on-surface uppercase">
+                          {user ? user.username.charAt(0) : '?'}
+                        </span>
+                        <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs font-bold ring-2 ring-surface">
                           +
                         </span>
                       </div>
-                      <span className="text-[11px] font-medium text-on-surface text-center max-w-[64px] truncate">
-                        {user ? `@${user.username}` : 'Seu Momento'}
+                      <span className="text-[11px] font-medium text-on-surface text-center max-w-[68px] truncate">
+                        Seu momento
                       </span>
-                    </div>
+                    </button>
 
-                    {/* Comunidades Reais do D1 como Canais */}
-                    {communities.slice(0, 8).map((c) => (
+                    {/* Comunidades reais do D1 como canais */}
+                    {communities.slice(0, 12).map((c) => (
                       <Link
                         key={c.id}
                         to={`/c/${c.slug || c.id}`}
                         className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
                       >
                         <div
-                          className="p-0.5 rounded-full group-hover:scale-105 transition-transform"
+                          className="p-[2px] rounded-full group-hover:scale-105 transition-transform"
                           style={{
-                            background: `linear-gradient(135deg, ${c.icon_color || '#712ae2'}, #4f46e5)`,
+                            background: `linear-gradient(135deg, ${c.icon_color || '#6B8E23'}, #2563EB)`,
                           }}
                         >
-                          <div className="w-13 h-13 rounded-full bg-surface-container-lowest p-0.5 flex items-center justify-center">
+                          <div className="rounded-full bg-surface p-[2px]">
                             <div
-                              className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-xs"
-                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                              className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm text-white"
+                              style={{ backgroundColor: c.icon_color || '#6B8E23' }}
                             >
                               {c.name.charAt(0).toUpperCase()}
                             </div>
                           </div>
                         </div>
                         <span className="text-[11px] text-on-surface-variant text-center max-w-[68px] truncate">
-                          c/{c.name}
+                          {c.name}
                         </span>
                       </Link>
                     ))}
                   </div>
                 </div>
 
-                {/* Feed Tabs Switcher (Para Você, Seguindo, Em Alta) */}
-                <div className="flex items-center justify-between bg-surface-container-lowest rounded-2xl px-6 py-1.5 shadow-sm border border-outline-variant/30">
-                  <div className="flex items-center gap-8">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('foryou');
-                        setSearchParams({});
-                      }}
-                      className={`relative py-3 text-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                        activeTab === 'foryou' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      <span>Para Você</span>
-                      {activeTab === 'foryou' && (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary-container" />
-                          <span className="absolute bottom-0 left-0 right-0 h-1 bg-primary-container rounded-full" />
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('following');
-                        setSearchParams({});
-                      }}
-                      className={`relative py-3 text-sm font-semibold transition-colors cursor-pointer ${
-                        activeTab === 'following' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      <span>Seguindo</span>
-                      {activeTab === 'following' && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-primary-container rounded-full" />
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('trending');
-                        setSearchParams({ filter: 'trending' });
-                      }}
-                      className={`relative py-3 text-sm font-semibold transition-colors flex items-center gap-1 cursor-pointer ${
-                        activeTab === 'trending' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      <span>Em Alta</span>
-                      <span>🔥</span>
-                      {activeTab === 'trending' && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 bg-primary-container rounded-full" />
-                      )}
-                    </button>
+                {/* Abas do Feed fixas no topo da lista (Para Você, Seguindo, Em Alta) */}
+                <div className="sticky top-16 z-20 -mx-3 sm:mx-0 px-3 sm:px-1 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
+                  <div className="flex items-center gap-6 sm:gap-8">
+                    {(
+                      [
+                        { key: 'foryou', label: 'Para Você', params: {} },
+                        { key: 'following', label: 'Seguindo', params: {} },
+                        { key: 'trending', label: 'Em Alta 🔥', params: { filter: 'trending' } },
+                      ] as const
+                    ).map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab.key);
+                          setSearchParams(tab.params as Record<string, string>);
+                        }}
+                        className={`relative py-3 text-sm font-semibold transition-colors cursor-pointer ${
+                          activeTab === tab.key ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        {tab.label}
+                        {activeTab === tab.key && (
+                          <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />
+                        )}
+                      </button>
+                    ))}
                   </div>
-
                   <button
                     type="button"
                     aria-label="Preferências do feed"
-                    className="p-2 rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+                    className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[20px]">tune</span>
                   </button>
                 </div>
-
-                {/* Composer Card */}
-                <CreatePostForm
-                  onPostCreated={handlePostCreated}
-                  communities={communities}
-                />
 
                 {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}
                 {loading ? (
