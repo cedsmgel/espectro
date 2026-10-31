@@ -425,34 +425,7 @@ export const Feed: React.FC = () => {
                   )}
                 </div>
 
-                {/* Card 3: Visão Geral da Rede (Métricas Reais D1) */}
-                <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[20px]">hub</span>
-                    <h2 className="font-bold text-sm text-on-surface">Rede Espectro</h2>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div className="bg-surface-container-low p-3 rounded-xl flex flex-col">
-                      <span className="text-lg font-bold text-on-surface">{posts.length}</span>
-                      <span className="text-[11px] text-on-surface-variant">Posts Carregados</span>
-                    </div>
-                    <div className="bg-surface-container-low p-3 rounded-xl flex flex-col">
-                      <span className="text-lg font-bold text-on-surface">{communities.length}</span>
-                      <span className="text-[11px] text-on-surface-variant">Comunidades</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Mini Rodapé */}
-                <div className="px-2 flex flex-col gap-1 text-[11px] text-on-surface-variant">
-                  <div className="flex flex-wrap gap-x-3 gap-y-1">
-                    <a href="#" className="hover:underline">Termos</a>
-                    <a href="#" className="hover:underline">Privacidade</a>
-                    <a href="#" className="hover:underline">Diretrizes</a>
-                    <a href="#" className="hover:underline">Cookies</a>
-                  </div>
-                  <p>© 2026 Espectro Inc.</p>
-                </div>
               </aside>
             </div>
           </div>

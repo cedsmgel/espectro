@@ -13,7 +13,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
-  const { toggleSidebar, openCreatePostModal } = useSidebar();
+  const { toggleSidebar } = useSidebar();
   const { isDark, toggleTheme } = useTheme();
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
@@ -317,67 +317,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </button>
             {user ? (
               <>
-                {/* Botão e Dropdown Criar */}
-                <div className="relative">
-                  <div className="hidden md:flex items-center shadow-xs">
-                    <button
-                      type="button"
-                      onClick={openCreatePostModal}
-                      className="flex items-center gap-1.5 py-1.5 px-3.5 rounded-l-full bg-primary-container text-on-primary font-medium text-sm hover:bg-primary transition-all cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">add</span>
-                      <span>Criar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowCreateDropdown((prev) => !prev)}
-                      aria-label="Mais opções de criação"
-                      className="py-1.5 pr-2.5 pl-1 rounded-r-full bg-primary-container text-on-primary hover:bg-primary border-l border-white/20 transition-all cursor-pointer flex items-center"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                    </button>
-                  </div>
 
-                  {showCreateDropdown && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setShowCreateDropdown(false)}
-                      />
-                      <div className="absolute right-0 top-10 z-40 w-52 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-1.5 flex flex-col animate-in fade-in duration-150">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCreateDropdown(false);
-                            openCreatePostModal();
-                          }}
-                          className="px-4 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer text-left transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px] text-primary">edit_note</span>
-                          <div>
-                            <p className="font-semibold">Nova Publicação</p>
-                            <p className="text-[10px] text-on-surface-variant">Postar no feed ou scrap</p>
-                          </div>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowCreateDropdown(false);
-                            setShowCommunityModal(true);
-                          }}
-                          className="px-4 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer text-left transition-colors border-t border-outline-variant/20"
-                        >
-                          <span className="material-symbols-outlined text-[18px] text-secondary">group_add</span>
-                          <div>
-                            <p className="font-semibold">Criar Comunidade</p>
-                            <p className="text-[10px] text-on-surface-variant">Fundar um novo espaço</p>
-                          </div>
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
 
                 {/* Botão Mensagens com link para /mensagens e Badge real (Desktop: md:flex) */}
                 <Link
