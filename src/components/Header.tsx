@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, directMessagesApi, searchApi, SearchResults } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { parseScrap } from '../lib/scrapStyle';
-import { useTheme } from '../context/ThemeContext';
 import { ContactsDrawer } from './ContactsDrawer';
 import { CreateCommunityModal } from './CreateCommunityModal';
 
@@ -14,7 +13,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const { toggleSidebar } = useSidebar();
-  const { isDark, toggleTheme } = useTheme();
   const handleToggle = onToggleSidebar || toggleSidebar;
   const user = authStorage.getUser();
   const userId = user?.id;
@@ -364,37 +362,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               </div>
             )}
 
-            {/* Botão de Alternância de Tema (Light / Dark Mode) */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              title={isDark ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-              className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-all duration-200 cursor-pointer flex items-center justify-center relative group"
-            >
-              <span className="material-symbols-outlined text-[22px] transition-transform duration-300 group-hover:rotate-45">
-                {isDark ? 'light_mode' : 'dark_mode'}
-              </span>
-            </button>
 
-            {/* Avatar Mobile do Usuário (Stitch Mobile Header) */}
-            {user && (
-              <Link
-                to="/perfil"
-                className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase shadow-xs shrink-0 ml-0.5 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-                title={`Meu perfil (@${user.username})`}
-              >
-                {user.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.username}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  user.username.charAt(0)
-                )}
-              </Link>
-            )}
           </div>
         </div>
 
