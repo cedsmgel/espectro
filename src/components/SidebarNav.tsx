@@ -111,6 +111,13 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   Espectro
                 </span>
               )}
+              {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
+              <span
+                role="tooltip"
+                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+              >
+                Início
+              </span>
             </Link>
           </div>
 

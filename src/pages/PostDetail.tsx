@@ -15,7 +15,6 @@ import {
   authStorage,
 } from '../lib/api';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
-import { RightSidebarSearch } from '../components/RightSidebarSearch';
 
 export const PostDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -283,85 +282,6 @@ export const PostDetail: React.FC = () => {
           )}
         </div>
       </main>
-
-      {/* 4. Coluna Direita: Widgets (w-80, sticky top-0 h-screen, pt-4, hidden lg:flex) */}
-      <aside className="w-72 hidden xl:flex flex-col fixed right-0 top-0 h-screen pt-4 px-4 overflow-y-auto border-l border-outline-variant/15 gap-4">
-        {/* Barra de Pesquisa */}
-        <RightSidebarSearch />
-
-        {/* Card Comunidades em Alta */}
-        <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary text-[18px]">
-                local_fire_department
-              </span>
-              <h2 className="font-bold text-xs sm:text-sm text-on-surface">
-                Comunidades em Alta
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowCommunityModal(true)}
-              className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[13px]">add</span>
-              <span>Criar</span>
-            </button>
-          </div>
-
-          {communities.length === 0 ? (
-            <div className="p-3 text-center text-on-surface-variant text-xs bg-surface-container-low rounded-xl">
-              <p className="font-medium text-on-surface text-[11px]">
-                Nenhuma comunidade ainda
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {communities.slice(0, 5).map((c, idx) => (
-                <div key={c.id} className="flex items-center justify-between gap-1.5 group">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] font-bold text-on-surface-variant w-3.5 text-center">
-                      #{idx + 1}
-                    </span>
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-                      style={{ backgroundColor: c.icon_color || '#712ae2' }}
-                    >
-                      {c.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <Link
-                        to={`/c/${c.slug || c.id}`}
-                        className="text-xs font-semibold text-on-surface truncate group-hover:text-primary transition-colors"
-                      >
-                        c/{c.name}
-                      </Link>
-                      <span className="text-[10px] text-on-surface-variant truncate">
-                        {c.members_count} {c.members_count === 1 ? 'membro' : 'membros'}
-                      </span>
-                    </div>
-                  </div>
-                  <Link
-                    to={`/c/${c.slug || c.id}`}
-                    className="px-2.5 py-0.5 rounded-full bg-surface-container text-primary text-[11px] font-semibold hover:bg-primary hover:text-on-primary transition-all flex-shrink-0 shadow-xs"
-                  >
-                    Ver
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Rodapé sutil de links estilo Twitter */}
-        <div className="px-2 py-3 text-[11px] text-on-surface-variant/70 flex flex-wrap gap-x-3 gap-y-1">
-          <a href="#" className="hover:underline">Termos</a>
-          <a href="#" className="hover:underline">Privacidade</a>
-          <a href="#" className="hover:underline">Diretrizes</a>
-          <span>© 2026 Espectro Inc.</span>
-        </div>
-      </aside>
 
       {/* Modal Criar Comunidade */}
       <CreateCommunityModal

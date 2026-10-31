@@ -21,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
@@ -93,6 +94,29 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       setShowSearchResults(false);
       navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
     }
+  };
+
+  const handleSelectResult = (path: string) => {
+    mobileInputRef.current?.blur();
+    setShowSearchResults(false);
+    setMobileSearchOpen(false);
+    navigate(path);
+  };
+
+  const handleMobileSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      mobileInputRef.current?.blur();
+      setShowSearchResults(false);
+      setMobileSearchOpen(false);
+      navigate('/?q=' + encodeURIComponent(searchQuery.trim()));
+    }
+  };
+
+  const handleCancelMobileSearch = () => {
+    mobileInputRef.current?.blur();
+    setMobileSearchOpen(false);
+    setShowSearchResults(false);
   };
 
   return (
@@ -366,44 +390,214 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           </div>
         </div>
 
-        {/* Barra de Pesquisa Mobile Expandida (Overlay Stitch) */}
-        {mobileSearchOpen && (
-          <div className="md:hidden fixed inset-0 bg-surface-container-lowest z-50 flex items-center px-3 gap-2 pt-[env(safe-area-inset-top)] animate-in fade-in duration-150">
-            <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-                search
-              </span>
-              <input
-                type="text"
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Pesquisar pessoas, comunidades, posts..."
-                className="w-full pl-9 pr-8 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-xs focus:outline-none focus:ring-1 focus:ring-primary-container"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1"
-                >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
-                </button>
+              </header>
+
+      {/* 2. Barra e Dropdown de Pesquisa Mobile (Totalmente integrado com resultados) */}
+      {mobileSearchOpen && (
+        <>
+          {/* Backdrop escuro para fechar ao tocar fora */}
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 animate-in fade-in duration-150"
+            onClick={handleCancelMobileSearch}
+          />
+
+          {/* Container Superior Fixo da Pesquisa no Mobile (w-full) */}
+          <div className="md:hidden fixed inset-x-0 top-0 z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-md pt-[env(safe-area-inset-top)] animate-in slide-in-from-top-2 duration-150">
+            {/* Barra de Input com largura total */}
+            <div className="relative w-full px-3 py-2.5 flex items-center gap-2">
+              <form onSubmit={handleMobileSearchSubmit} className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">
+                  search
+                </span>
+                <input
+                  ref={mobileInputRef}
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim()) setShowSearchResults(true);
+                  }}
+                  placeholder="Pesquisar pessoas, comunidades, posts..."
+                  className="w-full pl-9 pr-8 py-2 rounded-full bg-surface-container-low border border-outline-variant/40 text-on-surface text-sm placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 focus:border-primary-container"
+                />
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults(null);
+                      if (mobileInputRef.current) mobileInputRef.current.focus();
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-1 cursor-pointer"
+                    aria-label="Limpar texto"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                ) : null}
+              </form>
+
+              <button
+                type="button"
+                onClick={handleCancelMobileSearch}
+                className="px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg shrink-0 cursor-pointer"
+              >
+                Cancelar
+              </button>
+
+              {/* Dropdown de Resultados no Mobile: absolute top-full left-0 w-full z-50 max-h-[60vh] overflow-y-auto */}
+              {showSearchResults && searchQuery.trim().length > 0 && (
+                <div className="absolute top-full left-0 w-full z-50 max-h-[60vh] overflow-y-auto bg-surface-container-lowest border-b border-outline-variant/30 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                  {/* Carregando */}
+                  {isSearching && !searchResults && (
+                    <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span>Buscando no Espectro...</span>
+                    </div>
+                  )}
+
+                  {searchResults && (
+                    <div className="flex flex-col gap-2 p-3 w-full">
+                      {/* Grupo: Usuários / Pessoas */}
+                      {searchResults.users.map((u) => (
+                        <button
+                          key={`user-${u.id}`}
+                          type="button"
+                          onClick={() => handleSelectResult(`/perfil/${encodeURIComponent(u.username)}`)}
+                          className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container-high transition-colors text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {u.avatar_url ? (
+                              <img
+                                src={u.avatar_url}
+                                alt={u.username}
+                                className="w-10 h-10 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm shrink-0">
+                                {u.username.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm font-semibold text-on-surface truncate">
+                                {u.name || u.username}
+                              </span>
+                              <span className="text-xs text-on-surface-variant truncate">
+                                @{u.username}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">
+                            Pessoa
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* Grupo: Comunidades */}
+                      {searchResults.communities.map((c) => (
+                        <button
+                          key={`comm-${c.id}`}
+                          type="button"
+                          onClick={() => handleSelectResult(`/c/${encodeURIComponent(c.slug || c.name || c.id)}`)}
+                          className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container-high transition-colors text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0 shadow-xs"
+                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                            >
+                              {c.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm font-semibold text-on-surface truncate">
+                                c/{c.name}
+                              </span>
+                              <span className="text-xs text-on-surface-variant truncate">
+                                {c.description || `${c.members_count || 1} membros`}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-secondary/10 text-secondary text-[10px] font-bold shrink-0">
+                            Comunidade
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* Grupo: Posts */}
+                      {searchResults.posts.map((p) => (
+                        <button
+                          key={`post-${p.id}`}
+                          type="button"
+                          onClick={() => handleSelectResult(`/post/${p.id}`)}
+                          className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container-high transition-colors text-left cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {p.media_url && p.media_type === 'image' ? (
+                              <img
+                                src={p.media_url}
+                                alt=""
+                                className="w-10 h-10 rounded-lg object-cover shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface shrink-0">
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {p.post_type === 'scrap' ? 'auto_stories' : 'article'}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-sm font-semibold text-on-surface truncate">
+                                {p.title || parseScrap(p.content).body}
+                              </span>
+                              <span className="text-xs text-on-surface-variant truncate">
+                                por @{p.author_name} {p.community_name ? `em c/${p.community_name}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-[10px] font-bold shrink-0">
+                            Post
+                          </span>
+                        </button>
+                      ))}
+
+                      {/* Sem resultados */}
+                      {searchResults.users.length === 0 &&
+                        searchResults.communities.length === 0 &&
+                        searchResults.posts.length === 0 && (
+                          <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                            <span className="material-symbols-outlined text-[28px] text-on-surface-variant/60">
+                              search_off
+                            </span>
+                            <span>Nenhum resultado encontrado para "${searchQuery}"</span>
+                          </div>
+                        )}
+
+                      {/* Rodapé: Ver todos no feed */}
+                      {(searchResults.users.length > 0 ||
+                        searchResults.communities.length > 0 ||
+                        searchResults.posts.length > 0) && (
+                        <div className="pt-2 mt-1 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant">
+                          <span>Ver resultados completos</span>
+                          <button
+                            type="button"
+                            onClick={handleMobileSearchSubmit}
+                            className="text-primary hover:underline font-semibold cursor-pointer"
+                          >
+                            Ir para o Feed →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
-            </form>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileSearchOpen(false);
-                setShowSearchResults(false);
-              }}
-              className="px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg cursor-pointer"
-            >
-              Cancelar
-            </button>
+            </div>
           </div>
-        )}
-      </header>
+        </>
+      )}
 
       {/* Slide-in Contacts Drawer (Direct rápido) */}
       <ContactsDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />

@@ -791,7 +791,7 @@ export const DirectMessages: React.FC = () => {
   return (
     <div
       style={{
-        height: isMobile && viewportHeight ? `${viewportHeight}px` : undefined,
+        height: isMobile && isKeyboardOpen && viewportHeight ? `${viewportHeight}px` : undefined,
       }}
       className="w-full h-dvh md:h-screen overflow-hidden bg-surface text-on-surface flex flex-col md:flex-row fixed inset-x-0 top-0 md:static"
     >
@@ -1002,7 +1002,7 @@ export const DirectMessages: React.FC = () => {
                 ) : (
                   <>
                     {/* Header da Conversa Ativa */}
-                    <div className="h-14 sm:h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0 box-content">
+                    <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         {/* Botão Voltar para Lista no Mobile (Tela Cheia) */}
                         <button
@@ -1590,7 +1590,7 @@ export const DirectMessages: React.FC = () => {
                     )}
 
                     {/* Input do Chat com Botões de Anexo, Emojis, GIFs e Enviar */}
-                    <div className="p-2.5 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 z-20">
+                    <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 z-20">
                       {/* Barra de Citação ao Responder (Tarefa 3) */}
                       {replyingTo && (
                         <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-1 shadow-2xs">

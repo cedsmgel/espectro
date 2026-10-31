@@ -970,8 +970,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         )}
       </div>
 
-      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e flex adaptativo */}
-      <footer className="sticky bottom-0 bg-black px-3 sm:px-4 py-2.5 sm:py-3.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-zinc-800 shrink-0 z-20 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e alinhamento em linha única */}
+      <footer className="sticky bottom-0 bg-surface-container-lowest px-3 sm:px-5 py-2.5 sm:py-3.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] border-t border-outline-variant/30 shrink-0 z-20 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Lado Esquerdo: Ícones Foto, Vídeo, Emoji, GIF e Localização */}
         <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           {/* Foto */}
@@ -979,8 +979,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={() => handleTriggerUpload('image')}
             disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-blue-400 hover:text-blue-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
-            title="Foto"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-blue-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             aria-label="Adicionar Foto"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
@@ -991,8 +990,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={() => handleTriggerUpload('video')}
             disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
-            title="Vídeo"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-indigo-500 hover:text-indigo-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             aria-label="Adicionar Vídeo"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">videocam</span>
@@ -1005,8 +1003,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               setShowEmojiPicker(!showEmojiPicker);
               setShowGifPicker(false);
             }}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-amber-400 hover:text-amber-300 transition-colors cursor-pointer flex items-center justify-center"
-            title="Emoji"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-amber-500 hover:text-amber-600 transition-colors cursor-pointer flex items-center justify-center"
             aria-label="Adicionar Emoji"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">sentiment_satisfied</span>
@@ -1019,8 +1016,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               setShowGifPicker(!showGifPicker);
               setShowEmojiPicker(false);
             }}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 text-teal-400 hover:text-teal-300 transition-colors cursor-pointer flex items-center justify-center"
-            title="GIF"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-teal-500 hover:text-teal-600 transition-colors cursor-pointer flex items-center justify-center"
             aria-label="Adicionar GIF"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">gif_box</span>
@@ -1030,41 +1026,40 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           <button
             type="button"
             onClick={handleLocationClick}
-            className={`p-1.5 sm:p-2 rounded-full hover:bg-zinc-800 transition-colors cursor-pointer flex items-center justify-center ${
-              locationTag ? 'text-rose-500 bg-rose-500/15' : 'text-rose-400 hover:text-rose-300'
+            className={`p-1.5 sm:p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center ${
+              locationTag ? 'text-rose-500 bg-rose-500/15' : 'text-rose-500 hover:text-rose-600'
             }`}
-            title="Localização"
             aria-label="Adicionar Localização"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">location_on</span>
           </button>
         </div>
 
-        {/* Lado Direito: Seletor de Destino e Botão Publicar em Azul Vibrante */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Lado Direito: Seletor de Destino e Botão Publicar */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
           {/* Seletor de Destino */}
-          <div className="flex items-center gap-1.5 bg-zinc-900 px-2.5 sm:px-3 py-1.5 rounded-full border border-zinc-700/60 text-xs">
-            <span className="material-symbols-outlined text-zinc-400 text-[15px] sm:text-[16px]">groups</span>
+          <div className="flex items-center gap-1 bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs shrink-0 max-w-[130px] sm:max-w-[200px]">
+            <span className="material-symbols-outlined text-on-surface-variant text-[15px] sm:text-[16px] shrink-0">groups</span>
             <select
               value={communityId}
               onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
-              className="bg-transparent text-xs text-zinc-200 font-medium focus:outline-none cursor-pointer max-w-[120px] sm:max-w-[180px] truncate"
+              className="bg-transparent text-xs text-on-surface font-medium focus:outline-none cursor-pointer truncate w-full"
             >
-              <option value="" className="bg-zinc-900 text-zinc-100">Publicar no Feed Geral</option>
+              <option value="" className="bg-surface text-on-surface">Feed Geral</option>
               {communities.map((c) => (
-                <option key={c.id} value={c.id} className="bg-zinc-900 text-zinc-100">
+                <option key={c.id} value={c.id} className="bg-surface text-on-surface">
                   c/{c.name}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Botão Publicar em Azul Vibrante */}
+          {/* Botão Publicar */}
           <button
             type="button"
             onClick={handleSubmit}
             disabled={submitting || uploading}
-            className="px-4 sm:px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
+            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-primary-container hover:bg-primary text-on-primary font-bold text-xs shadow-xs hover:shadow-md transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             {submitting ? (
               <>
