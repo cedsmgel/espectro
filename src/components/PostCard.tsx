@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Post, Comment, commentsApi, postsApi, authStorage } from '../lib/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { Post, postsApi, authStorage } from '../lib/api';
 import { renderMarkdown } from '../lib/markdown';
 import { VideoPlayer } from './VideoPlayer';
 import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
@@ -10,19 +10,22 @@ interface PostCardProps {
   onVote?: (postId: number, voteType: 'up' | 'down') => void;
   onDelete?: (postId: number) => void;
   onUpdate?: (updatedPost: Post) => void;
+  isDetail?: boolean;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUpdate }) => {
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onVote,
+  onDelete,
+  onUpdate,
+  isDetail = false,
+}) => {
+  const navigate = useNavigate();
   const user = authStorage.getUser();
   const [upvotes, setUpvotes] = useState(post.upvotes);
   const [downvotes, setDownvotes] = useState(post.downvotes);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
-  const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [replyToId, setReplyToId] = useState<number | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
 
   // Estados de edição e exclusão
@@ -73,45 +76,19 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
     }
   };
 
-  const loadComments = async () => {
-    if (showComments) {
-      setShowComments(false);
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isDetail) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('a') ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('[role="button"]')
+    ) {
       return;
     }
-
-    setShowComments(true);
-    setLoadingComments(true);
-    try {
-      const data = await commentsApi.list(post.id);
-      setComments(data);
-    } catch (err) {
-      console.error('Erro ao carregar comentários:', err);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      alert('Você precisa estar logado para comentar.');
-      return;
-    }
-
-    if (!newComment.trim()) return;
-
-    setSubmittingComment(true);
-    try {
-      const created = await commentsApi.create(post.id, newComment.trim(), replyToId || undefined);
-      setComments((prev) => [...prev, created]);
-      setCommentsCount((prev) => prev + 1);
-      setNewComment('');
-      setReplyToId(null);
-    } catch (err: any) {
-      alert(err.message || 'Erro ao enviar comentário.');
-    } finally {
-      setSubmittingComment(false);
-    }
+    navigate(`/post/${post.id}`);
   };
 
   // Exclusão do post chamando DELETE /api/posts/:id (com limpeza no Cloudflare R2)
@@ -175,9 +152,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
   return (
     <>
       <article
+        onClick={handleCardClick}
         className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 flex flex-col transition-all hover:shadow-md ${
-          isDeleting ? 'opacity-50 pointer-events-none' : ''
-        }`}
+          !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
+        } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
         {/* 1. Cabeçalho do Post */}
         <div className="p-4 sm:p-5 pb-2 sm:pb-3 flex items-start justify-between">
@@ -240,8 +218,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
             </div>
           </div>
 
-          {/* Menu Kebab (Três Pontinhos) - Só aparece se o usuário logado for o autor do post */}
-          {isAuthor && (
+          {/* Menu Kebab (Três Pontinhos) - Só aparece se o usuário logado for o autor do post e não estiver em detalhe */}
+          {isAuthor && !isDetail && (
             <div className="relative">
               <button
                 type="button"
@@ -358,14 +336,17 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
           )
         )}
 
-        {/* 4. Barra de Ações: Votos e Comentários */}
+        {/* 4. Barra de Ações: Votos, Comentários, Salvar e Compartilhar */}
         <div className="p-4 sm:p-5 pt-3 border-t border-outline-variant/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Controle de Voto */}
             <div className="flex items-center bg-surface-container-low rounded-full px-1.5 py-0.5 border border-outline-variant/30">
               <button
                 type="button"
-                onClick={() => handleVoteClick('up')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleVoteClick('up');
+                }}
                 aria-label="Upvote"
                 className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
                   userVote === 'up'
@@ -384,7 +365,10 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
               </span>
               <button
                 type="button"
-                onClick={() => handleVoteClick('down')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleVoteClick('down');
+                }}
                 aria-label="Downvote"
                 className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
                   userVote === 'down'
@@ -396,25 +380,47 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
               </button>
             </div>
 
-            {/* Comentários */}
+            {/* Balão de Comentário -> Navega para /post/:id */}
             <button
               type="button"
-              onClick={loadComments}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isDetail) {
+                  navigate(`/post/${post.id}`);
+                }
+              }}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-xs font-medium cursor-pointer"
+              title="Ver discussão e comentários"
             >
               <span className="material-symbols-outlined text-[19px]">chat_bubble_outline</span>
-              <span className="hidden sm:inline">{commentsCount} comentários</span>
-              <span className="sm:hidden font-semibold">{commentsCount}</span>
+              <span>{commentsCount}</span>
             </button>
           </div>
 
-          {/* Lado Direito: Compartilhar / Salvar */}
+          {/* Lado Direito: Salvar e Compartilhar */}
           <div className="flex items-center gap-1 text-on-surface-variant">
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsSaved((v) => !v);
+              }}
+              className={`p-1.5 rounded-full hover:bg-surface-container transition-colors cursor-pointer ${
+                isSaved ? 'text-primary' : 'hover:text-on-surface'
+              }`}
+              title={isSaved ? 'Salvo' : 'Salvar publicação'}
+            >
+              <span className="material-symbols-outlined text-[19px]">
+                {isSaved ? 'bookmark' : 'bookmark_border'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
                 navigator.clipboard.writeText(
-                  window.location.origin + `/c/${post.community_slug || post.community_id || 'geral'}#post-${post.id}`
+                  window.location.origin + `/post/${post.id}`
                 );
                 alert('Link copiado para a área de transferência!');
               }}
@@ -425,72 +431,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onVote, onDelete, onUp
             </button>
           </div>
         </div>
-
-        {/* Seção Expansível de Comentários */}
-        {showComments && (
-          <div className="pt-3 border-t border-outline-variant/20 flex flex-col gap-3">
-            {user ? (
-              <form onSubmit={handleAddComment} className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase flex-shrink-0">
-                  {user.username.charAt(0)}
-                </div>
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={replyToId ? 'Respondendo comentário...' : 'Adicionar um comentário...'}
-                  className="flex-1 bg-surface-container-low rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
-                />
-                <button
-                  type="submit"
-                  disabled={submittingComment || !newComment.trim()}
-                  className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary text-xs font-semibold hover:bg-primary disabled:opacity-40 transition-all cursor-pointer"
-                >
-                  {submittingComment ? '...' : 'Enviar'}
-                </button>
-              </form>
-            ) : (
-              <p className="text-xs text-on-surface-variant">
-                Faça login para participar da conversa.
-              </p>
-            )}
-
-            {loadingComments ? (
-              <div className="flex items-center justify-center py-4 text-xs text-on-surface-variant">
-                Carregando comentários...
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="text-xs text-on-surface-variant text-center py-3">
-                Nenhum comentário ainda. Seja o primeiro a comentar!
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 pt-1">
-                {comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-1 text-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <Link
-                        to={`/perfil/${encodeURIComponent(c.author_name)}`}
-                        className="font-semibold text-on-surface hover:text-primary hover:underline transition-colors cursor-pointer"
-                      >
-                        @{c.author_name}
-                      </Link>
-                      <span className="text-on-surface-variant text-[11px]">
-                        {new Date(c.created_at).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-on-surface">{c.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </article>
 
       {/* MODAL DE EDIÇÃO DA PUBLICAÇÃO */}

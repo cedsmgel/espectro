@@ -15,6 +15,7 @@ import { Profile } from './pages/Profile';
 import { ProfilePage } from './pages/ProfilePage';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { AccountSettings } from './pages/AccountSettings';
+import { PostDetail } from './pages/PostDetail';
 
 const GlobalCreatePostModal: React.FC = () => {
   const { isCreatePostOpen, closeCreatePostModal } = useSidebar();
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
         <SidebarProvider>
           <Routes>
           <Route path="/" element={<Feed />} />
+          <Route path="/post/:id" element={<PostDetail />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/:username" element={<ProfilePage />} />
           <Route path="/u/:username" element={<ProfilePage />} />

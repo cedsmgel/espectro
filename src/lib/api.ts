@@ -277,6 +277,7 @@ export const authApi = api;
 export const postsApi = {
   list: (filters?: { community_id?: number; community_slug?: string; post_type?: string; feed?: string }) =>
     api.getPosts(filters),
+  getById: (id: number) => apiRequest<Post>(`/api/posts/${id}`, { method: 'GET' }),
   create: (data: CreatePostData) => api.createPost(data),
   vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
   update: (postId: number, data: { title?: string | null; content: string }) =>

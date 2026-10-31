@@ -160,10 +160,9 @@ export const Feed: React.FC = () => {
         }`}
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
-          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* FEED CENTRAL (Colunas 1 a 8) */}
-              <section className="lg:col-span-8 flex flex-col gap-4 min-w-0 w-full max-w-2xl mx-auto">
+          <div className="flex justify-center gap-8 w-full max-w-[1100px] mx-auto px-4 items-start">
+            {/* FEED CENTRAL */}
+            <section className="w-full max-w-2xl flex flex-col gap-4 min-w-0">
                 {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
                 <div className="-mx-3 sm:mx-0">
                   <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
@@ -301,8 +300,8 @@ export const Feed: React.FC = () => {
                 )}
               </section>
 
-              {/* COLUNA LATERAL DIREITA (Colunas 9 a 12) */}
-              <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
+              {/* BARRA LATERAL DIREITA */}
+            <aside className="w-72 shrink-0 hidden lg:flex flex-col gap-4 sticky top-20">
                 {/* Card 1: Comunidades em Alta (D1) */}
                 <div className="bg-surface-container-lowest/80 dark:bg-[#121212] rounded-2xl p-3.5 sm:p-4 border border-outline-variant/15 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
@@ -425,7 +424,6 @@ export const Feed: React.FC = () => {
                   )}
                 </div>
               </aside>
-            </div>
           </div>
         </main>
 
