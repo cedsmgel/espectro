@@ -518,6 +518,55 @@ export const reportsApi = {
     apiRequest<{ reported: boolean }>('/api/reports', { method: 'POST', body: JSON.stringify(params) }),
 };
 
+export interface GroupSummary {
+  id: number;
+  name: string;
+  description: string | null;
+  role: "admin" | "member";
+  only_admins_send: number;
+  members_count: number;
+  unread_count: number;
+  last_content: string | null;
+  last_sender: string | null;
+  last_created_at: string | null;
+}
+
+export interface GroupMember {
+  id: number;
+  username: string;
+  avatar_url?: string | null;
+  role: "admin" | "member";
+  joined_at: string;
+}
+
+export interface GroupMessage {
+  id: number;
+  content: string;
+  sender_id: number | null;
+  sender_username: string | null;
+  created_at: string;
+}
+
+export const groupsApi = {
+  list: () => apiRequest<GroupSummary[]>("/api/groups", { method: "GET" }),
+  create: (data: { name: string; description?: string; member_ids: number[] }) =>
+    apiRequest<{ id: number; name: string }>("/api/groups", { method: "POST", body: JSON.stringify(data) }),
+  detail: (id: number) =>
+    apiRequest<{ group: { id: number; name: string; description: string | null; only_admins_send: boolean }; members: GroupMember[]; my_role: "admin" | "member" }>(
+      `/api/groups/${id}`,
+      { method: "GET" }
+    ),
+  messages: (id: number, beforeId?: number) =>
+    apiRequest<{ messages: GroupMessage[]; has_more: boolean }>(
+      `/api/groups/${id}/messages${beforeId ? `?before_id=${beforeId}` : ""}`,
+      { method: "GET" }
+    ),
+  send: (id: number, content: string) =>
+    apiRequest<{ message: GroupMessage }>(`/api/groups/${id}/messages`, { method: "POST", body: JSON.stringify({ content }) }),
+  manage: (id: number, body: Record<string, unknown>) =>
+    apiRequest<Record<string, unknown>>(`/api/groups/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),
+};
+
 export const conversationsApi = {
   list: () => apiRequest<Conversation[]>('/api/conversations', { method: 'GET' }),
 };

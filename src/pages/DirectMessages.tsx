@@ -14,6 +14,8 @@ import {
   Conversation,
   conversationSettingsApi,
   ConversationSettings,
+  GroupSummary,
+  groupsApi,
   directMessagesApi,
   blocksApi,
 } from '../lib/api';
@@ -29,6 +31,7 @@ import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { ChatMenu } from '../components/chat/ChatMenu';
+import { CreateGroupModal } from '../components/chat/CreateGroupModal';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
@@ -207,6 +210,7 @@ export const DirectMessages: React.FC = () => {
   const refreshConversations = useCallback(async () => {
     if (!userId) return;
     try {
+      groupsApi.list().then(setGroups).catch(() => {});
       const list = await conversationsApi.list();
       setConversations(Object.fromEntries(list.map((c) => [c.friend_id, c])));
     } catch {}
@@ -291,6 +295,8 @@ export const DirectMessages: React.FC = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [groups, setGroups] = useState<GroupSummary[]>([]);
   const voice = useVoiceRecorder();
 
   // Fechar popover de emoji ao clicar fora
@@ -802,14 +808,19 @@ export const DirectMessages: React.FC = () => {
 
   const handleSendVoice = async () => {
     const blob = await voice.stop();
-    if (!blob || !activeFriend) return;
+    if (!activeFriend) return;
+    if (!blob) {
+      setUploadError('Não foi possível capturar o áudio gravado.');
+      return;
+    }
     try {
       const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
       const file = new File([blob], `voz-${Date.now()}.${ext}`, { type: blob.type || 'audio/webm' });
       const res = await uploadApi.upload(file, { context: 'audio' });
       sendMediaMessage({ media_url: res.url, message_type: 'audio', filename: 'Mensagem de voz' });
     } catch (err: any) {
-      setUploadError(err?.message || 'Não foi possível enviar o áudio.');
+      console.error('Falha ao enviar áudio:', err);
+      setUploadError(err?.message || 'Não foi possível enviar o áudio. Tente de novo.');
     }
   };
 
@@ -1176,6 +1187,12 @@ export const DirectMessages: React.FC = () => {
                         onSelect: handleMarkAllRead,
                       },
                       {
+                        key: 'new-group',
+                        label: 'Novo grupo',
+                        icon: 'group_add',
+                        onSelect: () => setShowCreateGroup(true),
+                      },
+                      {
                         key: 'push',
                         label: push.subscribed ? 'Desativar notificações push' : 'Ativar notificações push',
                         icon: push.subscribed ? 'notifications_off' : 'notifications_active',
@@ -1225,6 +1242,33 @@ export const DirectMessages: React.FC = () => {
                       <span>{showArchived ? 'Voltar às conversas' : 'Arquivadas'}</span>
                     </button>
                   )}
+                  {!showArchived && groups
+                    .filter((g) => !searchConv.trim() || g.name.toLowerCase().includes(searchConv.trim().toLowerCase()))
+                    .map((g) => (
+                      <Link key={`g-${g.id}`} to={`/grupos/${g.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container-low/60">
+                        <div className="w-11 h-11 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {g.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold truncate">{g.name}</span>
+                            {g.last_created_at && (
+                              <span className="text-[11px] text-on-surface-variant flex-shrink-0">{formatConversationTime(g.last_created_at)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 mt-0.5">
+                            <p className="text-xs text-on-surface-variant truncate">
+                              {g.last_content ? `${g.last_sender ? '@' + g.last_sender + ': ' : ''}${g.last_content}` : `${g.members_count} membros`}
+                            </p>
+                            {g.unread_count > 0 && (
+                              <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold flex items-center justify-center">
+                                {g.unread_count > 99 ? '99+' : g.unread_count}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   {filteredConversations.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
@@ -2170,19 +2214,6 @@ export const DirectMessages: React.FC = () => {
                           <span>Documento</span>
                         </button>
 
-                        {/* Mensagem de voz */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAttachMenu(false);
-                            handleStartVoice();
-                          }}
-                          className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
-                        >
-                          <span className="material-symbols-outlined text-[20px] text-emerald-600">mic</span>
-                          <span>Mensagem de voz</span>
-                        </button>
-
                         {/* Localização (somente celular) */}
                         {isMobile && <button
                           type="button"
@@ -2296,6 +2327,18 @@ export const DirectMessages: React.FC = () => {
                           placeholder={`Mensagem para @${activeFriend.username}...`}
                           className="flex-1 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
                         />
+
+                        {!inputText.trim() && (
+                          <button
+                            type="button"
+                            onClick={handleStartVoice}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+                            title="Gravar mensagem de voz"
+                            aria-label="Gravar mensagem de voz"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">mic</span>
+                          </button>
+                        )}
 
                         {/* Botão Enviar Mensagem */}
                         <button
@@ -2532,6 +2575,16 @@ export const DirectMessages: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {showCreateGroup && (
+        <CreateGroupModal
+          onClose={() => setShowCreateGroup(false)}
+          onCreated={(gid) => {
+            setShowCreateGroup(false);
+            navigate(`/grupos/${gid}`);
+          }}
+        />
       )}
 
       {reportTarget && activeFriend && (

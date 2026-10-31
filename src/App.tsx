@@ -16,6 +16,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ProfileSettings } from './pages/ProfileSettings';
 import { AccountSettings } from './pages/AccountSettings';
 import { PostDetail } from './pages/PostDetail';
+import { GroupChat } from './pages/GroupChat';
 import { usePresenceHeartbeat } from './hooks/usePresence';
 
 const GlobalCreatePostModal: React.FC = () => {
@@ -58,6 +59,7 @@ export const App: React.FC = () => {
           <Route path="/notificacoes" element={<Notifications />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/mensagens" element={<DirectMessages />} />
+          <Route path="/grupos/:id" element={<GroupChat />} />
           <Route path="/videos" element={<Videos />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
