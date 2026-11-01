@@ -41,6 +41,9 @@ const AUDIO_TYPES: Record<string, string> = {
   wav: "audio/wav",
 };
 
+// Acima disso a foto não vai para o cache de borda
+const EDGE_CACHE_MAX_BYTES = 8 * 1024 * 1024;
+
 const KEY_PATTERN = /^(images|videos|documents|audio)\/[\w.-]+$/;
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -57,6 +60,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     if (!key || !KEY_PATTERN.test(key)) {
       return errorResponse("Caminho do arquivo inválido.", 400);
+    }
+
+    // Fotos (imutáveis, nome com id único) ficam também no cache de borda: o mesmo arquivo para
+    // outros visitantes não gasta nova leitura no R2. Vídeo, áudio e documentos seguem direto do R2.
+    const edgeCache = key.startsWith("images/") && !request.headers.has("range") ? (caches as unknown as { default: Cache }).default : null;
+    if (edgeCache) {
+      const hit = await edgeCache.match(request);
+      if (hit) return hit;
     }
 
     // Suporte a HTTP Range requests para streaming suave e seeking de vídeos
@@ -100,7 +111,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     // Se houve solicitação de range parcial (status 206)
-    if ("range" in object && (object as any).range) {
+    // (sem cabeçalho Range o R2 também devolve o intervalo completo: isso é um 200, não um 206)
+    if (request.headers.has("range") && "range" in object && (object as any).range) {
       const r = (object as any).range;
       const offset = r.offset ?? 0;
       const length = r.length ?? object.size;
@@ -114,10 +126,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     headers.set("Content-Length", String(object.size));
-    return new Response(object.body, {
+    const response = new Response(object.body, {
       status: 200,
       headers,
     });
+    // Guarda uma cópia no cache de borda (só respostas completas e de tamanho razoável)
+    if (edgeCache && object.size <= EDGE_CACHE_MAX_BYTES) {
+      context.waitUntil(edgeCache.put(request, response.clone()));
+    }
+    return response;
   } catch (err: any) {
     return serverError(err, "media/[[path]]");
   }
