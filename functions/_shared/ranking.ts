@@ -136,7 +136,7 @@ export interface EventRow {
 // Peso de cada evento: abrir vale 2; ficar na tela vale até 3 (30 s); só aparecer não conta como interesse
 function eventWeight(e: EventRow): number {
   if (e.type === "open") return 2;
-  if (e.type === "dwell") return Math.min(e.value ?? 0, 30_000) / 10_000;
+  if (e.type === "dwell" || e.type === "view") return Math.min(e.value ?? 0, 30_000) / 10_000;
   return 0;
 }
 
@@ -150,7 +150,7 @@ export function buildAffinities(
 
   for (const e of events) {
     const entry = seen.get(e.post_id) ?? { impressions: 0, opens: 0 };
-    if (e.type === "impression") entry.impressions += 1;
+    if (e.type === "impression" || e.type === "view") entry.impressions += 1;
     if (e.type === "open") entry.opens += 1;
     seen.set(e.post_id, entry);
 

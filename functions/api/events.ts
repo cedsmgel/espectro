@@ -1,13 +1,28 @@
-import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../_shared/auth";
+import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
 }
 
-const TYPES = ["impression", "open", "dwell"];
+const TYPES = ["impression", "open", "dwell", "view"];
 const MAX_EVENTS = 50;
 const MAX_DWELL_MS = 10 * 60 * 1000;
+const MAX_CALLS_PER_MINUTE = 60;
+
+// Chamadas por pessoa e minuto na memória deste isolate (aproximada, mas de graça)
+const recent = new Map<number, { minute: number; count: number }>();
+function allowEvents(userId: number): boolean {
+  const minute = Math.floor(Date.now() / 60000);
+  const entry = recent.get(userId);
+  if (!entry || entry.minute !== minute) {
+    if (recent.size > 5000) recent.clear();
+    recent.set(userId, { minute, count: 1 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= MAX_CALLS_PER_MINUTE;
+}
 
 // POST /api/events { events: [{ post_id, type: impression|open|dwell, value? }] }
 // Registra o que a pessoa viu, para ordenar o feed. Só para quem não desligou a personalização.
@@ -16,8 +31,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const user = await getAuthUser(request, getJwtSecret(env));
     if (!user) return errorResponse("Não autorizado.", 401);
 
-    const limited = await rateLimit(env.DB, request, "events", 120, 60, user.id);
-    if (limited) return limited;
+    // Sem limite em D1 (cada chamada seria uma escrita): trava leve na memória do isolate, além do teto de 50 eventos por chamada
+    if (!allowEvents(user.id)) return jsonResponse({ recorded: 0 });
 
     const body = (await request.json().catch(() => null)) as { events?: Array<{ post_id?: number; type?: string; value?: number }> } | null;
     if (!body || !Array.isArray(body.events)) return errorResponse("Corpo inválido.", 400);
@@ -30,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       const postId = Number(e?.post_id);
       if (!Number.isInteger(postId) || postId <= 0 || !TYPES.includes(e?.type as string)) continue;
       let value: number | null = null;
-      if (e.type === "dwell") {
+      if (e.type === "dwell" || e.type === "view") {
         const ms = Math.round(Number(e.value));
         if (!Number.isFinite(ms) || ms < 500) continue;
         value = Math.min(ms, MAX_DWELL_MS);

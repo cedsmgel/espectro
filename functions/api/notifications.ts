@@ -1,27 +1,12 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../_shared/auth";
+import { notificationSummary } from "../_shared/pulse";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
 }
 
-async function summary(db: D1Database, userId: number) {
-  const row = await db
-    .prepare(
-      `SELECT
-         (SELECT COUNT(*) FROM notifications WHERE user_id = ?1 AND read_at IS NULL) AS unread,
-         (SELECT COUNT(*) FROM friendships WHERE friend_id = ?1 AND status = 'pending') AS pending_requests,
-         (SELECT COUNT(*) FROM direct_messages WHERE receiver_id = ?1 AND read_at IS NULL) AS unread_messages`
-    )
-    .bind(userId)
-    .first<{ unread: number; pending_requests: number; unread_messages: number }>();
-
-  return {
-    unread: Number(row?.unread || 0),
-    pending_requests: Number(row?.pending_requests || 0),
-    unread_messages: Number(row?.unread_messages || 0),
-  };
-}
+const summary = notificationSummary;
 
 // GET: lista paginada (?before_id=&limit=) ou só os contadores (?count=1)
 export const onRequestGet: PagesFunction<Env> = async (context) => {

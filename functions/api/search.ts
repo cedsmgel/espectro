@@ -1,4 +1,5 @@
 import { jsonResponse, errorResponse, serverError, escapeLike, rateLimit, getAuthUser, getJwtSecret } from "../_shared/auth";
+import { cachedForVisitors } from "../_shared/edgeCache";
 import { NOT_IN_PRIVATE_SQL } from "../_shared/communities";
 
 export interface Env {
@@ -6,7 +7,7 @@ export interface Env {
   JWT_SECRET?: string;
 }
 
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+const handleGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
     const limited = await rateLimit(env.DB, request, "search", 60, 60);
@@ -113,3 +114,5 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return serverError(err, "search");
   }
 };
+
+export const onRequestGet: PagesFunction<Env> = (context) => cachedForVisitors(context.request, 30, async () => handleGet(context));

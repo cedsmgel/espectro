@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../../_shared/auth";
+import { cachedForVisitors } from "../../_shared/edgeCache";
 import {
   cleanCommunityTags,
   cleanRules,
@@ -15,7 +16,7 @@ export interface Env {
 }
 
 // GET: lista as comunidades (privadas só aparecem para quem é membro) ou devolve uma por slug/id
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+const handleGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -160,3 +161,5 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return serverError(err, "communities/index");
   }
 };
+
+export const onRequestGet: PagesFunction<Env> = (context) => cachedForVisitors(context.request, 60, async () => handleGet(context));

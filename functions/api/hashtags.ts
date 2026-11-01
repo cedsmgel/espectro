@@ -1,4 +1,5 @@
 import { getAuthUser, getJwtSecret, jsonResponse, errorResponse, serverError } from "../_shared/auth";
+import { cachedForVisitors } from "../_shared/edgeCache";
 import { NOT_IN_PRIVATE_SQL } from "../_shared/communities";
 import { normalizeTag } from "../_shared/hashtags";
 
@@ -19,7 +20,7 @@ const VISIBLE_POSTS = `
 // GET /api/hashtags?trending=1[&limit=10]  -> mais usadas na última semana
 // GET /api/hashtags?q=mus                  -> sugestões por prefixo (ordem de uso)
 // GET /api/hashtags?tag=musica             -> total de publicações da hashtag
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+const handleGet: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const url = new URL(request.url);
     const viewer = await getAuthUser(request, getJwtSecret(env));
@@ -77,3 +78,5 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     return serverError(err, "hashtags");
   }
 };
+
+export const onRequestGet: PagesFunction<Env> = (context) => cachedForVisitors(context.request, 60, async () => handleGet(context));
