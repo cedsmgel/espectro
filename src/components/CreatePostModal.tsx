@@ -58,11 +58,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden h-[100dvh] overscroll-none"
-      style={{
-        height: isMobile && isKeyboardOpen && height ? `${height}px` : undefined,
-        top: isMobile && isKeyboardOpen ? `${offsetTop}px` : undefined,
-      }}
+      className="fixed inset-0 z-[60] flex items-start sm:items-center justify-center p-0 sm:p-4 bg-surface-container-lowest sm:bg-black/80 sm:backdrop-blur-md animate-in fade-in duration-200 overflow-hidden overscroll-none"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -73,6 +69,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       <div
         style={{
           height: isMobile && isKeyboardOpen && height ? `${height}px` : undefined,
+          marginTop: isMobile && isKeyboardOpen ? `${offsetTop}px` : undefined,
         }}
         className="w-full h-[100dvh] sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface overscroll-contain"
       >
