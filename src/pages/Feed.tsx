@@ -9,6 +9,7 @@ import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
+import { MomentumBar } from '../components/moments/MomentumBar';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -156,56 +157,9 @@ export const Feed: React.FC = () => {
       {/* 3. Coluna Central: Feed (Tarefa 3: flex-1 com div max-w-2xl mx-auto perfeitamente centralizada) */}
       <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
         <div className="w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
-          {/* Momentos & Canais: avatares flutuando direto no fundo, sem caixa */}
+          {/* Momentum: avatares flutuando direto no fundo, sem caixa */}
           <div className="-mx-3 sm:mx-0">
-            <div className="flex items-start gap-4 overflow-x-auto px-3 sm:px-0 py-1 scrollbar-none">
-              {/* Seu Momento: abre o modal de criação */}
-              <button
-                type="button"
-                onClick={openCreatePostModal}
-                className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
-              >
-                <div className="relative w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center group-hover:scale-105 transition-transform">
-                  <span className="text-lg font-bold text-on-surface uppercase">
-                    {user ? user.username.charAt(0) : '?'}
-                  </span>
-                  <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-xs font-bold ring-2 ring-surface">
-                    +
-                  </span>
-                </div>
-                <span className="text-[11px] font-medium text-on-surface text-center max-w-[68px] truncate">
-                  Seu momento
-                </span>
-              </button>
-
-              {/* Comunidades reais do D1 como canais */}
-              {communities.slice(0, 12).map((c) => (
-                <Link
-                  key={c.id}
-                  to={`/c/${c.slug || c.id}`}
-                  className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
-                >
-                  <div
-                    className="p-[2px] rounded-full group-hover:scale-105 transition-transform"
-                    style={{
-                      background: `linear-gradient(135deg, ${c.icon_color || '#6B8E23'}, #2563EB)`,
-                    }}
-                  >
-                    <div className="rounded-full bg-surface p-[2px]">
-                      <div
-                        className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-sm text-white"
-                        style={{ backgroundColor: c.icon_color || '#6B8E23' }}
-                      >
-                        {c.name.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-on-surface-variant text-center max-w-[68px] truncate">
-                    {c.name}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <MomentumBar />
           </div>
 
           {/* Abas do Feed fixas no topo da lista (Tarefa 5: dentro de max-w-2xl mx-auto) */}

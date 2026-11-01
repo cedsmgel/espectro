@@ -733,6 +733,52 @@ export interface UploadOptions {
   context?: string;
 }
 
+// Momentum: conteúdo de 24 horas visível para amigos
+export interface MomentOverlay {
+  filter?: string;
+  brightness?: number;
+  contrast?: number;
+  text_pos?: 'top' | 'center' | 'bottom';
+}
+
+export interface Moment {
+  id: number;
+  media_url: string | null;
+  media_type: 'image' | 'video' | 'text';
+  text: string | null;
+  bg: string | null;
+  overlay: string | null;
+  created_at: string;
+  expires_at: string;
+  viewed: boolean;
+  views_count: number;
+}
+
+export interface MomentGroup {
+  user_id: number;
+  username: string;
+  avatar_url: string | null;
+  items: Moment[];
+  all_viewed: boolean;
+  latest_at: string;
+}
+
+export interface MomentViewer {
+  id: number;
+  username: string;
+  avatar_url: string | null;
+  viewed_at: string;
+}
+
+export const momentsApi = {
+  list: () => apiRequest<MomentGroup[]>('/api/moments', { method: 'GET' }),
+  create: (data: { media_url?: string; media_type: 'image' | 'video' | 'text'; text?: string; bg?: string; overlay?: MomentOverlay }) =>
+    apiRequest<{ id: number }>('/api/moments', { method: 'POST', body: JSON.stringify(data) }),
+  remove: (id: number) => apiRequest<{ deleted: boolean }>(`/api/moments/${id}`, { method: 'DELETE' }),
+  markViewed: (id: number) => apiRequest<{ ok: boolean }>(`/api/moments/${id}/view`, { method: 'POST' }),
+  viewers: (id: number) => apiRequest<MomentViewer[]>(`/api/moments/${id}/view`, { method: 'GET' }),
+};
+
 export const uploadApi = {
   upload: async (file: File, options?: UploadOptions): Promise<UploadResponse> => {
     const token = authStorage.getToken();
