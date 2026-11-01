@@ -1,4 +1,5 @@
 import { getAuthUser, getJwtSecret, hashPassword, jsonResponse, errorResponse, rateLimit, serverError, signJWT, verifyPassword } from "../../_shared/auth";
+import { forgetSession } from "../../_shared/session";
 import { forgetSuspension } from "../../_shared/suspension";
 
 export interface Env {
@@ -31,11 +32,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const hash = await hashPassword(next);
     const now = Math.floor(Date.now() / 1000);
-    await env.DB.prepare("UPDATE users SET password_hash = ?, sessions_valid_after = ? WHERE id = ?").bind(hash, now, auth.id).run();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET password_hash = ?, sessions_valid_after = ? WHERE id = ?").bind(hash, now, auth.id),
+      env.DB.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL AND id != ?").bind(auth.id, auth.sid ?? ""),
+    ]);
     forgetSuspension(auth.id);
+    forgetSession();
 
     // Novo token para este aparelho continuar logado; os demais precisam entrar de novo
-    const token = await signJWT({ id: auth.id, username: user.username }, secret);
+    const token = await signJWT({ id: auth.id, username: user.username, sid: auth.sid }, secret);
     return jsonResponse({ changed: true, token });
   } catch (err: unknown) {
     return serverError(err, "account:password");

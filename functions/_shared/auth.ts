@@ -5,6 +5,7 @@ export interface UserPayload {
   username: string;
   exp?: number;
   iat?: number;
+  sid?: string;
 }
 
 // Segredo do JWT: sem fallback. Falha se não estiver configurado ou for fraco.

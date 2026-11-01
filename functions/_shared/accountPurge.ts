@@ -85,6 +85,9 @@ export async function purgeDueAccounts(env: PurgeEnv): Promise<number> {
   ).run();
   if (!claim.meta.changes) return 0;
 
+  // Registros de sessão (IP e localização) ficam no máximo 6 meses
+  await env.DB.prepare("DELETE FROM user_sessions WHERE created_at < datetime('now', '-6 months')").run();
+
   const due = await env.DB.prepare(
     "SELECT id FROM users WHERE deletion_scheduled_for IS NOT NULL AND deletion_scheduled_for <= CURRENT_TIMESTAMP AND is_admin = 0 LIMIT 5"
   ).all<{ id: number }>();

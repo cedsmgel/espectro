@@ -466,7 +466,7 @@ export const conversationSettingsApi = {
     }),
 };
 
-export type AppNotificationType = 'friend_accepted' | 'post_comment' | 'comment_reply' | 'post_upvote';
+export type AppNotificationType = 'friend_accepted' | 'post_comment' | 'comment_reply' | 'post_upvote' | 'security_login';
 
 export interface AppNotification {
   id: number;
@@ -978,7 +978,23 @@ export const DELETION_REASON_OPTIONS: { id: string; label: string }[] = [
   { id: 'outro', label: 'Outro motivo' },
 ];
 
+export interface AccountSession {
+  id: string;
+  ip: string | null;
+  current: boolean;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  browser: string | null;
+  os: string | null;
+  device: 'mobile' | 'tablet' | 'desktop' | null;
+  created_at: string;
+  last_seen_at: string;
+}
+
 export const accountSecurityApi = {
+  listSessions: async () => (await apiRequest<{ sessions: AccountSession[] }>('/api/account/sessions', { method: 'GET' })).sessions,
+  revokeSession: (id: string) => apiRequest<{ revoked: boolean }>(`/api/account/sessions?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
   changePassword: async (current: string, next: string) => {
     const res = await apiRequest<{ changed: boolean; token: string }>('/api/account/password', {
       method: 'POST',

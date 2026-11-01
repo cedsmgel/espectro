@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { accountSecurityApi, authStorage } from '../lib/api';
+import { AccountSession, accountSecurityApi, authStorage } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 
@@ -9,6 +9,25 @@ const buttonClass = 'h-10 px-5 rounded-full bg-primary-container text-on-primary
 const outlineClass = 'h-10 px-5 rounded-full border border-outline-variant text-on-surface text-xs font-semibold cursor-pointer hover:bg-surface-container disabled:opacity-50';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
+
+const countryName = (code: string | null) => {
+  if (!code) return null;
+  try {
+    return new Intl.DisplayNames(['pt-BR'], { type: 'region' }).of(code) || code;
+  } catch {
+    return code;
+  }
+};
+
+const sessionPlace = (s: AccountSession) => [s.city, s.region, countryName(s.country)].filter(Boolean).join(', ') || 'Local desconhecido';
+
+const timeAgo = (iso: string) => {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (minutes < 2) return 'agora';
+  if (minutes < 60) return `há ${minutes} min`;
+  if (minutes < 1440) return `há ${Math.floor(minutes / 60)} h`;
+  return `há ${Math.floor(minutes / 1440)} d`;
+};
 
 const NoticeLine: React.FC<{ notice: Notice }> = ({ notice }) =>
   notice ? (
@@ -38,8 +57,17 @@ export const AccountData: React.FC = () => {
 
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<Notice>(null);
+  const [sessions, setSessions] = useState<AccountSession[] | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<Notice>(null);
+
+  const loadSessions = () => {
+    accountSecurityApi.listSessions().then(setSessions).catch(() => setSessions([]));
+  };
+  useEffect(() => {
+    if (user) loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -68,6 +96,7 @@ export const AccountData: React.FC = () => {
       await accountSecurityApi.signOutEverywhere();
       setConfirmingSignOut(false);
       setSessionNotice({ kind: 'ok', text: 'Pronto. Todos os outros dispositivos foram desconectados.' });
+      loadSessions();
     } catch (err: any) {
       setSessionNotice({ kind: 'error', text: err?.message || 'Não foi possível encerrar as sessões.' });
     }
@@ -116,7 +145,39 @@ export const AccountData: React.FC = () => {
             </form>
           </Block>
 
-          <Block title="Sessões" description="Se você usou o Espectro em um aparelho que não é seu, ou suspeita de acesso indevido, saia de todos os dispositivos. Este aparelho continua conectado.">
+          <Block title="Sessões" description="Aparelhos conectados à sua conta, com a localização aproximada do acesso. Se algum não for seu, encerre e troque a senha. O IP aparece parcialmente oculto.">
+            {sessions && sessions.length > 0 && (
+              <ul>
+                {sessions.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 py-3 border-b border-outline-variant">
+                    <span className="material-symbols-outlined text-[24px] text-on-surface-variant shrink-0">
+                      {s.device === 'mobile' ? 'smartphone' : s.device === 'tablet' ? 'tablet' : 'computer'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-on-surface truncate">
+                        {s.browser} em {s.os}
+                        {s.current && <span className="ml-2 text-[11px] font-medium text-on-surface-variant">Este aparelho</span>}
+                      </p>
+                      <p className="text-xs text-on-surface-variant truncate">
+                        {sessionPlace(s)}
+                        {s.ip ? ` · ${s.ip}` : ''} · {s.current ? 'ativo agora' : timeAgo(s.last_seen_at)}
+                      </p>
+                    </div>
+                    {!s.current && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void accountSecurityApi.revokeSession(s.id).then(loadSessions).catch(() => {});
+                        }}
+                        className="h-9 px-4 rounded-full border border-outline-variant text-xs font-semibold cursor-pointer hover:bg-surface-container shrink-0"
+                      >
+                        Encerrar
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="flex items-center gap-3 flex-wrap">
               {confirmingSignOut ? (
                 <>
