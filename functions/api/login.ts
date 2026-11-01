@@ -1,3 +1,4 @@
+import { createSession, describeLocation } from "../_shared/session";
 import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 
 export interface Env {
@@ -71,11 +72,31 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const secret = getJwtSecret(env);
 
+    // Registra a sessão deste aparelho (localização aproximada e dispositivo) e avisa se for um acesso novo
+    const session = await createSession(env.DB, request, user.id);
+    if (session.unfamiliar) {
+      let country = session.info.country || undefined;
+      try {
+        if (country) country = new Intl.DisplayNames(["pt-BR"], { type: "region" }).of(country) || country;
+      } catch {}
+      const where = describeLocation(session.info, country);
+      await env.DB.prepare(
+        "INSERT OR IGNORE INTO notifications (user_id, actor_id, type, content, dedupe_key) VALUES (?, NULL, 'security_login', ?, ?)"
+      )
+        .bind(
+          user.id,
+          `${session.info.browser} em ${session.info.os} · ${where}. Se não foi você, troque a senha e saia de todos os dispositivos.`,
+          `login:${session.sid}`
+        )
+        .run();
+    }
+
     // Gera o token JWT
     const token = await signJWT(
       {
         id: user.id,
         username: user.username,
+        sid: session.sid,
       },
       secret
     );

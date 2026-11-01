@@ -661,6 +661,12 @@ const TYPE_COPY: Record<
   AppNotification['type'],
   { text: string; icon: string; badge: string; action: string }
 > = {
+  security_login: {
+    text: 'Novo acesso à sua conta',
+    icon: 'shield',
+    badge: 'bg-error text-white',
+    action: 'Ver sessões',
+  },
   friend_accepted: {
     text: 'aceitou seu pedido de amizade',
     icon: 'how_to_reg',
@@ -690,8 +696,14 @@ const TYPE_COPY: Record<
 const NotificationCard: React.FC<NotificationCardProps> = ({ item, onOpen, onToggleRead, onDelete }) => {
   const copy = TYPE_COPY[item.type];
   const username = item.actor_username || 'alguém';
-  const target =
-    item.type === 'friend_accepted' ? `/perfil/${encodeURIComponent(username)}` : item.post_id ? `/post/${item.post_id}` : null;
+  const isSecurity = item.type === 'security_login';
+  const target = isSecurity
+    ? '/configuracoes/dados'
+    : item.type === 'friend_accepted'
+    ? `/perfil/${encodeURIComponent(username)}`
+    : item.post_id
+    ? `/post/${item.post_id}`
+    : null;
 
   return (
     <article
@@ -720,10 +732,16 @@ const NotificationCard: React.FC<NotificationCardProps> = ({ item, onOpen, onTog
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs sm:text-sm text-on-surface leading-snug">
-              <Link to={`/perfil/${encodeURIComponent(username)}`} className="font-bold hover:underline">
-                @{username}
-              </Link>{' '}
-              {copy.text}
+              {isSecurity ? (
+                <span className="font-bold">{copy.text}</span>
+              ) : (
+                <>
+                  <Link to={`/perfil/${encodeURIComponent(username)}`} className="font-bold hover:underline">
+                    @{username}
+                  </Link>{' '}
+                  {copy.text}
+                </>
+              )}
             </p>
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-[11px] text-on-surface-variant whitespace-nowrap">{relativeTime(item.created_at)}</span>

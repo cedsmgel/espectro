@@ -49,3 +49,30 @@ O DMCA (17 U.S.C. § 512) vale para o público dos EUA; no Brasil, o equivalente
 2. Termos de uso, política de privacidade e página do(a) encarregado(a) (Fase 4).
 3. Idade mínima e perfil privado para menores.
 4. Lista de sessões por aparelho (hoje só existe "sair de todos").
+
+## 4. Rastreamento de IP e geolocalização
+
+Objetivo: segurança da conta (sessões por aparelho, aviso de acesso novo) e proteção contra abuso, sem virar vigilância.
+
+### Opções avaliadas
+| Opção | Prós | Contras | Decisão |
+| --- | --- | --- | --- |
+| `request.cf` da Cloudflare (país, região, cidade, fuso, ASN) | Já vem na requisição, sem custo, sem latência, o IP não sai da infraestrutura que já atende o app | Precisão de cidade é aproximada; operadoras móveis (CGNAT) e VPN distorcem | **Adotada** |
+| Base MaxMind GeoLite2 embutida | Offline, controlável | Exige licença, atualização semanal e dezenas de MB no Worker | Descartada |
+| API externa de geoIP | Simples | Envia o IP de cada pessoa a um terceiro, adiciona latência e limite de chamadas | Descartada |
+
+### O que o Espectro guarda (tabela `user_sessions`)
+IP completo, país, região, cidade, fuso, ASN, navegador, sistema e tipo de aparelho, uma linha por login.
+
+### Para que serve
+1. **Lista de aparelhos** em "Senha, dados e exclusão", com encerramento individual.
+2. **Aviso de acesso novo**: se o país, o navegador e o sistema nunca foram vistos nessa conta, chega uma notificação de segurança.
+3. **Limite de requisições** por IP (já existia), para frear abuso e tentativa de senha.
+4. Ideias futuras: aviso de "viagem impossível", painel de abuso para moderação.
+
+### Limites e cuidados
+- IP é dado pessoal; a base legal é a **obrigação legal** (Marco Civil, art. 15: registros de acesso por 6 meses) e o **legítimo interesse de segurança**. A política de privacidade deve dizer isso.
+- **Retenção:** linhas de sessão com mais de 6 meses são apagadas pela rotina de manutenção.
+- **Exibição:** a pessoa vê só a localização aproximada e o IP com o final oculto (`203.0.113.xxx`); outras pessoas nunca veem.
+- **Finalidade:** não usar IP ou localização para publicidade, perfil de interesses ou decisões automáticas que bloqueiem a conta. Divergência de local gera **aviso**, nunca bloqueio, porque VPN, Tor e redes móveis geram falsos positivos.
+- Ao excluir a conta, as linhas de sessão vão junto. Se a obrigação de guarda for exigida em ordem judicial, o registro precisa ser preservado antes da exclusão.
