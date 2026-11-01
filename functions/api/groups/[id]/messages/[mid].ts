@@ -1,10 +1,13 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../../../../_shared/auth";
 import { membership } from "../../../../_shared/groups";
 import { EDIT_WINDOW_SECONDS, notifyGroup, type ChatEnv } from "../../../../_shared/chat";
+import { releaseMedia } from "../../../../_shared/mediaCleanup";
 
 export interface Env extends ChatEnv {
   DB: D1Database;
   JWT_SECRET: string;
+  MEDIA_BUCKET?: R2Bucket;
+  BUCKET?: R2Bucket;
 }
 
 // DELETE /api/groups/:id/messages/:mid: apaga a mensagem (autor ou admin do grupo).
@@ -21,10 +24,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     if (!me) return errorResponse("Grupo não encontrado.", 404);
 
     const message = await env.DB.prepare(
-      "SELECT sender_id FROM chat_group_messages WHERE id = ? AND group_id = ? AND deleted_at IS NULL"
+      "SELECT sender_id, media_url FROM chat_group_messages WHERE id = ? AND group_id = ? AND deleted_at IS NULL"
     )
       .bind(messageId, groupId)
-      .first<{ sender_id: number | null }>();
+      .first<{ sender_id: number | null; media_url: string | null }>();
     if (!message) return errorResponse("Mensagem não encontrada.", 404);
     if (message.sender_id !== user.id && me.role !== "admin") {
       return errorResponse("Você só pode apagar as suas mensagens.", 403);
@@ -36,7 +39,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       .bind(messageId)
       .run();
 
+    await env.DB.prepare("DELETE FROM starred_messages WHERE kind = 'group' AND message_id = ?").bind(messageId).run();
     await notifyGroup(env, groupId, { type: "delete", message_id: messageId });
+    // O arquivo sai do bucket se nenhuma outra mensagem ou publicação o usa
+    context.waitUntil(releaseMedia(env, [message.media_url]));
     return jsonResponse({ ok: true });
   } catch (err: unknown) {
     return serverError(err, "groups/messages/delete");

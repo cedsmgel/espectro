@@ -22,7 +22,7 @@ async function collectMediaKeys(db: D1Database, userId: number): Promise<string[
     "SELECT media_url AS u FROM posts WHERE author_id = ?1",
     "SELECT media_url AS u FROM moments WHERE user_id = ?1",
     "SELECT media_url AS u FROM direct_messages WHERE sender_id = ?1",
-    "SELECT media_url AS u FROM group_messages WHERE sender_id = ?1",
+    "SELECT media_url AS u FROM chat_group_messages WHERE sender_id = ?1",
   ];
   const keys = new Set<string>();
   for (const sql of queries) {
