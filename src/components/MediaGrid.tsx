@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ThumbImg } from './ThumbImg';
 import type { Post } from '../lib/api';
 
 function isVideo(post: Post): boolean {
@@ -68,11 +69,9 @@ export const MediaGrid: React.FC<{ posts: Post[] }> = ({ posts }) => (
             {video ? (
               <VideoThumb src={post.media_url as string} />
             ) : (
-              <img
+              <ThumbImg
                 src={post.media_url as string}
                 alt={post.title?.trim() || ''}
-                loading="lazy"
-                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover"
               />
             )}

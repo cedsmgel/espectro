@@ -53,6 +53,7 @@ import { StarredModal } from '../components/chat/StarredModal';
 import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
 import { InviteJoinModal } from '../components/chat/GroupModals';
 import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
+import { ThumbImg } from '../components/ThumbImg';
 import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 // Emojis populares pré-selecionados para o seletor rápido
@@ -1074,12 +1075,11 @@ export const DirectMessages: React.FC = () => {
       if (msgType === 'image') {
         return (
           <div className="flex flex-col gap-1.5">
-            <img
+            <ThumbImg
               src={m.media_url}
               alt={m.content || 'Foto'}
               onClick={() => setPreviewImageUrl(m.media_url || null)}
               className="max-w-[200px] w-auto h-auto rounded-lg shadow-xs cursor-pointer hover:opacity-95 transition-opacity"
-              loading="lazy"
             />
             {m.content &&
               m.content !== 'Foto' &&
