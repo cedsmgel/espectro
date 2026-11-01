@@ -46,6 +46,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const user = authStorage.getUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const videoCameraInputRef = useRef<HTMLInputElement>(null);
+  // No celular, foto e vídeo perguntam: galeria ou câmera
+  const [mediaMenu, setMediaMenu] = useState<'image' | 'video' | null>(null);
   const isPhone = useIsPhone();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -428,6 +431,16 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         type="file"
         ref={cameraInputRef}
         accept="image/*"
+        capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {/* Câmera de vídeo do celular */}
+      <input
+        type="file"
+        ref={videoCameraInputRef}
+        accept="video/*"
         capture="environment"
         onChange={handleFileChange}
         className="hidden"
@@ -843,17 +856,46 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
       {/* 4. FERRAMENTAS: uma barra só, fica acima do teclado */}
       <footer className="bg-surface-container-lowest border-t border-outline-variant px-2 sm:px-4 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shrink-0 z-20 flex items-center gap-0.5">
-        <button type="button" onClick={() => handleTriggerUpload('image')} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Adicionar foto">
-          <span className="material-symbols-outlined text-[22px]">image</span>
-        </button>
-        <button type="button" onClick={() => handleTriggerUpload('video')} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Adicionar vídeo">
-          <span className="material-symbols-outlined text-[22px]">videocam</span>
-        </button>
-        {isPhone && (
-          <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Tirar foto com a câmera">
-            <span className="material-symbols-outlined text-[22px]">photo_camera</span>
-          </button>
-        )}
+        {(['image', 'video'] as const).map((kind) => (
+          <div key={kind} className="relative">
+            <button
+              type="button"
+              onClick={() => (isPhone ? setMediaMenu(mediaMenu === kind ? null : kind) : handleTriggerUpload(kind))}
+              disabled={uploading}
+              aria-expanded={isPhone ? mediaMenu === kind : undefined}
+              className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50"
+              aria-label={kind === 'image' ? 'Adicionar foto' : 'Adicionar vídeo'}
+            >
+              <span className="material-symbols-outlined text-[22px]">{kind === 'image' ? 'image' : 'videocam'}</span>
+            </button>
+            {isPhone && mediaMenu === kind && (
+              <div className="absolute bottom-full left-0 mb-2 w-48 rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xl overflow-hidden z-30">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaMenu(null);
+                    handleTriggerUpload(kind);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">photo_library</span>
+                  Galeria
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaMenu(null);
+                    (kind === 'image' ? cameraInputRef : videoCameraInputRef).current?.click();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container cursor-pointer border-t border-outline-variant"
+                >
+                  <span className="material-symbols-outlined text-[20px]">{kind === 'image' ? 'photo_camera' : 'videocam'}</span>
+                  {kind === 'image' ? 'Tirar foto' : 'Gravar vídeo'}
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
         {postType === 'discussion' && (
           <>
             <span className="w-px h-6 bg-outline-variant mx-1.5" />
