@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 1. Busca perfil público por nome de usuário (?username=...)
     if (targetUsername) {
       const user = await env.DB.prepare(
-        "SELECT id, username, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
+        "SELECT id, username, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
       )
         .bind(targetUsername.trim())
         .first<any>();
@@ -56,7 +56,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const user = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
       .first<any>();
@@ -97,10 +97,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     const current = await env.DB.prepare(
-      "SELECT name, bio, avatar_url, music FROM users WHERE id = ?"
+      "SELECT name, bio, avatar_url, cover_url, music FROM users WHERE id = ?"
     )
       .bind(auth.id)
-      .first<{ name: string | null; bio: string | null; avatar_url: string | null; music: string | null }>();
+      .first<{ name: string | null; bio: string | null; avatar_url: string | null; cover_url: string | null; music: string | null }>();
     if (!current) {
       return errorResponse("Conta de usuário não encontrada.", 404);
     }
@@ -137,6 +137,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       }
     }
 
+    let rawCoverUrl: string | null = current.cover_url;
+    if (body.cover_url !== undefined) {
+      if (!body.cover_url) {
+        rawCoverUrl = null;
+      } else {
+        rawCoverUrl = sanitizeMediaUrl(body.cover_url);
+        if (!rawCoverUrl) {
+          return errorResponse("URL da capa inválida.", 400);
+        }
+      }
+    }
+
     // 3. Validação do nome de usuário
     if (!rawUsername || rawUsername.length < 3 || rawUsername.length > 30) {
       return errorResponse("O nome de usuário deve ter entre 3 e 30 caracteres.", 400);
@@ -159,15 +171,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // 5. Atualização dos dados no D1
     await env.DB.prepare(
       `UPDATE users 
-       SET name = ?, username = ?, bio = ?, avatar_url = ?, music = ?
+       SET name = ?, username = ?, bio = ?, avatar_url = ?, cover_url = ?, music = ?
        WHERE id = ?`
     )
-      .bind(rawName, rawUsername, rawBio, rawAvatarUrl, rawMusic, auth.id)
+      .bind(rawName, rawUsername, rawBio, rawAvatarUrl, rawCoverUrl, rawMusic, auth.id)
       .run();
 
     // 6. Busca os dados atualizados
     const updatedUser = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
       .first();

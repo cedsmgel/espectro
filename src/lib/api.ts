@@ -822,6 +822,7 @@ export interface UserProfile {
   name?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  cover_url?: string | null;
   music?: string | null;
   is_private?: boolean;
   allow_scraps?: boolean;
@@ -929,6 +930,17 @@ export const accountApi = {
   },
 };
 
+export type ProfileDetailsMap = Record<string, { value: string; visibility: 'public' | 'friends' | 'private' }>;
+
+export const profileDetailsApi = {
+  getMine: async (): Promise<ProfileDetailsMap> =>
+    (await apiRequest<{ details: ProfileDetailsMap }>('/api/profile_details', { method: 'GET' })).details,
+  getFor: async (username: string): Promise<ProfileDetailsMap> =>
+    (await apiRequest<{ details: ProfileDetailsMap }>(`/api/profile_details?username=${encodeURIComponent(username)}`, { method: 'GET' })).details,
+  save: (details: Record<string, { value: unknown; visibility: 'public' | 'friends' | 'private' }>) =>
+    apiRequest<{ saved: boolean }>('/api/profile_details', { method: 'PUT', body: JSON.stringify({ details }) }),
+};
+
 export const profileApi = {
   get: async (username?: string): Promise<UserProfile> => {
     const url = username ? `/api/profile?username=${encodeURIComponent(username)}` : '/api/profile';
@@ -940,6 +952,7 @@ export const profileApi = {
     username?: string;
     bio?: string | null;
     avatar_url?: string | null;
+    cover_url?: string | null;
   }): Promise<{ user: UserProfile; token?: string; message: string }> => {
     return apiRequest<{ user: UserProfile; token?: string; message: string }>('/api/profile', {
       method: 'PUT',
