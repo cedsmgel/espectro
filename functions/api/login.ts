@@ -38,10 +38,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Busca usuário no banco D1
     const user = await env.DB.prepare(
-      "SELECT id, username, password_hash FROM users WHERE username = ? COLLATE NOCASE"
+      "SELECT id, username, password_hash, suspended_at, suspended_reason FROM users WHERE username = ? COLLATE NOCASE"
     )
       .bind(cleanUsername)
-      .first<{ id: number; username: string; password_hash: string }>();
+      .first<{ id: number; username: string; password_hash: string; suspended_at: string | null; suspended_reason: string | null }>();
 
     if (!user) {
       // Executa o mesmo custo de hash para não revelar se o usuário existe pelo tempo de resposta
@@ -53,6 +53,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const passwordMatch = await verifyPassword(password, user.password_hash);
     if (!passwordMatch) {
       return errorResponse("Credenciais inválidas.", 401);
+    }
+
+    // Só avisa da suspensão depois da senha conferir, para não revelar contas a quem não é dono
+    if (user.suspended_at) {
+      return jsonResponse(
+        { error: `Sua conta foi suspensa.${user.suspended_reason ? ` Motivo: ${user.suspended_reason}` : ""}`, suspended: true },
+        403
+      );
     }
 
     const secret = getJwtSecret(env);

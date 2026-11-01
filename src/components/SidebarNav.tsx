@@ -4,6 +4,7 @@ import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
 import { useNotificationCount } from '../hooks/useNotificationCount';
 import { useSidebar } from '../context/SidebarContext';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import { useTheme } from '../context/ThemeContext';
 import { RightSidebarSearch } from './RightSidebarSearch';
 
@@ -16,6 +17,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const navigate = useNavigate();
   const user = authStorage.getUser();
   const { isExpanded, toggleSidebar, openCreatePostModal } = useSidebar();
+  const isAdmin = useIsAdmin();
   const { isDark, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -316,6 +318,17 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                       <span className="material-symbols-outlined text-[18px] text-tertiary">shield</span>
                       <span>Privacidade & Conta</span>
                     </Link>
+
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-error">gavel</span>
+                        <span>Moderação</span>
+                      </Link>
+                    )}
 
                     {/* Alternar Tema Light / Dark */}
                     <button

@@ -15,6 +15,17 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Aviso deixado quando a sessão foi encerrada por suspensão
+  useEffect(() => {
+    try {
+      const notice = sessionStorage.getItem('espectro_login_notice');
+      if (notice) {
+        setError(notice);
+        sessionStorage.removeItem('espectro_login_notice');
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (searchParams.get('tab') === 'cadastro') {
       setActiveTab('register');

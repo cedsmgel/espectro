@@ -14,6 +14,8 @@ interface ReportModalProps {
   userId: number;
   username: string;
   messageId?: number | null;
+  postId?: number | null;
+  commentId?: number | null;
   alreadyBlocked?: boolean;
   onDone: (result: { reported: boolean; blocked: boolean }) => void;
   onClose: () => void;
@@ -23,13 +25,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   userId,
   username,
   messageId,
+  postId,
+  commentId,
   alreadyBlocked,
   onDone,
   onClose,
 }) => {
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
-  const [alsoBlock, setAlsoBlock] = useState(!alreadyBlocked);
+  const [alsoBlock, setAlsoBlock] = useState(!alreadyBlocked && !postId && !commentId);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +45,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     setSending(true);
     setError(null);
     try {
-      await reportsApi.send({ user_id: userId, reason, details: details.trim() || undefined, message_id: messageId });
+      await reportsApi.send({
+        user_id: userId,
+        reason,
+        details: details.trim() || undefined,
+        message_id: messageId,
+        post_id: postId,
+        comment_id: commentId,
+      });
       let blocked = false;
       if (alsoBlock && !alreadyBlocked) {
         await blocksApi.block(userId);
@@ -57,7 +68,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   return (
     <ModalShell
-      title={messageId ? 'Denunciar mensagem' : `Denunciar @${username}`}
+      title={messageId ? 'Denunciar mensagem' : postId ? 'Denunciar publicação' : commentId ? 'Denunciar comentário' : `Denunciar @${username}`}
       onClose={onClose}
       footer={
         <div className="flex items-center justify-end gap-2">
@@ -81,6 +92,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     >
       <p className="text-[11px] text-on-surface-variant mb-4">
         {messageId ? `Sobre a mensagem de @${username}. ` : ''}
+        {postId ? `Sobre a publicação de @${username}. ` : ''}
         Sua denúncia é confidencial: a pessoa não é avisada.
       </p>
 
