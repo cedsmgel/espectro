@@ -3,3 +3,49 @@
 
 /sw.js
   Cache-Control: no-cache
+
+# Telas privadas ou sem conteúdo próprio: fora dos buscadores (o robots.txt não bloqueia, para o buscador ler o noindex)
+/login
+  X-Robots-Tag: noindex, nofollow
+
+/redefinir-senha
+  X-Robots-Tag: noindex, nofollow
+
+/confirmar-email
+  X-Robots-Tag: noindex, nofollow
+
+/entrar/*
+  X-Robots-Tag: noindex, nofollow
+
+/configuracoes/*
+  X-Robots-Tag: noindex, nofollow
+
+/settings/*
+  X-Robots-Tag: noindex, nofollow
+
+/mensagens
+  X-Robots-Tag: noindex, nofollow
+
+/notificacoes
+  X-Robots-Tag: noindex, nofollow
+
+/notifications
+  X-Robots-Tag: noindex, nofollow
+
+/amigos
+  X-Robots-Tag: noindex, nofollow
+
+/grupos/*
+  X-Robots-Tag: noindex, nofollow
+
+/admin
+  X-Robots-Tag: noindex, nofollow
+
+/perfil/*/*
+  X-Robots-Tag: noindex, nofollow
+
+/u/*/*
+  X-Robots-Tag: noindex, nofollow
+
+/profile/*/*
+  X-Robots-Tag: noindex, nofollow
