@@ -403,6 +403,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
+  // Só libera o Publicar quando há algo para publicar (título, texto ou mídia)
+  const canPublish = Boolean(title.trim() || content.trim() || mediaUrl.trim());
+
   if (!user) {
     return (
       <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
@@ -465,39 +468,68 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         />
       )}
 
-      {/* 1. TOPO FIXO (Header do Modal): Botão X à esquerda e título "Criar Publicação" */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-zinc-800/80 bg-surface-container-lowest shrink-0 z-10">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="w-8 h-8 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center transition-colors cursor-pointer"
-            title="Fechar"
-            aria-label="Fechar"
-          >
-            <span className="material-symbols-outlined text-[22px]">close</span>
-          </button>
-          <h1 className="text-base sm:text-lg font-bold text-on-surface tracking-tight">
-            Criar Publicação
-          </h1>
-        </div>
+      {/* 1. TOPO: X, destino em pílula e Publicar (como no Reddit) */}
+      <header className="flex items-center gap-2 px-3 sm:px-5 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] shrink-0 z-10">
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-10 h-10 rounded-full border border-outline-variant hover:bg-surface-container text-on-surface flex items-center justify-center transition-colors cursor-pointer shrink-0"
+          title="Fechar"
+          aria-label="Fechar"
+        >
+          <span className="material-symbols-outlined text-[22px]">close</span>
+        </button>
 
-        {/* Descartar Rascunho (se houver rascunho recuperado) */}
+        <label className="relative flex items-center gap-1 h-10 pl-3 pr-2 rounded-full border border-outline-variant bg-surface-container-lowest min-w-0 max-w-[60%] cursor-pointer">
+          <select
+            value={communityId}
+            onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
+            aria-label="Onde publicar"
+            className="appearance-none bg-transparent text-base sm:text-sm font-semibold text-on-surface focus:outline-none cursor-pointer truncate pr-5 min-w-0"
+          >
+            <option value="">Feed Geral</option>
+            {communities.map((c) => (
+              <option key={c.id} value={c.id}>
+                e/{c.name}
+              </option>
+            ))}
+          </select>
+          <span className="material-symbols-outlined text-[18px] text-on-surface-variant absolute right-2 pointer-events-none">expand_more</span>
+        </label>
+
+        <div className="flex-1" />
+
         {isDraftRestored && (
           <button
             type="button"
             onClick={handleDiscardDraft}
-            className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer font-medium"
+            className="w-10 h-10 rounded-full hover:bg-surface-container text-error flex items-center justify-center cursor-pointer shrink-0"
             title="Descartar rascunho salvo"
+            aria-label="Descartar rascunho salvo"
           >
-            <span className="material-symbols-outlined text-[15px]">delete</span>
-            <span className="hidden sm:inline">Descartar rascunho</span>
+            <span className="material-symbols-outlined text-[20px]">delete</span>
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={submitting || uploading || !canPublish}
+          className="h-10 px-5 rounded-full bg-primary-container hover:bg-primary text-on-primary font-bold text-sm transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 disabled:bg-surface-container-high disabled:text-on-surface-variant disabled:cursor-default"
+        >
+          {submitting ? (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span>Publicando</span>
+            </>
+          ) : (
+            <span>Publicar</span>
+          )}
+        </button>
       </header>
 
       {/* 2. ABAS DE TIPO (Logo abaixo do Header): Botões Pílula (Discussão vs Scrap Nostálgico) */}
-      <div className="flex items-center gap-2 px-4 sm:px-6 py-2.5 border-b border-zinc-800/60 bg-surface-container-lowest shrink-0">
+      <div className="flex items-center gap-2 px-3 sm:px-6 pb-2 bg-surface-container-lowest shrink-0">
         <button
           type="button"
           onClick={() => setPostType('discussion')}
@@ -581,11 +613,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         )}
 
         {/* Autor + Campo de Título (Se Discussão) */}
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0 shadow-xs">
-            {user.username.charAt(0)}
-          </div>
-
+        <div className="flex flex-col">
           <div className="flex-1 flex flex-col gap-2 min-w-0">
             {/* Input de Título: visível apenas na aba "Discussão" */}
             {postType === 'discussion' && (
@@ -593,45 +621,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={mediaUrl.trim() ? "Título da sua discussão (opcional)..." : "Título da sua discussão..."}
-                className="w-full bg-transparent text-on-surface font-bold text-base sm:text-lg placeholder:text-on-surface-variant/50 focus:outline-none border-b border-outline-variant pb-2 transition-all"
+                placeholder={mediaUrl.trim() ? "Título (opcional)" : "Título"}
+                className="w-full bg-transparent text-on-surface font-bold text-2xl sm:text-xl placeholder:text-on-surface-variant/50 focus:outline-none py-1"
                 autoFocus={!mediaUrl.trim()}
               />
-            )}
-
-            {/* Barra de Formatação Básica (apenas para Discussão) */}
-            {postType === 'discussion' && (
-              <div className="flex items-center justify-between py-1 text-xs text-on-surface-variant">
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => insertMarkdown('**', '**', 'negrito')}
-                    className="p-1.5 rounded hover:bg-surface-container font-bold text-on-surface transition-colors cursor-pointer"
-                    title="Negrito"
-                  >
-                    B
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => insertMarkdown('*', '*', 'itálico')}
-                    className="p-1.5 rounded hover:bg-surface-container italic font-serif text-on-surface transition-colors cursor-pointer"
-                    title="Itálico"
-                  >
-                    I
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => insertMarkdown('`', '`', 'código')}
-                    className="p-1.5 rounded hover:bg-surface-container font-mono text-xs transition-colors cursor-pointer"
-                    title="Código"
-                  >
-                    &lt;/&gt;
-                  </button>
-                </div>
-                <span className="text-[11px] font-mono text-on-surface-variant/70">
-                  {content.length}/{POST_CONTENT_MAX} caracteres
-                </span>
-              </div>
             )}
 
             {/* PERSONALIZAÇÃO DE GRAFIA PARA O SCRAP (Nostalgia Orkut: Fontes, Cores, Tamanho e Papel) */}
@@ -754,9 +747,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 value={content}
                 onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
                 maxLength={POST_CONTENT_MAX}
-                placeholder="O que você gostaria de discutir ou compartilhar hoje?"
+                placeholder="Texto do post (opcional)"
                 rows={6}
-                className="w-full min-h-[160px] bg-transparent text-on-surface text-sm sm:text-base placeholder:text-on-surface-variant/40 focus:outline-none resize-none leading-relaxed"
+                className="w-full min-h-[40dvh] sm:min-h-[160px] bg-transparent text-on-surface text-base placeholder:text-on-surface-variant/60 focus:outline-none resize-none leading-relaxed"
               />
             )}
 
@@ -848,82 +841,30 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
       </div>
 
-      {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e alinhamento em linha única */}
-      <footer className="sticky bottom-0 bg-surface-container-lowest px-3 sm:px-5 py-2.5 sm:py-3.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] border-t border-outline-variant shrink-0 z-20 flex items-center justify-between gap-1.5 sm:gap-3">
-        {/* Lado Esquerdo: Ícones Foto, Vídeo, Emoji, GIF e Localização */}
-        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
-          {/* Foto */}
-          <button
-            type="button"
-            onClick={() => handleTriggerUpload('image')}
-            disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-primary hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
-            aria-label="Adicionar Foto"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">image</span>
+      {/* 4. FERRAMENTAS: uma barra só, fica acima do teclado */}
+      <footer className="bg-surface-container-lowest border-t border-outline-variant px-2 sm:px-4 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shrink-0 z-20 flex items-center gap-0.5">
+        <button type="button" onClick={() => handleTriggerUpload('image')} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Adicionar foto">
+          <span className="material-symbols-outlined text-[22px]">image</span>
+        </button>
+        <button type="button" onClick={() => handleTriggerUpload('video')} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Adicionar vídeo">
+          <span className="material-symbols-outlined text-[22px]">videocam</span>
+        </button>
+        {isPhone && (
+          <button type="button" onClick={() => cameraInputRef.current?.click()} disabled={uploading} className="w-10 h-10 rounded-full hover:bg-surface-container text-on-surface flex items-center justify-center cursor-pointer disabled:opacity-50" aria-label="Tirar foto com a câmera">
+            <span className="material-symbols-outlined text-[22px]">photo_camera</span>
           </button>
-
-          {/* Vídeo (sem R2) */}
-          <button
-            type="button"
-            onClick={() => handleTriggerUpload('video')}
-            disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
-            aria-label="Adicionar Vídeo"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">videocam</span>
-          </button>
-
-          {/* Câmera: só aparece em celular */}
-          {isPhone && (
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={uploading}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-primary hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
-              aria-label="Tirar foto com a câmera"
-            >
-              <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
-            </button>
-          )}
-        </div>
-
-        {/* Lado Direito: Seletor de Destino e Botão Publicar */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
-          {/* Seletor de Destino */}
-          <div className="flex items-center gap-1 bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-full border border-outline-variant text-xs shrink-0 max-w-[130px] sm:max-w-[200px]">
-            <span className="material-symbols-outlined text-on-surface-variant text-[15px] sm:text-[16px] shrink-0">groups</span>
-            <select
-              value={communityId}
-              onChange={(e) => setCommunityId(e.target.value ? Number(e.target.value) : '')}
-              className="bg-transparent text-xs text-on-surface font-medium focus:outline-none cursor-pointer truncate w-full"
-            >
-              <option value="" className="bg-surface text-on-surface">Feed Geral</option>
-              {communities.map((c) => (
-                <option key={c.id} value={c.id} className="bg-surface text-on-surface">
-                  e/{c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Botão Publicar */}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting || uploading}
-            className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-primary-container hover:bg-primary text-on-primary font-bold text-xs shadow-xs hover:shadow-md transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shrink-0"
-          >
-            {submitting ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Publicando...</span>
-              </>
-            ) : (
-              <span>Publicar</span>
-            )}
-          </button>
-        </div>
+        )}
+        {postType === 'discussion' && (
+          <>
+            <span className="w-px h-6 bg-outline-variant mx-1.5" />
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown('**', '**', 'negrito')} className="w-10 h-10 rounded-full hover:bg-surface-container font-bold text-on-surface cursor-pointer" aria-label="Negrito">B</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown('*', '*', 'itálico')} className="w-10 h-10 rounded-full hover:bg-surface-container italic font-serif text-on-surface cursor-pointer" aria-label="Itálico">I</button>
+            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insertMarkdown('`', '`', 'código')} className="w-10 h-10 rounded-full hover:bg-surface-container font-mono text-xs text-on-surface cursor-pointer" aria-label="Código">&lt;/&gt;</button>
+          </>
+        )}
+        <span className="ml-auto pr-2 text-[11px] font-mono text-on-surface-variant/70 whitespace-nowrap">
+          {content.length}/{POST_CONTENT_MAX}
+        </span>
       </footer>
     </div>
   );

@@ -7,15 +7,22 @@ interface CreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPostCreated?: (post: Post) => void;
+  // Aberto a partir de uma comunidade: já vem com o destino e as hashtags dela
+  defaultCommunityId?: number | null;
+  communityTags?: string[];
+  requireTag?: boolean;
 }
 
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
   onClose,
   onPostCreated,
+  defaultCommunityId = null,
+  communityTags,
+  requireTag,
 }) => {
   const [communities, setCommunities] = useState<Community[]>([]);
-  const { height, isMobile, isKeyboardOpen } = useVisualViewport();
+  const { height, offsetTop, isMobile, isKeyboardOpen } = useVisualViewport();
 
   useEffect(() => {
     if (isOpen) {
@@ -51,9 +58,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden h-[100dvh]"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden h-[100dvh] overscroll-none"
       style={{
         height: isMobile && isKeyboardOpen && height ? `${height}px` : undefined,
+        top: isMobile && isKeyboardOpen ? `${offsetTop}px` : undefined,
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -73,6 +81,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           communities={communities}
           isModal={true}
           onClose={onClose}
+          defaultCommunityId={defaultCommunityId}
+          communityTags={communityTags}
+          requireTag={requireTag}
         />
       </div>
     </div>
