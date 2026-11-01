@@ -16,6 +16,7 @@ import {
   suggestionsApi,
 } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
+import { CommunitySuggestions } from '../components/CommunitySuggestions';
 import { usePush } from '../hooks/usePush';
 import { notifyNotificationsChanged } from '../hooks/useNotificationCount';
 import { notifyUnreadChanged } from '../hooks/useUnreadDms';
@@ -61,6 +62,7 @@ function suggestionReason(s: FriendSuggestion): string {
   if (s.shared_communities > 0) {
     return `${s.shared_communities} ${s.shared_communities === 1 ? 'comunidade' : 'comunidades'} em comum`;
   }
+  if ((s.interactions ?? 0) > 0) return 'Interagiu com suas publicações';
   return 'Novo no Espectro';
 }
 
@@ -532,6 +534,8 @@ export const Notifications: React.FC = () => {
                       )}
                       {push.error && <p className="text-[11px] text-error">{push.error}</p>}
                     </div>
+
+                    <CommunitySuggestions onJoined={() => communitiesApi.list().then(setCommunities).catch(() => {})} />
 
                     <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
                       <div className="flex items-center justify-between">

@@ -19,6 +19,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ReportModal } from '../components/chat/ReportModal';
+import { ShareButton } from '../components/ShareButton';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -368,6 +369,17 @@ export const ProfilePage: React.FC = () => {
                     <p className="text-xs text-on-surface-variant mt-1 italic">
                       Nenhuma biografia informada ainda.
                     </p>
+                  )}
+
+                  {userProfile && !isLockedPrivate && (
+                    <div className="mt-3">
+                      <ShareButton
+                        variant="pill"
+                        url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
+                        title={`@${userProfile.username} no Espectro`}
+                        text={userProfile.bio || undefined}
+                      />
+                    </div>
                   )}
 
                   {!isLockedPrivate && (
