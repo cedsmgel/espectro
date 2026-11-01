@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmojiPicker } from '../components/chat/EmojiPicker';
 import { Header } from '../components/Header';
@@ -1191,6 +1191,388 @@ export const DirectMessages: React.FC = () => {
     return <p className="chat-text text-xs leading-relaxed whitespace-pre-wrap">{m.content}</p>;
   };
 
+  // Lista de bolhas memorizada: digitar no campo não recria as mensagens.
+  // As funções vêm sempre da última renderização pela ref; só mudanças de dados refazem a lista.
+  const latestActions = useRef<Record<string, (...args: any[]) => any>>({});
+  latestActions.current = { handleCopyMessage, handleDeleteMessage, handleStartEdit, handleStartReply, handleTouchEnd, handleTouchStart, reactToMessage, renderMessageContent, retrySend, toggleStar };
+  const messageNodes = useMemo(() => {
+    if (!user || !activeFriend) return null;
+    const handleCopyMessage = (...args: any[]) => latestActions.current.handleCopyMessage(...args);
+    const handleDeleteMessage = (...args: any[]) => latestActions.current.handleDeleteMessage(...args);
+    const handleStartEdit = (...args: any[]) => latestActions.current.handleStartEdit(...args);
+    const handleStartReply = (...args: any[]) => latestActions.current.handleStartReply(...args);
+    const handleTouchEnd = (...args: any[]) => latestActions.current.handleTouchEnd(...args);
+    const handleTouchStart = (...args: any[]) => latestActions.current.handleTouchStart(...args);
+    const reactToMessage = (...args: any[]) => latestActions.current.reactToMessage(...args);
+    const renderMessageContent = (...args: any[]) => latestActions.current.renderMessageContent(...args);
+    const retrySend = (...args: any[]) => latestActions.current.retrySend(...args);
+    const toggleStar = (...args: any[]) => latestActions.current.toggleStar(...args);
+    return visibleMessages.map((m, idx) => {
+                          const isMe = m.sender_id === user.id;
+
+                          // Separador de datas (Tarefa 2)
+                          const currentDateLabel = formatMessageDateSeparator(m.created_at);
+                          const prevDateLabel =
+                            idx > 0 ? formatMessageDateSeparator(visibleMessages[idx - 1].created_at) : null;
+                          const showDateSeparator = currentDateLabel !== prevDateLabel;
+
+                          // Agrupamento de mensagens consecutivas do mesmo remetente (Tarefa 2)
+                          const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null;
+                          const nextMsg = idx < visibleMessages.length - 1 ? visibleMessages[idx + 1] : null;
+                          const isSameSenderAsPrev = !showDateSeparator && prevMsg && prevMsg.sender_id === m.sender_id;
+                          const isSameSenderAsNext =
+                            nextMsg &&
+                            nextMsg.sender_id === m.sender_id &&
+                            formatMessageDateSeparator(nextMsg.created_at) === currentDateLabel;
+
+                          const isFirstInBlock = !isSameSenderAsPrev;
+                          const isLastInBlock = !isSameSenderAsNext;
+                          const marginTopClass = showDateSeparator ? 'mt-4' : isFirstInBlock ? 'mt-3' : 'mt-1';
+
+                          // Se a mensagem citou outra (Responder - Tarefa 3 & 4)
+                          const repliedMsg = m.reply_to_id
+                            ? messages.find((item) => item.id === m.reply_to_id)
+                            : null;
+
+                          const isKebabOpen = activeKebabMessage?.id === m.id;
+                          const bare = isBareMessage(m);
+
+                          return (
+                            <React.Fragment key={m.id || `${m.created_at}-${idx}`}>
+                              {/* Separador de Data Visual */}
+                              {showDateSeparator && (
+                                <div className="flex justify-center my-3 select-none">
+                                  <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant">
+                                    {currentDateLabel}
+                                  </span>
+                                </div>
+                              )}
+
+                              <div
+                                id={`msg-${m.id}`}
+                                className={`group relative flex items-end gap-2 max-w-xl ${marginTopClass} ${
+                                  isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
+                                } ${isKebabOpen ? 'z-50' : 'z-10'}`}
+                              >
+                                {/* Avatar do contato apenas na última mensagem do bloco consecutivo */}
+                                {!isMe && (
+                                  isLastInBlock ? (
+                                    <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase">
+                                      {activeFriend.username.charAt(0)}
+                                    </div>
+                                  ) : (
+                                    <div className="w-7 h-7 flex-shrink-0" />
+                                  )
+                                )}
+
+                                <div
+                                  className="relative flex flex-col max-w-[85%] sm:max-w-md select-text"
+                                  onTouchStart={() => handleTouchStart(m)}
+                                  onTouchEnd={handleTouchEnd}
+                                  onTouchCancel={handleTouchEnd}
+                                >
+                                  {/* Botão de Três Pontos (Kebab) visível no hover ou com o menu aberto */}
+                                  <div
+                                    className={`absolute top-1 z-30 ${
+                                      isMe ? '-left-8' : '-right-8'
+                                    } transition-all duration-150 ${
+                                      isKebabOpen
+                                        ? 'opacity-100 scale-100'
+                                        : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveKebabMessage(isKebabOpen ? null : m);
+                                      }}
+                                      className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline-variant flex items-center justify-center shadow-md transition-all cursor-pointer"
+                                      title="Opções da mensagem"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                                    </button>
+                                  </div>
+
+                                  {/* Submenu Dropdown com Efeito de Foco */}
+                                  {isKebabOpen && (
+                                    <div
+                                      data-kebab-menu
+                                      className={`absolute z-50 ${
+                                        isMe ? 'right-0 top-full mt-1.5' : 'left-0 top-full mt-1.5'
+                                      } min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {m.id && m.id > 0 && (
+                                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant dark:border-zinc-800">
+                                          {REACTION_EMOJIS.map((emoji) => {
+                                            const mine = (m.reactions || []).some((r) => r.user_id === user.id && r.emoji === emoji);
+                                            return (
+                                              <button
+                                                key={emoji}
+                                                type="button"
+                                                aria-label={`Reagir com ${emoji}`}
+                                                aria-pressed={mine}
+                                                onClick={() => {
+                                                  reactToMessage(m.id!, mine ? null : emoji);
+                                                  setActiveKebabMessage(null);
+                                                }}
+                                                className={`w-8 h-8 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-125 cursor-pointer ${
+                                                  mine ? 'bg-primary/20' : ''
+                                                }`}
+                                              >
+                                                {emoji}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleStartReply(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">reply</span>
+                                        <span className="font-medium">Responder</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setForwardModalMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">forward</span>
+                                        <span className="font-medium">Encaminhar</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleCopyMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">content_copy</span>
+                                        <span className="font-medium">Copiar</span>
+                                      </button>
+
+                                      {isMe && m.id && m.id > 0 && (m.message_type || 'text') === 'text' && canEditMessage(m.created_at) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleStartEdit(m);
+                                            setActiveKebabMessage(null);
+                                          }}
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                        >
+                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">edit</span>
+                                          <span className="font-medium">Editar</span>
+                                        </button>
+                                      )}
+
+                                      {m.id && m.id > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            toggleStar(m);
+                                            setActiveKebabMessage(null);
+                                          }}
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                        >
+                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">star</span>
+                                          <span className="font-medium">{starredIds.has(m.id) ? 'Desfavoritar' : 'Favoritar'}</span>
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setInfoModalMessage(m);
+                                          setActiveKebabMessage(null);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">info</span>
+                                        <span className="font-medium">Dados da Mensagem</span>
+                                      </button>
+
+                                      {!isMe && m.id && m.id > 0 && (
+                                        <>
+                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setReportTarget({ messageId: m.id! });
+                                              setActiveKebabMessage(null);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">flag</span>
+                                            <span className="font-medium">Denunciar mensagem</span>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {isMe && m.id && (
+                                        <>
+                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleDeleteMessage(m.id!);
+                                              setActiveKebabMessage(null);
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
+                                          >
+                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                            <span className="font-medium">Excluir</span>
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Balão de Mensagem */}
+                                  <div
+                                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${bare ? '!bg-transparent !shadow-none !p-0 !border-0 ' : ''}${
+                                      isMe
+                                        ? `bg-primary-container text-on-primary rounded-2xl ${
+                                            isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'
+                                          } ${isLastInBlock ? 'rounded-br-xs' : 'rounded-br-md'} rounded-l-2xl`
+                                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant ${
+                                            isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
+                                          } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
+                                    }`}
+                                    style={isMe && myBubbleColor ? { backgroundColor: myBubbleColor, color: '#ffffff' } : undefined}
+                                  >
+                                    {/* Citação se for resposta (Tarefa 3) */}
+                                    {m.reply_to_id && (
+                                      <div
+                                        onClick={() => {
+                                          const el = document.getElementById(`msg-${m.reply_to_id}`);
+                                          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        }}
+                                        className={`mb-2 p-2 rounded-xl text-left border-l-2 text-xs cursor-pointer transition-opacity hover:opacity-90 ${
+                                          isMe
+                                            ? 'bg-black/20 border-on-primary/70 text-on-primary'
+                                            : 'bg-surface-container border-primary text-on-surface'
+                                        }`}
+                                      >
+                                        <span className="font-bold text-[11px] block truncate">
+                                          @{repliedMsg?.sender_username || 'Mensagem anterior'}
+                                        </span>
+                                        <span className="text-[11px] opacity-80 block truncate">
+                                          {repliedMsg?.content ||
+                                            (repliedMsg?.message_type === 'image'
+                                              ? '📷 Foto'
+                                              : repliedMsg?.message_type === 'video'
+                                              ? '🎥 Vídeo'
+                                              : 'Mensagem original')}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {renderMessageContent(m, isMe)}
+                                  </div>
+
+                                  {groupReactions(m.reactions, user.id).length > 0 && (
+                                    <div className={`flex flex-wrap gap-1 -mt-1.5 ${isMe ? 'justify-end mr-2' : 'ml-2'}`}>
+                                      {groupReactions(m.reactions, user.id).map((group) => (
+                                        <button
+                                          key={group.emoji}
+                                          type="button"
+                                          onClick={() => m.id && reactToMessage(m.id, group.mine ? null : group.emoji)}
+                                          title={group.mine ? 'Remover sua reação' : 'Reagir igual'}
+                                          className={`h-6 px-1.5 rounded-full text-xs flex items-center gap-1 border shadow-xs cursor-pointer transition-colors ${
+                                            group.mine
+                                              ? 'bg-primary/15 border-primary/40'
+                                              : 'bg-surface-container-high border-outline-variant/40 hover:bg-surface-container-highest'
+                                          }`}
+                                        >
+                                          <span>{group.emoji}</span>
+                                          {group.count > 1 && (
+                                            <span className="text-[10px] font-semibold text-on-surface-variant">{group.count}</span>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Horário e Ticks de Confirmação (Tarefa 3) */}
+                                  <div
+                                    className={`text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-1 ${
+                                      isMe ? 'justify-end mr-1' : 'ml-1'
+                                    }`}
+                                  >
+                                    {m.id !== undefined && starredIds.has(m.id) && (
+                                      <span className="material-symbols-outlined text-[12px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }} title="Favorita">
+                                        star
+                                      </span>
+                                    )}
+                                    {m.expires_at && <span className="material-symbols-outlined text-[12px]" title="Mensagem temporária">timer</span>}
+                                    <span>
+                                      {new Date(m.created_at).toLocaleTimeString('pt-BR', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </span>
+                                    {m.edited_at && <span>· editada</span>}
+                                    {isMe && (
+                                      m.status === 'failed' ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => m.client_id && retrySend(m.client_id)}
+                                          className="inline-flex items-center gap-0.5 text-error font-semibold cursor-pointer"
+                                          title="Falha ao enviar. Toque para reenviar"
+                                        >
+                                          <span className="material-symbols-outlined text-[14px]">error</span>
+                                          <span>Reenviar</span>
+                                        </button>
+                                      ) : m.status === 'sending' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Enviando"
+                                        >
+                                          schedule
+                                        </span>
+                                      ) : m.status === 'read' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[15px] text-primary font-bold select-none inline-flex items-center"
+                                          title="Lida"
+                                        >
+                                          done_all
+                                        </span>
+                                      ) : m.status === 'delivered' ? (
+                                        <span
+                                          className="material-symbols-outlined text-[15px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Entregue"
+                                        >
+                                          done_all
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
+                                          title="Enviada"
+                                        >
+                                          check
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </React.Fragment>
+                          );
+                        });
+  }, [visibleMessages, messages, activeFriend, activeKebabMessage, myBubbleColor, starredIds, openedOnce, user]);
+
   return (
     <div
       style={{
@@ -1869,370 +2251,7 @@ export const DirectMessages: React.FC = () => {
                           />
                         </div>
                       ) : (
-                        visibleMessages.map((m, idx) => {
-                          const isMe = m.sender_id === user.id;
-
-                          // Separador de datas (Tarefa 2)
-                          const currentDateLabel = formatMessageDateSeparator(m.created_at);
-                          const prevDateLabel =
-                            idx > 0 ? formatMessageDateSeparator(visibleMessages[idx - 1].created_at) : null;
-                          const showDateSeparator = currentDateLabel !== prevDateLabel;
-
-                          // Agrupamento de mensagens consecutivas do mesmo remetente (Tarefa 2)
-                          const prevMsg = idx > 0 ? visibleMessages[idx - 1] : null;
-                          const nextMsg = idx < visibleMessages.length - 1 ? visibleMessages[idx + 1] : null;
-                          const isSameSenderAsPrev = !showDateSeparator && prevMsg && prevMsg.sender_id === m.sender_id;
-                          const isSameSenderAsNext =
-                            nextMsg &&
-                            nextMsg.sender_id === m.sender_id &&
-                            formatMessageDateSeparator(nextMsg.created_at) === currentDateLabel;
-
-                          const isFirstInBlock = !isSameSenderAsPrev;
-                          const isLastInBlock = !isSameSenderAsNext;
-                          const marginTopClass = showDateSeparator ? 'mt-4' : isFirstInBlock ? 'mt-3' : 'mt-1';
-
-                          // Se a mensagem citou outra (Responder - Tarefa 3 & 4)
-                          const repliedMsg = m.reply_to_id
-                            ? messages.find((item) => item.id === m.reply_to_id)
-                            : null;
-
-                          const isKebabOpen = activeKebabMessage?.id === m.id;
-                          const bare = isBareMessage(m);
-
-                          return (
-                            <React.Fragment key={m.id || `${m.created_at}-${idx}`}>
-                              {/* Separador de Data Visual */}
-                              {showDateSeparator && (
-                                <div className="flex justify-center my-3 select-none">
-                                  <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant">
-                                    {currentDateLabel}
-                                  </span>
-                                </div>
-                              )}
-
-                              <div
-                                id={`msg-${m.id}`}
-                                className={`group relative flex items-end gap-2 max-w-xl ${marginTopClass} ${
-                                  isMe ? 'ml-auto justify-end' : 'mr-auto justify-start'
-                                } ${isKebabOpen ? 'z-50' : 'z-10'}`}
-                              >
-                                {/* Avatar do contato apenas na última mensagem do bloco consecutivo */}
-                                {!isMe && (
-                                  isLastInBlock ? (
-                                    <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase">
-                                      {activeFriend.username.charAt(0)}
-                                    </div>
-                                  ) : (
-                                    <div className="w-7 h-7 flex-shrink-0" />
-                                  )
-                                )}
-
-                                <div
-                                  className="relative flex flex-col max-w-[85%] sm:max-w-md select-text"
-                                  onTouchStart={() => handleTouchStart(m)}
-                                  onTouchEnd={handleTouchEnd}
-                                  onTouchCancel={handleTouchEnd}
-                                >
-                                  {/* Botão de Três Pontos (Kebab) visível no hover ou com o menu aberto */}
-                                  <div
-                                    className={`absolute top-1 z-30 ${
-                                      isMe ? '-left-8' : '-right-8'
-                                    } transition-all duration-150 ${
-                                      isKebabOpen
-                                        ? 'opacity-100 scale-100'
-                                        : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
-                                    }`}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setActiveKebabMessage(isKebabOpen ? null : m);
-                                      }}
-                                      className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline-variant flex items-center justify-center shadow-md transition-all cursor-pointer"
-                                      title="Opções da mensagem"
-                                    >
-                                      <span className="material-symbols-outlined text-[16px]">more_vert</span>
-                                    </button>
-                                  </div>
-
-                                  {/* Submenu Dropdown com Efeito de Foco */}
-                                  {isKebabOpen && (
-                                    <div
-                                      data-kebab-menu
-                                      className={`absolute z-50 ${
-                                        isMe ? 'right-0 top-full mt-1.5' : 'left-0 top-full mt-1.5'
-                                      } min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {m.id && m.id > 0 && (
-                                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant dark:border-zinc-800">
-                                          {REACTION_EMOJIS.map((emoji) => {
-                                            const mine = (m.reactions || []).some((r) => r.user_id === user.id && r.emoji === emoji);
-                                            return (
-                                              <button
-                                                key={emoji}
-                                                type="button"
-                                                aria-label={`Reagir com ${emoji}`}
-                                                aria-pressed={mine}
-                                                onClick={() => {
-                                                  reactToMessage(m.id!, mine ? null : emoji);
-                                                  setActiveKebabMessage(null);
-                                                }}
-                                                className={`w-8 h-8 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-125 cursor-pointer ${
-                                                  mine ? 'bg-primary/20' : ''
-                                                }`}
-                                              >
-                                                {emoji}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleStartReply(m);
-                                          setActiveKebabMessage(null);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                      >
-                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">reply</span>
-                                        <span className="font-medium">Responder</span>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setForwardModalMessage(m);
-                                          setActiveKebabMessage(null);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                      >
-                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">forward</span>
-                                        <span className="font-medium">Encaminhar</span>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          handleCopyMessage(m);
-                                          setActiveKebabMessage(null);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                      >
-                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">content_copy</span>
-                                        <span className="font-medium">Copiar</span>
-                                      </button>
-
-                                      {isMe && m.id && m.id > 0 && (m.message_type || 'text') === 'text' && canEditMessage(m.created_at) && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            handleStartEdit(m);
-                                            setActiveKebabMessage(null);
-                                          }}
-                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                        >
-                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">edit</span>
-                                          <span className="font-medium">Editar</span>
-                                        </button>
-                                      )}
-
-                                      {m.id && m.id > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            toggleStar(m);
-                                            setActiveKebabMessage(null);
-                                          }}
-                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                        >
-                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">star</span>
-                                          <span className="font-medium">{starredIds.has(m.id) ? 'Desfavoritar' : 'Favoritar'}</span>
-                                        </button>
-                                      )}
-
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setInfoModalMessage(m);
-                                          setActiveKebabMessage(null);
-                                        }}
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
-                                      >
-                                        <span className="material-symbols-outlined text-[18px] text-on-surface-variant">info</span>
-                                        <span className="font-medium">Dados da Mensagem</span>
-                                      </button>
-
-                                      {!isMe && m.id && m.id > 0 && (
-                                        <>
-                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              setReportTarget({ messageId: m.id! });
-                                              setActiveKebabMessage(null);
-                                            }}
-                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
-                                          >
-                                            <span className="material-symbols-outlined text-[18px]">flag</span>
-                                            <span className="font-medium">Denunciar mensagem</span>
-                                          </button>
-                                        </>
-                                      )}
-
-                                      {isMe && m.id && (
-                                        <>
-                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              handleDeleteMessage(m.id!);
-                                              setActiveKebabMessage(null);
-                                            }}
-                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-error hover:bg-error/15 transition-colors text-left cursor-pointer"
-                                          >
-                                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                                            <span className="font-medium">Excluir</span>
-                                          </button>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  {/* Balão de Mensagem */}
-                                  <div
-                                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${bare ? '!bg-transparent !shadow-none !p-0 !border-0 ' : ''}${
-                                      isMe
-                                        ? `bg-primary-container text-on-primary rounded-2xl ${
-                                            isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'
-                                          } ${isLastInBlock ? 'rounded-br-xs' : 'rounded-br-md'} rounded-l-2xl`
-                                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant ${
-                                            isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
-                                          } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
-                                    }`}
-                                    style={isMe && myBubbleColor ? { backgroundColor: myBubbleColor, color: '#ffffff' } : undefined}
-                                  >
-                                    {/* Citação se for resposta (Tarefa 3) */}
-                                    {m.reply_to_id && (
-                                      <div
-                                        onClick={() => {
-                                          const el = document.getElementById(`msg-${m.reply_to_id}`);
-                                          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                        }}
-                                        className={`mb-2 p-2 rounded-xl text-left border-l-2 text-xs cursor-pointer transition-opacity hover:opacity-90 ${
-                                          isMe
-                                            ? 'bg-black/20 border-on-primary/70 text-on-primary'
-                                            : 'bg-surface-container border-primary text-on-surface'
-                                        }`}
-                                      >
-                                        <span className="font-bold text-[11px] block truncate">
-                                          @{repliedMsg?.sender_username || 'Mensagem anterior'}
-                                        </span>
-                                        <span className="text-[11px] opacity-80 block truncate">
-                                          {repliedMsg?.content ||
-                                            (repliedMsg?.message_type === 'image'
-                                              ? '📷 Foto'
-                                              : repliedMsg?.message_type === 'video'
-                                              ? '🎥 Vídeo'
-                                              : 'Mensagem original')}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {renderMessageContent(m, isMe)}
-                                  </div>
-
-                                  {groupReactions(m.reactions, user.id).length > 0 && (
-                                    <div className={`flex flex-wrap gap-1 -mt-1.5 ${isMe ? 'justify-end mr-2' : 'ml-2'}`}>
-                                      {groupReactions(m.reactions, user.id).map((group) => (
-                                        <button
-                                          key={group.emoji}
-                                          type="button"
-                                          onClick={() => m.id && reactToMessage(m.id, group.mine ? null : group.emoji)}
-                                          title={group.mine ? 'Remover sua reação' : 'Reagir igual'}
-                                          className={`h-6 px-1.5 rounded-full text-xs flex items-center gap-1 border shadow-xs cursor-pointer transition-colors ${
-                                            group.mine
-                                              ? 'bg-primary/15 border-primary/40'
-                                              : 'bg-surface-container-high border-outline-variant/40 hover:bg-surface-container-highest'
-                                          }`}
-                                        >
-                                          <span>{group.emoji}</span>
-                                          {group.count > 1 && (
-                                            <span className="text-[10px] font-semibold text-on-surface-variant">{group.count}</span>
-                                          )}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* Horário e Ticks de Confirmação (Tarefa 3) */}
-                                  <div
-                                    className={`text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-1 ${
-                                      isMe ? 'justify-end mr-1' : 'ml-1'
-                                    }`}
-                                  >
-                                    {m.id !== undefined && starredIds.has(m.id) && (
-                                      <span className="material-symbols-outlined text-[12px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }} title="Favorita">
-                                        star
-                                      </span>
-                                    )}
-                                    {m.expires_at && <span className="material-symbols-outlined text-[12px]" title="Mensagem temporária">timer</span>}
-                                    <span>
-                                      {new Date(m.created_at).toLocaleTimeString('pt-BR', {
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      })}
-                                    </span>
-                                    {m.edited_at && <span>· editada</span>}
-                                    {isMe && (
-                                      m.status === 'failed' ? (
-                                        <button
-                                          type="button"
-                                          onClick={() => m.client_id && retrySend(m.client_id)}
-                                          className="inline-flex items-center gap-0.5 text-error font-semibold cursor-pointer"
-                                          title="Falha ao enviar. Toque para reenviar"
-                                        >
-                                          <span className="material-symbols-outlined text-[14px]">error</span>
-                                          <span>Reenviar</span>
-                                        </button>
-                                      ) : m.status === 'sending' ? (
-                                        <span
-                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
-                                          title="Enviando"
-                                        >
-                                          schedule
-                                        </span>
-                                      ) : m.status === 'read' ? (
-                                        <span
-                                          className="material-symbols-outlined text-[15px] text-primary font-bold select-none inline-flex items-center"
-                                          title="Lida"
-                                        >
-                                          done_all
-                                        </span>
-                                      ) : m.status === 'delivered' ? (
-                                        <span
-                                          className="material-symbols-outlined text-[15px] text-zinc-400 select-none inline-flex items-center"
-                                          title="Entregue"
-                                        >
-                                          done_all
-                                        </span>
-                                      ) : (
-                                        <span
-                                          className="material-symbols-outlined text-[14px] text-zinc-400 select-none inline-flex items-center"
-                                          title="Enviada"
-                                        >
-                                          check
-                                        </span>
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </React.Fragment>
-                          );
-                        })
+                        messageNodes
                       )}
 
                       {/* Estado: Usuário Digitando... */}

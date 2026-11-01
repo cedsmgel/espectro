@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   authStorage,
@@ -458,26 +458,22 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     }
   };
 
-  if (error && !detail) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-on-surface-variant">
-        <div>
-          <p className="font-semibold text-on-surface">{error}</p>
-          <Link to="/mensagens" className="text-primary text-xs hover:underline">Voltar às mensagens</Link>
-        </div>
-      </div>
-    );
-  }
-  if (!detail) {
-    return <div className="flex-1 flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
-  }
-
-  const isAdmin = detail.my_role === 'admin';
-  const canSend = isAdmin || !detail.group.only_admins_send;
-  const roleOf = new Map(detail.members.map((m) => [m.id, m]));
-  const term = searchTerm.trim().toLowerCase();
-  const shown = term ? messages.filter((m) => m.message_type !== 'system' && !m.deleted && (m.content || '').toLowerCase().includes(term)) : messages;
-
+  // Lista de bolhas memorizada: digitar no campo não recria as mensagens.
+  const latestActions = useRef<Record<string, (...args: any[]) => any>>({});
+  latestActions.current = { handleStartEdit, handleCopy, handleDelete, reactTo, toggleStar, startLongPress, cancelLongPress };
+  const listNodes = useMemo(() => {
+    if (!detail) return null;
+    const isAdmin = detail.my_role === 'admin';
+    const roleOf = new Map(detail.members.map((m) => [m.id, m]));
+    const term = searchTerm.trim().toLowerCase();
+    const shown = term ? messages.filter((m) => m.message_type !== 'system' && !m.deleted && (m.content || '').toLowerCase().includes(term)) : messages;
+    const handleStartEdit = (...args: any[]) => latestActions.current.handleStartEdit(...args);
+    const handleCopy = (...args: any[]) => latestActions.current.handleCopy(...args);
+    const handleDelete = (...args: any[]) => latestActions.current.handleDelete(...args);
+    const reactTo = (...args: any[]) => latestActions.current.reactTo(...args);
+    const toggleStar = (...args: any[]) => latestActions.current.toggleStar(...args);
+    const startLongPress = (...args: any[]) => latestActions.current.startLongPress(...args);
+    const cancelLongPress = (...args: any[]) => latestActions.current.cancelLongPress(...args);
   const renderBody = (m: GroupMessage) => {
     if (m.deleted) return <span className="italic opacity-70">Mensagem apagada</span>;
     if (m.view_once && (m.message_type === 'image' || m.message_type === 'video')) {
@@ -521,110 +517,8 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
         return <span className="whitespace-pre-wrap break-words">{m.content}</span>;
     }
   };
-
-  return (
-    <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-surface text-on-surface">
-      {/* Cabeçalho: mesmo padrão do chat privado */}
-      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between shadow-xs z-10 flex-shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link to="/mensagens" className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container md:hidden" aria-label="Voltar">
-            <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-          </Link>
-          <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
-            {detail.group.name.charAt(0)}
-          </div>
-          <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
-            <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
-            <span className="block text-[11px] text-on-surface-variant truncate">
-              {typerLabel ? (
-                <span className="text-primary font-semibold">{typerLabel}</span>
-              ) : (
-                detail.members.map((m) => `@${m.username}`).join(', ')
-              )}
-            </span>
-          </button>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setSearchOpen((open) => !open);
-              setSearchTerm('');
-            }}
-            title="Pesquisar na conversa"
-            aria-label="Pesquisar na conversa"
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-              searchOpen ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[20px]">search</span>
-          </button>
-          <ChatMenu
-            title="Opções do grupo"
-            buttonClassName="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-            items={[
-              { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
-              { key: 'search', label: 'Pesquisar na conversa', icon: 'search', onSelect: () => setSearchOpen(true) },
-              { key: 'share', label: 'Compartilhar grupo', icon: 'share', onSelect: () => setModal('share'), hidden: !isAdmin && !detail.group.members_can_invite },
-              { key: 'library', label: 'Mídias, links e docs', icon: 'perm_media', onSelect: () => setModal('library') },
-              { key: 'starred', label: 'Mensagens favoritas', icon: 'star', onSelect: () => setModal('starred') },
-              {
-                key: 'disappear',
-                label: `Mensagens temporárias · ${disappearLabel(detail.group.disappear_seconds)}`,
-                icon: 'timer',
-                onSelect: () => setModal('disappear'),
-                hidden: !isAdmin,
-              },
-              { key: 'permissions', label: 'Permissões do grupo', icon: 'admin_panel_settings', onSelect: () => setModal('permissions'), hidden: !isAdmin },
-              { key: 'export', label: exporting ? 'Exportando...' : 'Exportar conversa', icon: 'download', onSelect: () => void exportConversation() },
-              { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
-            ]}
-          />
-        </div>
-      </div>
-
-      {searchOpen && (
-        <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant flex items-center gap-2 flex-shrink-0">
-          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
-          <input
-            autoFocus
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar nas mensagens carregadas..."
-            className="flex-1 h-8 bg-transparent text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setSearchTerm('');
-              setSearchOpen(false);
-            }}
-            aria-label="Fechar busca"
-            className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
-        </div>
-      )}
-
-      {/* Histórico */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
-        {hasMore && (
-          <div className="flex justify-center mb-2">
-            <button type="button" onClick={loadOlder} className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low">
-              Carregar mensagens anteriores
-            </button>
-          </div>
-        )}
-
-        {messages.length === 0 && (
-          <div className="text-center text-xs text-on-surface-variant py-10">
-            <p className="font-semibold text-on-surface">Nenhuma mensagem ainda</p>
-            <p>Diga um oi para o grupo.</p>
-          </div>
-        )}
-
+    return (
+      <>
         {term && shown.length === 0 && <p className="text-center text-xs text-on-surface-variant py-10">Nada encontrado.</p>}
 
         {shown.map((m, idx) => {
@@ -837,6 +731,132 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
             </React.Fragment>
           );
         })}
+      </>
+    );
+  }, [detail, messages, searchTerm, kebabId, starredIds, user?.id]);
+
+  if (error && !detail) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-on-surface-variant">
+        <div>
+          <p className="font-semibold text-on-surface">{error}</p>
+          <Link to="/mensagens" className="text-primary text-xs hover:underline">Voltar às mensagens</Link>
+        </div>
+      </div>
+    );
+  }
+  if (!detail) {
+    return <div className="flex-1 flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
+  }
+
+  const isAdmin = detail.my_role === 'admin';
+  const canSend = isAdmin || !detail.group.only_admins_send;
+
+
+  return (
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-surface text-on-surface">
+      {/* Cabeçalho: mesmo padrão do chat privado */}
+      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to="/mensagens" className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container md:hidden" aria-label="Voltar">
+            <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+          </Link>
+          <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
+            {detail.group.name.charAt(0)}
+          </div>
+          <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
+            <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
+            <span className="block text-[11px] text-on-surface-variant truncate">
+              {typerLabel ? (
+                <span className="text-primary font-semibold">{typerLabel}</span>
+              ) : (
+                detail.members.map((m) => `@${m.username}`).join(', ')
+              )}
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setSearchOpen((open) => !open);
+              setSearchTerm('');
+            }}
+            title="Pesquisar na conversa"
+            aria-label="Pesquisar na conversa"
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+              searchOpen ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">search</span>
+          </button>
+          <ChatMenu
+            title="Opções do grupo"
+            buttonClassName="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+            items={[
+              { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
+              { key: 'search', label: 'Pesquisar na conversa', icon: 'search', onSelect: () => setSearchOpen(true) },
+              { key: 'share', label: 'Compartilhar grupo', icon: 'share', onSelect: () => setModal('share'), hidden: !isAdmin && !detail.group.members_can_invite },
+              { key: 'library', label: 'Mídias, links e docs', icon: 'perm_media', onSelect: () => setModal('library') },
+              { key: 'starred', label: 'Mensagens favoritas', icon: 'star', onSelect: () => setModal('starred') },
+              {
+                key: 'disappear',
+                label: `Mensagens temporárias · ${disappearLabel(detail.group.disappear_seconds)}`,
+                icon: 'timer',
+                onSelect: () => setModal('disappear'),
+                hidden: !isAdmin,
+              },
+              { key: 'permissions', label: 'Permissões do grupo', icon: 'admin_panel_settings', onSelect: () => setModal('permissions'), hidden: !isAdmin },
+              { key: 'export', label: exporting ? 'Exportando...' : 'Exportar conversa', icon: 'download', onSelect: () => void exportConversation() },
+              { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
+            ]}
+          />
+        </div>
+      </div>
+
+      {searchOpen && (
+        <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant flex items-center gap-2 flex-shrink-0">
+          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+          <input
+            autoFocus
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar nas mensagens carregadas..."
+            className="flex-1 h-8 bg-transparent text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setSearchOpen(false);
+            }}
+            aria-label="Fechar busca"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* Histórico */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
+        {hasMore && (
+          <div className="flex justify-center mb-2">
+            <button type="button" onClick={loadOlder} className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low">
+              Carregar mensagens anteriores
+            </button>
+          </div>
+        )}
+
+        {messages.length === 0 && (
+          <div className="text-center text-xs text-on-surface-variant py-10">
+            <p className="font-semibold text-on-surface">Nenhuma mensagem ainda</p>
+            <p>Diga um oi para o grupo.</p>
+          </div>
+        )}
+
+        {listNodes}
         {typerList.map((t) => (
           <TypingBubble key={t.username} kind={t.kind} name={`@${t.username}`} className="mt-2" />
         ))}
