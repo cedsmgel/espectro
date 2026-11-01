@@ -27,6 +27,7 @@ import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
 import { GroupChatPanel } from './GroupChat';
 import { AudioMessage } from '../components/chat/AudioMessage';
+import { useIsPhone } from '../hooks/useIsPhone';
 import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
@@ -141,6 +142,7 @@ export const DirectMessages: React.FC = () => {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [forwardModalMessage, setForwardModalMessage] = useState<ChatMessage | null>(null);
   const { height: viewportHeight, isMobile, isKeyboardOpen } = useVisualViewport();
+  const isPhone = useIsPhone();
   const { isDark: isDarkTheme } = useTheme();
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -2096,7 +2098,7 @@ export const DirectMessages: React.FC = () => {
                         </button>
 
                         {/* Câmera (somente celular) */}
-                        {isMobile && <button
+                        {isPhone && <button
                           type="button"
                           onClick={() => {
                             setShowAttachMenu(false);

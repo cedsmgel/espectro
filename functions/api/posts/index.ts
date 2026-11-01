@@ -246,8 +246,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const cleanContent = content && typeof content === "string" ? content.trim() : "";
     const cleanTitle = title && typeof title === "string" && title.trim().length > 0 ? title.trim() : null;
 
-    if (cleanContent.length > 10000) {
-      return errorResponse("O conteúdo da postagem excede 10.000 caracteres.", 400);
+    if (cleanContent.length > 2000) {
+      return errorResponse("O conteúdo da postagem excede 2.000 caracteres.", 400);
     }
     if (cleanTitle && cleanTitle.length > 200) {
       return errorResponse("O título excede 200 caracteres.", 400);

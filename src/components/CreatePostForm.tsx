@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImageCropperModal } from './ImageCropperModal';
 import { authStorage, Community, CreatePostData, uploadApi } from '../lib/api';
+import { useIsPhone } from '../hooks/useIsPhone';
 import {
   DEFAULT_SCRAP_STYLE,
   SCRAP_FONTS,
@@ -25,23 +26,8 @@ interface CreatePostFormProps {
 }
 
 const DRAFT_STORAGE_KEY = 'espectro_composer_draft';
-
-// Lista de emojis populares para inserção rápida
-const QUICK_EMOJIS = [
-  '😊', '😂', '🔥', '❤️', '👏', '😍', '👍', '🎉',
-  '✨', '🚀', '👀', '💡', '💬', '💯', '🥳', '😎',
-  '🙌', '🤩', '💜', '🍀', '☕', '⚡', '🌟', '🎯',
-];
-
-// GIFs de fallback rápidos caso a API externa demore
-const FALLBACK_GIFS = [
-  { id: '1', url: 'https://media.giphy.com/media/artj92V8o75VPL7AeQ/giphy.gif', title: 'Celebrate' },
-  { id: '2', url: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif', title: 'Party' },
-  { id: '3', url: 'https://media.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif', title: 'Applause' },
-  { id: '4', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', title: 'Dance' },
-  { id: '5', url: 'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif', title: 'Thumbs Up' },
-  { id: '6', url: 'https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif', title: 'Awesome' },
-];
+// Mesmo limite que a API aceita para publicações
+const POST_CONTENT_MAX = 2000;
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   onPostCreated,
@@ -52,6 +38,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 }) => {
   const user = authStorage.getUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isPhone = useIsPhone();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -63,19 +51,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
   const [fileAccept, setFileAccept] = useState('image/*,video/*');
-  const [locationTag, setLocationTag] = useState<string | null>(null);
 
   // Estados para Drag & Drop e Recorte Profissional (Tarefas 1, 2, 3 e 4)
   const [pendingCropImage, setPendingCropImage] = useState<{ src: string; fileName: string } | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [videoFileName, setVideoFileName] = useState<string | null>(null);
-
-  // Modais / Popovers flutuantes da barra inferior
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showGifPicker, setShowGifPicker] = useState(false);
-  const [gifSearchQuery, setGifSearchQuery] = useState('');
-  const [gifResults, setGifResults] = useState(FALLBACK_GIFS);
-  const [loadingGifs, setLoadingGifs] = useState(false);
 
   // Estados de submissão e upload
   const [submitting, setSubmitting] = useState(false);
@@ -147,7 +127,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     setMediaType(null);
     setLocalPreviewUrl(null);
     setVideoFileName(null);
-    setLocationTag(null);
     setIsDraftRestored(false);
   };
 
@@ -159,30 +138,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     if (onClose) {
       onClose();
     }
-  };
-
-  // Inserção de texto ou emoji na posição do cursor
-  const insertTextAtCursor = (textToInsert: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setContent((prev) => prev + textToInsert);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const currentVal = textarea.value;
-
-    const newContent =
-      currentVal.substring(0, start) + textToInsert + currentVal.substring(end);
-
-    setContent(newContent);
-
-    setTimeout(() => {
-      textarea.focus();
-      const newPos = start + textToInsert.length;
-      textarea.setSelectionRange(newPos, newPos);
-    }, 15);
   };
 
   // Inserção de Markdown simples (Negrito, Itálico, Link)
@@ -214,8 +169,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   };
 
   const handleTriggerUpload = (type: 'image' | 'video') => {
-    setShowEmojiPicker(false);
-    setShowGifPicker(false);
     if (type === 'video') {
       setFileAccept('video/mp4,video/webm,video/quicktime,video/ogg,video/m4v');
     } else {
@@ -347,75 +300,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     },
   });
 
-  // Busca rápida de GIFs na API do Giphy com fallback
-  useEffect(() => {
-    if (!showGifPicker) return;
-
-    const timer = setTimeout(async () => {
-      const query = gifSearchQuery.trim();
-      setLoadingGifs(true);
-      const apiKey = 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0P4W3';
-
-      try {
-        const endpoint = query
-          ? `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=12&rating=g`
-          : `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=12&rating=g`;
-
-        const res = await fetch(endpoint);
-        if (res.ok) {
-          const data: any = await res.json();
-          if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
-            const formatted = data.data.map((g: any) => ({
-              id: g.id,
-              url: g.images?.downsized_medium?.url || g.images?.original?.url || g.images?.fixed_height?.url,
-              title: g.title || 'GIF',
-            }));
-            setGifResults(formatted);
-          }
-        }
-      } catch {
-        setGifResults(FALLBACK_GIFS);
-      } finally {
-        setLoadingGifs(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [gifSearchQuery, showGifPicker]);
-
-  const handleSelectGif = (gifUrl: string) => {
-    setMediaUrl(gifUrl);
-    setMediaType('image');
-    setShowGifPicker(false);
-    setGifSearchQuery('');
-  };
-
-  // Obter localização nativa
-  const handleLocationClick = () => {
-    if (locationTag) {
-      setLocationTag(null);
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      setError('Geolocalização não suportada neste dispositivo.');
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(2);
-        const lng = pos.coords.longitude.toFixed(2);
-        setLocationTag(`📍 ${lat}, ${lng}`);
-      },
-      () => {
-        // Fallback elegante
-        setLocationTag('📍 Brasil');
-      },
-      { timeout: 7000 }
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -433,10 +317,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       return;
     }
 
-    let finalContent = content.trim();
-    if (locationTag && !finalContent.includes(locationTag)) {
-      finalContent = `${finalContent}\n\n${locationTag}`;
-    }
+    const finalContent = content.trim();
 
     if (!finalContent.trim() && !hasMedia) {
       setError('Escreva algo ou anexe uma foto/vídeo para publicar.');
@@ -471,7 +352,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setContent('');
       setMediaUrl('');
       setMediaType(null);
-      setLocationTag(null);
       setIsDraftRestored(false);
       setSuccess(true);
 
@@ -501,6 +381,16 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     >
       {/* react-dropzone input invisível */}
       <input {...getInputProps()} />
+
+      {/* Câmera do celular: abre direto a câmera traseira e passa pelo mesmo recorte das fotos */}
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Input de arquivo nativo invisível para os botões Foto/Vídeo */}
       <input
@@ -701,7 +591,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                   </button>
                 </div>
                 <span className="text-[11px] font-mono text-on-surface-variant/70">
-                  {content.length} caracteres
+                  {content.length}/{POST_CONTENT_MAX} caracteres
                 </span>
               </div>
             )}
@@ -810,6 +700,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                   ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
+                maxLength={POST_CONTENT_MAX}
                   placeholder="Escreva seu scrap nostálgico aqui..."
                   rows={6}
                   style={scrapPaperStyle(scrapStyle)}
@@ -824,25 +715,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
+                maxLength={POST_CONTENT_MAX}
                 placeholder="O que você gostaria de discutir ou compartilhar hoje?"
                 rows={6}
                 className="w-full min-h-[160px] bg-transparent text-on-surface text-sm sm:text-base placeholder:text-on-surface-variant/40 focus:outline-none resize-none leading-relaxed"
               />
             )}
 
-            {/* Tag de Localização se ativa */}
-            {locationTag && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-xs font-semibold self-start border border-rose-500/20">
-                <span>{locationTag}</span>
-                <button
-                  type="button"
-                  onClick={() => setLocationTag(null)}
-                  className="hover:opacity-75"
-                >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -894,79 +773,6 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           </div>
         )}
 
-        {/* Popover de Emojis */}
-        {showEmojiPicker && (
-          <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800 text-xs font-bold text-zinc-300">
-              <span>Escolha um Emoji</span>
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(false)}
-                className="text-zinc-500 hover:text-zinc-200"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-8 gap-2">
-              {QUICK_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => insertTextAtCursor(emoji)}
-                  className="text-xl p-1.5 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer text-center"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Popover de GIFs com Busca */}
-        {showGifPicker && (
-          <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl animate-in fade-in zoom-in-95 flex flex-col gap-2.5">
-            <div className="flex items-center justify-between text-xs font-bold text-zinc-300">
-              <span>Pesquisar GIFs</span>
-              <button
-                type="button"
-                onClick={() => setShowGifPicker(false)}
-                className="text-zinc-500 hover:text-zinc-200"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
-            </div>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                value={gifSearchQuery}
-                onChange={(e) => setGifSearchQuery(e.target.value)}
-                placeholder="Buscar no Giphy..."
-                className="w-full bg-zinc-950 text-zinc-200 text-xs rounded-xl pl-9 pr-3 py-2 border border-zinc-800 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-              {loadingGifs ? (
-                <div className="col-span-3 py-6 text-center text-xs text-zinc-500">
-                  Carregando GIFs...
-                </div>
-              ) : (
-                gifResults.map((gif) => (
-                  <button
-                    key={gif.id}
-                    type="button"
-                    onClick={() => handleSelectGif(gif.url)}
-                    className="rounded-lg overflow-hidden border border-zinc-800 hover:border-blue-500 transition-all cursor-pointer aspect-video bg-zinc-950"
-                  >
-                    <img src={gif.url} alt={gif.title} className="w-full h-full object-cover" loading="lazy" />
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e alinhamento em linha única */}
@@ -981,7 +787,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-blue-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             aria-label="Adicionar Foto"
           >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
+            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">image</span>
           </button>
 
           {/* Vídeo (sem R2) */}
@@ -995,43 +801,18 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">videocam</span>
           </button>
 
-          {/* Emoji */}
-          <button
-            type="button"
-            onClick={() => {
-              setShowEmojiPicker(!showEmojiPicker);
-              setShowGifPicker(false);
-            }}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-amber-500 hover:text-amber-600 transition-colors cursor-pointer flex items-center justify-center"
-            aria-label="Adicionar Emoji"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">sentiment_satisfied</span>
-          </button>
-
-          {/* GIF */}
-          <button
-            type="button"
-            onClick={() => {
-              setShowGifPicker(!showGifPicker);
-              setShowEmojiPicker(false);
-            }}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-teal-500 hover:text-teal-600 transition-colors cursor-pointer flex items-center justify-center"
-            aria-label="Adicionar GIF"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">gif_box</span>
-          </button>
-
-          {/* Localização */}
-          <button
-            type="button"
-            onClick={handleLocationClick}
-            className={`p-1.5 sm:p-2 rounded-full hover:bg-surface-container transition-colors cursor-pointer flex items-center justify-center ${
-              locationTag ? 'text-rose-500 bg-rose-500/15' : 'text-rose-500 hover:text-rose-600'
-            }`}
-            aria-label="Adicionar Localização"
-          >
-            <span className="material-symbols-outlined text-[20px] sm:text-[21px]">location_on</span>
-          </button>
+          {/* Câmera: só aparece em celular */}
+          {isPhone && (
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploading}
+              className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-blue-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+              aria-label="Tirar foto com a câmera"
+            >
+              <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
+            </button>
+          )}
         </div>
 
         {/* Lado Direito: Seletor de Destino e Botão Publicar */}

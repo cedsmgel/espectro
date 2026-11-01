@@ -107,8 +107,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return errorResponse("O conteúdo da publicação não pode ser vazio.", 400);
     }
 
-    if (cleanContent.length > 10000) {
-      return errorResponse("O conteúdo da publicação excede 10.000 caracteres.", 400);
+    if (cleanContent.length > 2000) {
+      return errorResponse("O conteúdo da publicação excede 2.000 caracteres.", 400);
     }
     if (body.title && String(body.title).trim().length > 200) {
       return errorResponse("O título excede 200 caracteres.", 400);
