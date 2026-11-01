@@ -153,7 +153,7 @@ export const ProfileSettings: React.FC = () => {
         <SidebarNav />
         <div
           className={`pt-16 md:pt-0 flex-1 flex items-center justify-center p-6 transition-all duration-300 ease-in-out ${
-            isExpanded ? 'pl-0 md:pl-20 lg:pl-64' : 'pl-0 md:pl-20 lg:pl-64'
+            isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
           }`}
         >
           <EmptyState
@@ -178,7 +178,7 @@ export const ProfileSettings: React.FC = () => {
 
       <div
         className={`pt-16 md:pt-0 min-h-screen flex flex-col transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-20 lg:pl-64' : 'pl-0 md:pl-20 lg:pl-64'
+          isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
         <main className="w-full bg-surface py-8">

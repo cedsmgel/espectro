@@ -541,7 +541,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         </button>
       </header>
 
-      {/* 2. ABAS DE TIPO (Logo abaixo do Header): Botões Pílula (Discussão vs Scrap Nostálgico) */}
+      {/* 2. ABAS DE TIPO (Logo abaixo do Header): Botões Pílula (Discussão vs Scrap) */}
       <div className="flex items-center gap-2 px-3 sm:px-6 pb-2 bg-surface-container-lowest shrink-0">
         <button
           type="button"
@@ -565,7 +565,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">auto_stories</span>
-          <span>Scrap Nostálgico</span>
+          <span>Scrap</span>
         </button>
       </div>
 
@@ -745,7 +745,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                   value={content}
                   onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
                 maxLength={POST_CONTENT_MAX}
-                  placeholder="Escreva seu scrap nostálgico aqui..."
+                  placeholder="Escreva seu scrap aqui..."
                   rows={6}
                   style={scrapPaperStyle(scrapStyle)}
                   className="w-full min-h-[170px] rounded-sm px-5 pt-7 pb-5 shadow-lg focus:outline-none resize-none placeholder:opacity-50 placeholder:text-current"
