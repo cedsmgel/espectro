@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useMutedPreference } from '../lib/mutePreference';
+import { readFeedPrefs } from '../hooks/useFeedPrefs';
 
 export interface VideoPlayerProps {
   src: string;
@@ -21,6 +22,8 @@ let activeVideo: HTMLVideoElement | null = null;
 // Autoplay respeita quem pediu menos movimento ou economia de dados
 function autoplayAllowed(): boolean {
   if (typeof window === 'undefined') return false;
+  // Quem desligou "Reproduzir vídeos sozinhos" no menu do feed só toca ao toque
+  if (!readFeedPrefs().autoplay) return false;
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
   const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
   return !connection?.saveData;

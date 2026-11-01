@@ -184,7 +184,7 @@ export const ProfileSettings: React.FC = () => {
         }`}
       >
         <main className="w-full bg-surface py-8">
-          <div className="w-full max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="w-full max-w-2xl mx-auto px-4 sm:px-4">
             {/* Header da Página */}
             <div className="mb-6 flex items-center justify-between">
               <div>

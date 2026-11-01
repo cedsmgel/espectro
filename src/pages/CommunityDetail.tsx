@@ -244,8 +244,8 @@ export const CommunityDetail: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
-        <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 flex-1">
-          <section className="flex flex-col gap-6 max-w-4xl mx-auto min-w-0">
+        <main className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-4 pb-24 md:pb-8 flex-1">
+          <section className="flex flex-col gap-6 mx-auto min-w-0">
             {loading ? (
               <div className="flex flex-col gap-6">
                 {/* Header Skeleton */}

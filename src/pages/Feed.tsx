@@ -10,6 +10,8 @@ import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
 import { MomentumBar } from '../components/moments/MomentumBar';
+import { FeedPreferences } from '../components/FeedPreferences';
+import { useFeedPrefs } from '../hooks/useFeedPrefs';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,6 +24,7 @@ export const Feed: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'foryou' | 'following' | 'trending'>('foryou');
   const [showCommunityModal, setShowCommunityModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { prefs, update: updatePrefs, reset: resetPrefs, isCustom } = useFeedPrefs();
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -133,7 +136,7 @@ export const Feed: React.FC = () => {
   };
 
   // Filter posts
-  const filteredPosts = posts.filter((p) => {
+  const baseFiltered = posts.filter((p) => {
     if (queryParam) {
       const q = queryParam.toLowerCase();
       const matchTitle = p.title?.toLowerCase().includes(q);
@@ -149,6 +152,15 @@ export const Feed: React.FC = () => {
 
     return true;
   });
+
+  // Preferências do menu de personalização (salvas neste aparelho)
+  const hasMedia = (p: Post) => Boolean(p.media_url && p.media_url.trim());
+  const filteredPosts = baseFiltered
+    .filter((p) => (prefs.show === 'media' ? hasMedia(p) : prefs.show === 'text' ? !hasMedia(p) : true))
+    .filter((p) => (prefs.communities === 'hide' ? !p.community_id : true));
+  if (prefs.sort === 'top') {
+    filteredPosts.sort((a, b) => (b.upvotes || 0) - (b.downvotes || 0) - ((a.upvotes || 0) - (a.downvotes || 0)) || b.id - a.id);
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background text-on-surface">
@@ -176,7 +188,7 @@ export const Feed: React.FC = () => {
 
           {/* Abas do Feed fixas no topo da lista (Tarefa 5: dentro de max-w-2xl mx-auto) */}
           <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-20 -mx-4 px-4 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
-            <div className="flex items-center gap-6 sm:gap-8">
+            <div className="flex-1 min-w-0 flex items-center gap-5 sm:gap-8 overflow-x-auto scrollbar-none">
               {(
                 [
                   { key: 'foryou', label: 'Para Você', params: {} },
@@ -191,24 +203,23 @@ export const Feed: React.FC = () => {
                     setActiveTab(tab.key);
                     setSearchParams(tab.params as Record<string, string>);
                   }}
-                  className={`relative py-3 text-sm font-semibold transition-colors cursor-pointer ${
+                  className={`relative shrink-0 py-3 text-sm font-semibold transition-colors cursor-pointer ${
                     activeTab === tab.key ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   {tab.label}
-                  {activeTab === tab.key && (
-                    <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />
-                  )}
+                  {activeTab === tab.key && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />}
                 </button>
               ))}
+              {/* No celular não há menu lateral: Vídeos e Comunidades ficam ao lado das abas */}
+              <Link to="/shorts" className="md:hidden relative shrink-0 py-3 text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
+                Vídeos
+              </Link>
+              <Link to="/comunidades" className="md:hidden relative shrink-0 py-3 text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
+                Comunidades
+              </Link>
             </div>
-            <button
-              type="button"
-              aria-label="Preferências do feed"
-              className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">tune</span>
-            </button>
+            <FeedPreferences prefs={prefs} isCustom={isCustom} onChange={updatePrefs} onReset={resetPrefs} />
           </div>
 
           {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}

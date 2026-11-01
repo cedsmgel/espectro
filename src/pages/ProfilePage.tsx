@@ -306,7 +306,7 @@ export const ProfilePage: React.FC = () => {
         }`}
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
-          <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex flex-col gap-6 sm:gap-8">
+          <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 flex flex-col gap-6 sm:gap-8">
             {/* Capa do perfil */}
             {userProfile?.cover_url && !isLockedPrivate && (
               <div className="-mb-2 h-32 sm:h-52 rounded-3xl overflow-hidden border border-outline-variant bg-surface-container-low">
