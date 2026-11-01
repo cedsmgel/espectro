@@ -296,15 +296,15 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
 }
 
 export const api = {
-  async register(params: { username: string; email: string; password: string }) {
-    return apiRequest<{ id: number; username: string }>('/api/register', {
+  async register(params: { username: string; email: string; password: string; turnstile_token?: string }) {
+    return apiRequest<{ id: number; username: string; login_proof?: string }>('/api/register', {
       method: 'POST',
       body: JSON.stringify(params),
     });
   },
 
   // Com verificação em duas etapas, a senha só abre o segundo passo (mfa_required) e nenhuma sessão é criada
-  async login(params: { username: string; password: string }): Promise<LoginResult> {
+  async login(params: { username: string; password: string; turnstile_token?: string; login_proof?: string }): Promise<LoginResult> {
     const res = await apiRequest<LoginResult>('/api/login', {
       method: 'POST',
       body: JSON.stringify(params),
@@ -1163,8 +1163,14 @@ export const authFlowApi = {
     }
     return emailEnabledCache;
   },
-  forgotPassword: (email: string) =>
-    apiRequest<{ ok: boolean }>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  // Chave pública do Turnstile (null = desligado neste ambiente)
+  turnstileSiteKey: (): Promise<string | null> =>
+    fetch('/api/config')
+      .then((r) => (r.ok ? (r.json() as Promise<{ turnstile_sitekey?: string | null }>) : { turnstile_sitekey: null }))
+      .then((c) => c.turnstile_sitekey || null)
+      .catch(() => null),
+  forgotPassword: (email: string, turnstileToken?: string) =>
+    apiRequest<{ ok: boolean }>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email, turnstile_token: turnstileToken }) }),
   resetPassword: (token: string, password: string) =>
     apiRequest<{ changed: boolean }>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
   verifyEmail: (token: string) =>

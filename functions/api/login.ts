@@ -1,8 +1,9 @@
 import { completeLogin } from "../_shared/loginFlow";
 import { MfaEnv, mfaAvailable } from "../_shared/mfa";
-import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { verifyPassword, signJWT, verifyJWT, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { TurnstileEnv, turnstileFailedResponse, verifyTurnstile } from "../_shared/turnstile";
 
-export interface Env extends MfaEnv {
+export interface Env extends MfaEnv, TurnstileEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -16,7 +17,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const limited = await rateLimit(env.DB, request, "login-ip", 20, 300);
     if (limited) return limited;
 
-    let body: { username?: string; password?: string };
+    let body: { username?: string; password?: string; turnstile_token?: string; login_proof?: string };
     try {
       body = await request.json();
     } catch {
@@ -32,6 +33,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (username.length > 100 || password.length > 128) {
       return errorResponse("Credenciais inválidas.", 401);
     }
+
+    // Anti-bot (Turnstile). Logo depois do cadastro, a prova emitida pelo /api/register dispensa um segundo desafio
+    const proof = typeof body.login_proof === "string" ? await verifyJWT(body.login_proof, getJwtSecret(env)) : null;
+    const proofValid = proof?.purpose === "post_register";
+    if (!proofValid && !(await verifyTurnstile(request, env, body.turnstile_token, "login"))) return turnstileFailedResponse();
 
     const cleanUsername = username.trim().toLowerCase();
 
@@ -50,6 +56,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       await verifyPassword(password, DUMMY_HASH);
       return errorResponse("Credenciais inválidas.", 401);
     }
+
+    // A prova do cadastro só vale para a conta recém-criada
+    if (proofValid && proof?.id !== user.id) return turnstileFailedResponse();
 
     // Compara senha com PBKDF2
     const passwordMatch = await verifyPassword(password, user.password_hash);
