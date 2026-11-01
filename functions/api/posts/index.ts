@@ -40,7 +40,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         c.name AS community_name,
         c.slug AS community_slug,
         c.icon_color AS community_icon_color,
-        (SELECT COUNT(1) FROM comments WHERE comments.post_id = p.id) AS comments_count
+        (SELECT COUNT(1) FROM comments WHERE comments.post_id = p.id) AS comments_count,
+        ${authUser ? `EXISTS(SELECT 1 FROM saved_posts sp WHERE sp.post_id = p.id AND sp.user_id = ${Number(authUser.id)})` : "0"} AS saved
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN communities c ON p.community_id = c.id
@@ -127,6 +128,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       query += ` AND p.media_type = 'video' AND p.media_url IS NOT NULL AND p.media_url != ''`;
     } else if (mediaFilter === "any") {
       query += ` AND p.media_url IS NOT NULL AND p.media_url != ''`;
+    }
+
+    // saved=1: só as publicações que eu salvei (exige login)
+    if (url.searchParams.get("saved") === "1") {
+      if (!authUser) return errorResponse("Não autorizado.", 401);
+      query += ` AND p.id IN (SELECT post_id FROM saved_posts WHERE user_id = ?)`;
+      params.push(authUser.id);
     }
 
     // Paginação: before_id traz os posts mais antigos que o último recebido

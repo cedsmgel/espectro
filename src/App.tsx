@@ -20,6 +20,7 @@ const Shorts = lazyNamed(() => import('./pages/Shorts'), 'Shorts');
 const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
+const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
 const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
@@ -56,6 +57,8 @@ export const App: React.FC = () => {
           <Route path="/post/:id" element={<PostDetail />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/:username" element={<ProfilePage />} />
+          <Route path="/perfil/:username/:section" element={<ProfileSection />} />
+          <Route path="/u/:username/:section" element={<ProfileSection />} />
           <Route path="/u/:username" element={<ProfilePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/:username" element={<ProfilePage />} />

@@ -25,6 +25,7 @@ export interface Post {
   community_name: string | null;
   community_slug?: string | null;
   community_icon_color?: string | null;
+  saved?: number | boolean;
   comments_count: number;
 }
 
@@ -264,6 +265,8 @@ export const api = {
     community_slug?: string;
     post_type?: string;
     feed?: string;
+    saved?: boolean;
+    author_name?: string;
     media?: 'video' | 'any';
     before_id?: number;
     limit?: number;
@@ -276,6 +279,8 @@ export const api = {
     if (filters?.community_slug) params.set('community_slug', filters.community_slug);
     if (filters?.post_type) params.set('post_type', filters.post_type);
     if (filters?.feed) params.set('feed', filters.feed);
+    if (filters?.saved) params.set('saved', '1');
+    if (filters?.author_name) params.set('author_name', filters.author_name);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
   },
@@ -341,8 +346,7 @@ export const api = {
 export const authApi = api;
 
 export const postsApi = {
-  list: (filters?: { community_id?: number; community_slug?: string; post_type?: string; feed?: string }) =>
-    api.getPosts(filters),
+  list: (filters?: Parameters<typeof api.getPosts>[0]) => api.getPosts(filters),
   getById: (id: number) => apiRequest<Post>(`/api/posts/${id}`, { method: 'GET' }),
   create: (data: CreatePostData) => api.createPost(data),
   vote: (postId: number, voteType: 'up' | 'down') => api.votePost(postId, voteType),
@@ -870,6 +874,33 @@ export const searchApi = {
   search: async (query: string): Promise<SearchResults> => {
     return apiRequest<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`);
   },
+};
+
+export const savedApi = {
+  add: (postId: number) => apiRequest<{ saved: boolean }>('/api/saved', { method: 'POST', body: JSON.stringify({ post_id: postId }) }),
+  remove: (postId: number) => apiRequest<{ saved: boolean }>(`/api/saved?post_id=${postId}`, { method: 'DELETE' }),
+};
+
+export interface ProfileFriend {
+  id: number;
+  username: string;
+  name: string | null;
+  avatar_url: string | null;
+  mutual: number;
+}
+
+export interface MyActivity {
+  comments: Array<{ id: number; post_id: number; content: string; created_at: string; post_title: string | null; post_content: string }>;
+  votes: Array<{ post_id: number; vote: number; post_title: string | null; post_content: string }>;
+}
+
+export const profileSectionsApi = {
+  friends: (username: string, q?: string) =>
+    apiRequest<{ locked: boolean; friends: ProfileFriend[] }>(
+      `/api/profile_friends?username=${encodeURIComponent(username)}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+      { method: 'GET' }
+    ),
+  activity: () => apiRequest<MyActivity>('/api/activity', { method: 'GET' }),
 };
 
 export const usersApi = {
