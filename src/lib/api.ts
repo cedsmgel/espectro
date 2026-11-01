@@ -591,6 +591,23 @@ export interface AdminUser {
   reports_open: number;
 }
 
+export interface AdminVitalsMetric {
+  name: string;
+  device: 'phone' | 'desktop';
+  count: number;
+  p75: number;
+  good: number;
+  needs: number;
+  poor: number;
+}
+
+export interface AdminVitals {
+  days: number;
+  total: number;
+  metrics: AdminVitalsMetric[];
+  pages: Array<{ path: string; count: number; p75: number }>;
+}
+
 export const adminApi = {
   me: () => apiRequest<{ is_admin: boolean }>('/api/admin/me'),
   reports: (status: 'open' | 'closed', beforeId?: number) =>
@@ -605,6 +622,7 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, action: suspend ? 'suspend' : 'unsuspend', reason }),
     }),
+  vitals: (days: number) => apiRequest<AdminVitals>(`/api/admin/vitals?days=${days}`),
   removeContent: (type: 'post' | 'comment', id: number, note?: string) =>
     apiRequest<{ removed: boolean }>(
       `/api/admin/content?type=${type}&id=${id}${note ? `&note=${encodeURIComponent(note)}` : ''}`,
