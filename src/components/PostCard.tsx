@@ -188,7 +188,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     <>
       <article
         onClick={handleCardClick}
-        className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 flex flex-col transition-all hover:shadow-md ${
+        className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant flex flex-col transition-all hover:shadow-md ${
           !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
         } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
@@ -257,7 +257,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     className="fixed inset-0 z-30"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 top-8 z-40 w-48 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-1.5 flex flex-col animate-in fade-in duration-150">
+                  <div className="absolute right-0 top-8 z-40 w-48 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant py-1.5 flex flex-col animate-in fade-in duration-150">
                     {isAuthor ? (
                     <>
                     <button
@@ -284,7 +284,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                         handleDelete();
                       }}
                       disabled={isDeleting}
-                      className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2.5 cursor-pointer transition-colors text-left border-t border-outline-variant/20 font-medium"
+                      className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2.5 cursor-pointer transition-colors text-left border-t border-outline-variant font-medium"
                     >
                       <span className="material-symbols-outlined text-[17px] text-error">
                         delete
@@ -312,7 +312,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                             setShowMenu(false);
                             void handleAdminRemove();
                           }}
-                          className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2.5 cursor-pointer transition-colors text-left border-t border-outline-variant/30"
+                          className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2.5 cursor-pointer transition-colors text-left border-t border-outline-variant"
                         >
                           <span className="material-symbols-outlined text-[17px]">gavel</span>
                           <span>Remover (administrador)</span>
@@ -354,7 +354,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   const { style, body } = parseScrap(content);
                   const s = style || DEFAULT_SCRAP_STYLE;
                   return (
-                    <div className="relative mx-1 my-2 px-5 pt-7 pb-5 rounded-sm shadow-[0_8px_20px_rgba(0,0,0,0.35)] -rotate-[0.6deg]" style={scrapPaperStyle(s)}>
+                    <div className="relative mx-1 my-2 px-5 pt-7 pb-5 rounded-sm -rotate-[0.6deg]" style={scrapPaperStyle(s)}>
                       {/* Fita adesiva do recado */}
                       <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-20 h-5 bg-white/50 rotate-[-3deg] shadow-sm" />
                       <div className="whitespace-pre-wrap break-words">{renderMarkdown(body)}</div>
@@ -422,9 +422,9 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* 4. Ações: votos e comentários à esquerda; salvar e compartilhar à direita, todos com 40px de toque */}
-        <div className="px-3 sm:px-4 py-1.5 border-t border-outline-variant/20 flex items-center justify-between gap-2">
+        <div className="px-3 sm:px-4 py-1.5 border-t border-outline-variant flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center h-9 rounded-full bg-surface-container-low border border-outline-variant/30">
+            <div className="flex items-center h-9 rounded-full bg-surface-container-low border border-outline-variant">
               <button
                 type="button"
                 onClick={(e) => {
@@ -509,8 +509,8 @@ export const PostCard: React.FC<PostCardProps> = ({
       {/* MODAL DE EDIÇÃO DA PUBLICAÇÃO */}
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-lg bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+          <div className="w-full max-w-lg bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">
                   edit_note
@@ -544,7 +544,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     placeholder="Título da postagem..."
-                    className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
+                    className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
                   />
                 </div>
               )}
@@ -559,11 +559,11 @@ export const PostCard: React.FC<PostCardProps> = ({
                   placeholder="Escreva sua mensagem..."
                   rows={4}
                   required
-                  className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant/20">
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}

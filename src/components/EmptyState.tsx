@@ -28,7 +28,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div
-      className={`relative overflow-hidden bg-surface-container-lowest rounded-3xl p-8 sm:p-12 text-center border border-outline-variant/30 shadow-sm flex flex-col items-center justify-center transition-all ${className}`}
+      className={`relative overflow-hidden bg-surface-container-lowest rounded-3xl p-8 sm:p-12 text-center border border-outline-variant shadow-sm flex flex-col items-center justify-center transition-all ${className}`}
     >
       {/* Glow circles inspired by Stitch aesthetic */}
       <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />

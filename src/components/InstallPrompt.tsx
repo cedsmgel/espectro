@@ -79,7 +79,7 @@ export const InstallPrompt: React.FC = () => {
     <div
       role="dialog"
       aria-label="Instalar o Espectro"
-      className="fixed z-50 left-3 right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xl p-4 flex flex-col gap-3"
+      className="fixed z-50 left-3 right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] rounded-2xl bg-surface-container-lowest border border-outline-variant shadow-2xl p-4 flex flex-col gap-3"
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-extrabold">

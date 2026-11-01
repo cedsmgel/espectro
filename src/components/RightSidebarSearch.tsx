@@ -98,7 +98,7 @@ export const RightSidebarSearch: React.FC = () => {
 
       {/* Dropdown com Resultados */}
       {showSearchResults && searchQuery.trim().length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant overflow-hidden z-50 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
           {isSearching && !searchResults && (
             <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -109,7 +109,7 @@ export const RightSidebarSearch: React.FC = () => {
           {searchResults && (
             <>
               {searchResults.users.length > 0 && (
-                <div className="p-2 border-b border-outline-variant/20">
+                <div className="p-2 border-b border-outline-variant">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary">
                     <span className="material-symbols-outlined text-[16px]">person</span>
                     <span>Pessoas ({searchResults.users.length})</span>
@@ -148,7 +148,7 @@ export const RightSidebarSearch: React.FC = () => {
               )}
 
               {searchResults.communities.length > 0 && (
-                <div className="p-2 border-b border-outline-variant/20">
+                <div className="p-2 border-b border-outline-variant">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-secondary">
                     <span className="material-symbols-outlined text-[16px]">groups</span>
                     <span>Comunidades ({searchResults.communities.length})</span>
@@ -163,7 +163,7 @@ export const RightSidebarSearch: React.FC = () => {
                       >
                         <div
                           className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-xs shrink-0"
-                          style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                          style={{ backgroundColor: c.icon_color || '#404040' }}
                         >
                           {c.name.charAt(0).toUpperCase()}
                         </div>
@@ -223,7 +223,7 @@ export const RightSidebarSearch: React.FC = () => {
                   </div>
                 )}
 
-              <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-on-surface-variant">
+              <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant flex items-center justify-between text-[11px] text-on-surface-variant">
                 <span>Pressione <strong className="font-semibold text-on-surface">Enter</strong> para ver mais</span>
                 <button
                   type="button"

@@ -9,7 +9,7 @@ interface CreateCommunityModalProps {
 }
 
 const PRESET_COLORS = [
-  { name: 'Roxo Espectro', hex: '#712ae2' },
+  { name: 'Roxo Espectro', hex: '#404040' },
   { name: 'Índigo Profundo', hex: '#4f46e5' },
   { name: 'Azul Elétrico', hex: '#0284c7' },
   { name: 'Esmeralda', hex: '#059669' },
@@ -40,7 +40,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#712ae2');
+  const [selectedColor, setSelectedColor] = useState('#404040');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
       setName('');
       setDescription('');
-      setSelectedColor('#712ae2');
+      setSelectedColor('#404040');
       onClose();
 
       // Redireciona para /c/:slug da nova comunidade
@@ -90,9 +90,9 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] w-full max-w-lg shadow-2xl flex flex-col gap-5 max-h-[90dvh] overflow-y-auto">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] w-full max-w-lg shadow-2xl flex flex-col gap-5 max-h-[90dvh] overflow-y-auto">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+        <div className="flex items-center justify-between border-b border-outline-variant pb-3">
           <div className="flex items-center gap-2.5">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs transition-colors"
@@ -135,7 +135,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="ex: Tecnologia, UI Design, Cinema Cult"
               maxLength={60}
-              className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
             <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant px-1">
@@ -158,7 +158,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               placeholder="Qual o propósito deste grupo, diretrizes ou tópicos debatidos?"
               rows={3}
               maxLength={300}
-              className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
+              className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
             />
             <div className="text-right text-[10px] text-on-surface-variant">
               {description.length}/300
@@ -207,7 +207,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           </div>
 
           {/* Live Badge Preview */}
-          <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
+          <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-base shadow-xs"
@@ -233,7 +233,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           </div>
 
           {/* Botões de Ação */}
-          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant/20">
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant">
             <button
               type="button"
               onClick={onClose}

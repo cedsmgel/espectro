@@ -74,8 +74,8 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({ onSelect, onClose }) =
   }, [tab, query, active]);
 
   return (
-    <div className="w-[min(92vw,22rem)] rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-2xl overflow-hidden flex flex-col">
-      <div className="flex items-center gap-1 p-2 border-b border-outline-variant/20">
+    <div className="w-[min(92vw,22rem)] rounded-2xl bg-surface-container-lowest border border-outline-variant shadow-2xl overflow-hidden flex flex-col">
+      <div className="flex items-center gap-1 p-2 border-b border-outline-variant">
         {(['gifs', 'stickers'] as const).map((t) => (
           <button
             key={t}

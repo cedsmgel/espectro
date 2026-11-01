@@ -49,7 +49,7 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
   return (
     <section
       aria-label="Comunidades para você"
-      className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3"
+      className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant flex flex-col gap-3"
     >
       <div className="flex items-center gap-2">
         <span className="material-symbols-outlined text-primary text-[20px]">travel_explore</span>
@@ -61,7 +61,7 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
           <li key={c.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-container transition-colors">
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+              style={{ backgroundColor: c.icon_color || '#404040' }}
             >
               {c.name.charAt(0).toUpperCase()}
             </div>

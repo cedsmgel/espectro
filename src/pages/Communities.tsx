@@ -62,7 +62,7 @@ export const Communities: React.FC = () => {
         <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 flex-1">
           <section className="flex flex-col gap-6 max-w-5xl mx-auto min-w-0">
             {/* Header Banner */}
-            <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant/30">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
                   <span>c/Comunidades</span>
@@ -101,7 +101,7 @@ export const Communities: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar comunidades por nome ou tópicos..."
-                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
             </div>
 
@@ -114,7 +114,7 @@ export const Communities: React.FC = () => {
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm flex flex-col gap-3"
+                    className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant shadow-sm flex flex-col gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-surface-container-high" />
@@ -157,13 +157,13 @@ export const Communities: React.FC = () => {
                 {filtered.map((comm) => (
                   <div
                     key={comm.id}
-                    className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
+                    className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4 group"
                   >
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-base flex-shrink-0 shadow-xs"
-                          style={{ backgroundColor: comm.icon_color || '#712ae2' }}
+                          style={{ backgroundColor: comm.icon_color || '#404040' }}
                         >
                           {comm.name.charAt(0).toUpperCase()}
                         </div>
@@ -185,7 +185,7 @@ export const Communities: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-outline-variant/20">
+                    <div className="flex items-center justify-between pt-3 border-t border-outline-variant">
                       <span className="text-[10px] text-on-surface-variant font-medium">
                         Desde 2026
                       </span>

@@ -131,7 +131,7 @@ export const PostDetail: React.FC = () => {
       <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
         <div className="w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
           {/* Barra de Topo com Botão Voltar */}
-          <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-20 -mx-4 px-4 py-3 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 flex items-center gap-4">
+          <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-20 -mx-4 px-4 py-3 bg-surface/85 backdrop-blur-md border-b border-outline-variant flex items-center gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -158,7 +158,7 @@ export const PostDetail: React.FC = () => {
               <div className="w-full h-32 bg-surface-container-low rounded-2xl animate-pulse" />
             </div>
           ) : error || !post ? (
-            <div className="p-8 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/30">
+            <div className="p-8 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant">
               <span className="material-symbols-outlined text-4xl text-error mb-2">error</span>
               <p className="font-semibold text-sm">{error || 'Publicação não encontrada.'}</p>
               <button
@@ -179,7 +179,7 @@ export const PostDetail: React.FC = () => {
               />
 
               {/* Caixa de Criação de Comentário */}
-              <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/30 shadow-xs">
+              <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant shadow-xs">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-3 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px] text-primary">add_comment</span>
                   Deixe seu comentário
@@ -233,7 +233,7 @@ export const PostDetail: React.FC = () => {
                     <div className="w-full h-16 bg-surface-container-low rounded-xl animate-pulse" />
                   </div>
                 ) : comments.length === 0 ? (
-                  <div className="p-8 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/20">
+                  <div className="p-8 text-center bg-surface-container-lowest rounded-2xl border border-outline-variant">
                     <span className="material-symbols-outlined text-3xl text-on-surface-variant/40 mb-1">
                       forum
                     </span>
@@ -247,7 +247,7 @@ export const PostDetail: React.FC = () => {
                     {comments.map((c) => (
                       <div
                         key={c.id}
-                        className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/20 shadow-xs flex flex-col gap-2 transition-colors hover:border-outline-variant/40"
+                        className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant shadow-xs flex flex-col gap-2 transition-colors hover:border-outline-variant/40"
                       >
                         <div className="flex items-center justify-between">
                           <Link

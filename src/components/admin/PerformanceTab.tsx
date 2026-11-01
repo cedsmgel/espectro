@@ -69,7 +69,7 @@ export const PerformanceTab: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant/30 self-start">
+      <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start">
         {[7, 30].map((value) => (
           <button
             key={value}
@@ -102,7 +102,7 @@ export const PerformanceTab: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {METRICS.map((metric) => (
-              <article key={metric.name} className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 flex flex-col gap-3">
+              <article key={metric.name} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 flex flex-col gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-on-surface">{metric.label}</h3>
                   <p className="text-[11px] text-on-surface-variant">{metric.hint}</p>
@@ -136,7 +136,7 @@ export const PerformanceTab: React.FC = () => {
           </div>
 
           {data.pages.length > 0 && (
-            <section className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4">
+            <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
               <h3 className="text-sm font-bold text-on-surface mb-1">Páginas de entrada mais lentas</h3>
               <p className="text-[11px] text-on-surface-variant mb-3">Tempo até o conteúdo principal aparecer (LCP, percentil 75).</p>
               <ul className="flex flex-col gap-2">

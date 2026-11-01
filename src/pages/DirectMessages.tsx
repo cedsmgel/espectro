@@ -993,7 +993,7 @@ export const DirectMessages: React.FC = () => {
 
       if (msgType === 'file') {
         return (
-          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-surface-container-high/60 border border-outline-variant/30 min-w-[180px] max-w-[240px]">
+          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-surface-container-high/60 border border-outline-variant min-w-[180px] max-w-[240px]">
             <div className="w-8 h-8 rounded-md bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-xs">
               <span className="material-symbols-outlined text-[18px]">description</span>
             </div>
@@ -1040,14 +1040,14 @@ export const DirectMessages: React.FC = () => {
         return (
           <div className="flex flex-col gap-2 min-w-[200px]">
             <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-rose-500">pin_drop</span>
+              <span className="material-symbols-outlined text-[18px] text-on-surface-variant">pin_drop</span>
               <span className="text-xs font-bold text-on-surface">Localização Compartilhada</span>
             </div>
             <a
               href={m.media_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2.5 rounded-xl bg-surface-container-high/70 hover:bg-surface-container transition-all flex items-center justify-between gap-2 border border-outline-variant/30 cursor-pointer group"
+              className="p-2.5 rounded-xl bg-surface-container-high/70 hover:bg-surface-container transition-all flex items-center justify-between gap-2 border border-outline-variant cursor-pointer group"
             >
               <div className="flex flex-col text-left">
                 <span className="text-[11px] font-mono text-on-surface truncate">{coords || 'Abrir Mapa'}</span>
@@ -1116,7 +1116,7 @@ export const DirectMessages: React.FC = () => {
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
           onClick={() => setPreviewImageUrl(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl bg-surface-container-lowest border border-outline-variant/30 p-2">
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl bg-surface-container-lowest border border-outline-variant p-2">
             <button
               type="button"
               onClick={() => setPreviewImageUrl(null)}
@@ -1162,7 +1162,7 @@ export const DirectMessages: React.FC = () => {
             <div className="flex flex-1 w-full h-full overflow-hidden bg-surface">
               {/* COLUNA 1: Diretório Direct (No mobile: tela cheia quando activeFriend é null) */}
               <aside
-                className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex-col bg-surface-container-lowest border-r border-outline-variant/30 shadow-xs z-10 ${
+                className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex-col bg-surface-container-lowest border-r border-outline-variant shadow-xs z-10 ${
                   activeFriend || activeGroupId ? 'hidden md:flex' : 'flex'
                 }`}
               >
@@ -1297,7 +1297,7 @@ export const DirectMessages: React.FC = () => {
                         }}
                         className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                           activeFriend?.friend_id === c.friend_id
-                            ? 'bg-surface-container-low border border-outline-variant/30 shadow-xs'
+                            ? 'bg-surface-container-low border border-outline-variant shadow-xs'
                             : 'hover:bg-surface-container-low/60'
                         }`}
                       >
@@ -1461,7 +1461,7 @@ export const DirectMessages: React.FC = () => {
                 ) : (
                   <>
                     {/* Header da Conversa Ativa */}
-                    <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+                    <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between shadow-xs z-10 flex-shrink-0">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         {/* Botão Voltar para Lista no Mobile (Tela Cheia) */}
                         <button
@@ -1597,7 +1597,7 @@ export const DirectMessages: React.FC = () => {
                     </div>
 
                     {convSearchOpen && (
-                      <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center gap-2 flex-shrink-0">
+                      <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant flex items-center gap-2 flex-shrink-0">
                         <span className="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
                         <input
                           autoFocus
@@ -1713,7 +1713,7 @@ export const DirectMessages: React.FC = () => {
                               {/* Separador de Data Visual */}
                               {showDateSeparator && (
                                 <div className="flex justify-center my-3 select-none">
-                                  <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant/20">
+                                  <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant">
                                     {currentDateLabel}
                                   </span>
                                 </div>
@@ -1758,7 +1758,7 @@ export const DirectMessages: React.FC = () => {
                                         e.stopPropagation();
                                         setActiveKebabMessage(isKebabOpen ? null : m);
                                       }}
-                                      className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-outline-variant flex items-center justify-center shadow-md transition-all cursor-pointer"
+                                      className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant text-on-surface-variant hover:text-on-surface hover:border-outline-variant flex items-center justify-center shadow-md transition-all cursor-pointer"
                                       title="Opções da mensagem"
                                     >
                                       <span className="material-symbols-outlined text-[16px]">more_vert</span>
@@ -1775,7 +1775,7 @@ export const DirectMessages: React.FC = () => {
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       {m.id && m.id > 0 && (
-                                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant/20 dark:border-zinc-800">
+                                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant dark:border-zinc-800">
                                           {REACTION_EMOJIS.map((emoji) => {
                                             const mine = (m.reactions || []).some((r) => r.user_id === user.id && r.emoji === emoji);
                                             return (
@@ -1862,7 +1862,7 @@ export const DirectMessages: React.FC = () => {
 
                                       {!isMe && m.id && m.id > 0 && (
                                         <>
-                                          <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-800" />
+                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
                                           <button
                                             type="button"
                                             onClick={() => {
@@ -1879,7 +1879,7 @@ export const DirectMessages: React.FC = () => {
 
                                       {isMe && m.id && (
                                         <>
-                                          <div className="my-1 border-t border-outline-variant/20 dark:border-zinc-800" />
+                                          <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />
                                           <button
                                             type="button"
                                             onClick={() => {
@@ -1903,7 +1903,7 @@ export const DirectMessages: React.FC = () => {
                                         ? `bg-primary-container text-on-primary rounded-2xl ${
                                             isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'
                                           } ${isLastInBlock ? 'rounded-br-xs' : 'rounded-br-md'} rounded-l-2xl`
-                                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant/30 ${
+                                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant ${
                                             isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
                                           } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
                                     }`}
@@ -1995,7 +1995,7 @@ export const DirectMessages: React.FC = () => {
                                         </span>
                                       ) : m.status === 'read' ? (
                                         <span
-                                          className="material-symbols-outlined text-[15px] text-blue-500 font-bold select-none inline-flex items-center"
+                                          className="material-symbols-outlined text-[15px] text-primary font-bold select-none inline-flex items-center"
                                           title="Lida"
                                         >
                                           done_all
@@ -2041,7 +2041,7 @@ export const DirectMessages: React.FC = () => {
 
                     {/* Barra de Progresso Real de Upload */}
                     {isUploading && (
-                      <div className="px-6 py-2.5 bg-surface-container-low border-t border-outline-variant/20 flex flex-col gap-1.5 animate-in fade-in">
+                      <div className="px-6 py-2.5 bg-surface-container-low border-t border-outline-variant flex flex-col gap-1.5 animate-in fade-in">
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2 truncate">
                             <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
@@ -2130,7 +2130,7 @@ export const DirectMessages: React.FC = () => {
 
                     {/* Popover do Menu de Anexos (Clipe) */}
                     {showAttachMenu && (
-                      <div className="absolute bottom-20 left-4 z-30 bg-surface-container-lowest rounded-2xl p-2 shadow-2xl border border-outline-variant/30 flex flex-col gap-1 w-52 animate-in fade-in slide-in-from-bottom-2">
+                      <div className="absolute bottom-20 left-4 z-30 bg-surface-container-lowest rounded-2xl p-2 shadow-2xl border border-outline-variant flex flex-col gap-1 w-52 animate-in fade-in slide-in-from-bottom-2">
                         {/* Foto ou Vídeo */}
                         <button
                           type="button"
@@ -2166,7 +2166,7 @@ export const DirectMessages: React.FC = () => {
                           }}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
                         >
-                          <span className="material-symbols-outlined text-[20px] text-indigo-500">description</span>
+                          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">description</span>
                           <span>Documento</span>
                         </button>
 
@@ -2176,14 +2176,14 @@ export const DirectMessages: React.FC = () => {
                           onClick={handleSendLocation}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
                         >
-                          <span className="material-symbols-outlined text-[20px] text-rose-500">location_on</span>
+                          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">location_on</span>
                           <span>Localização</span>
                         </button>}
                       </div>
                     )}
 
                     {/* Input do Chat com Botões de Anexo, Emojis, GIFs e Enviar */}
-                    <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 z-20">
+                    <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant flex-shrink-0 z-20">
                       {editingMessage && (
                         <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs">
                           <div className="min-w-0">
@@ -2241,7 +2241,7 @@ export const DirectMessages: React.FC = () => {
                       ) : (
                       <form
                         onSubmit={handleSendMessage}
-                        className="flex items-center gap-1.5 bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant/30 relative"
+                        className="flex items-center gap-1.5 bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant relative"
                       >
                         {/* Botão de Anexo (Clipe) */}
                         <button
@@ -2343,7 +2343,7 @@ export const DirectMessages: React.FC = () => {
       {/* MODAL AMIGÁVEL: Limite de Tamanho / Duração Excedido */}
       {fileLimitWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
             <div className="flex items-start gap-3">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[28px]">warning</span>
@@ -2357,7 +2357,7 @@ export const DirectMessages: React.FC = () => {
             </div>
 
             {fileLimitWarning.details && (
-              <div className="p-3.5 rounded-2xl bg-surface-container-low text-xs text-on-surface-variant leading-relaxed border border-outline-variant/20">
+              <div className="p-3.5 rounded-2xl bg-surface-container-low text-xs text-on-surface-variant leading-relaxed border border-outline-variant">
                 {fileLimitWarning.details}
               </div>
             )}
@@ -2378,8 +2378,8 @@ export const DirectMessages: React.FC = () => {
       {/* MODAL: Encaminhar Mensagem (Tarefa 3) */}
       {forwardModalMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">forward</span>
                 <h3 className="font-bold text-base text-on-surface">Encaminhar Mensagem</h3>
@@ -2394,7 +2394,7 @@ export const DirectMessages: React.FC = () => {
             </div>
 
             {/* Prévia da Mensagem a Encaminhar */}
-            <div className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-xs">
+            <div className="p-3 rounded-2xl bg-surface-container-low border border-outline-variant text-xs">
               <span className="font-semibold text-primary block text-[11px] mb-0.5">
                 @{forwardModalMessage.sender_username}
               </span>
@@ -2470,8 +2470,8 @@ export const DirectMessages: React.FC = () => {
       {/* MODAL: Dados da Mensagem (Tarefa 3) */}
       {infoModalMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-sm bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant/30 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+          <div className="w-full max-w-sm bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant shadow-2xl flex flex-col gap-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[22px]">info</span>
                 <h3 className="font-bold text-base text-on-surface">Dados da Mensagem</h3>
@@ -2506,7 +2506,7 @@ export const DirectMessages: React.FC = () => {
               <div className="flex justify-between items-center py-1 border-b border-outline-variant/10">
                 <span className="text-on-surface-variant">Status de Entrega:</span>
                 {infoModalMessage.status === 'read' ? (
-                  <span className="text-blue-500 font-semibold flex items-center gap-1">
+                  <span className="text-primary font-semibold flex items-center gap-1">
                     <span className="material-symbols-outlined text-[15px] font-bold">done_all</span>
                     Lido pelo destinatário
                   </span>
@@ -2537,7 +2537,7 @@ export const DirectMessages: React.FC = () => {
                     href={infoModalMessage.media_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline break-all text-[11px] p-2 rounded-xl bg-surface-container-low border border-outline-variant/20 block"
+                    className="text-primary hover:underline break-all text-[11px] p-2 rounded-xl bg-surface-container-low border border-outline-variant block"
                   >
                     {infoModalMessage.media_url}
                   </a>

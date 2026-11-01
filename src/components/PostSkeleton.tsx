@@ -2,7 +2,7 @@ import React from 'react';
 
 export const PostSkeleton: React.FC = () => {
   return (
-    <article className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 animate-pulse">
+    <article className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant flex flex-col gap-4 animate-pulse">
       {/* 1. Header Skeleton */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -31,7 +31,7 @@ export const PostSkeleton: React.FC = () => {
       </div>
 
       {/* 3. Media block skeleton (16:9) */}
-      <div className="w-full aspect-video rounded-xl bg-surface-container-high border border-outline-variant/20 flex items-center justify-center">
+      <div className="w-full aspect-video rounded-xl bg-surface-container-high border border-outline-variant flex items-center justify-center">
         <span className="material-symbols-outlined text-outline-variant/40 text-[40px]">
           image
         </span>

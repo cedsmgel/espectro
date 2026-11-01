@@ -86,7 +86,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
 
       {/* Sidebar Principal (Compacta estilo Instagram: w-20 fixa no Desktop com Tooltips Flutuantes no Hover) */}
       <aside
-        className={`fixed left-0 top-0 h-screen z-50 md:z-30 flex flex-col justify-between py-4 border-r border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.02)] bg-surface-container-lowest transition-all duration-300 ease-in-out shrink-0 ${
+        className={`fixed left-0 top-0 h-screen z-50 md:z-30 flex flex-col justify-between py-4 border-r border-outline-variant bg-surface-container-lowest transition-all duration-300 ease-in-out shrink-0 ${
           isExpanded
             ? 'translate-x-0 w-64 px-3.5 md:w-20 md:px-2'
             : '-translate-x-full md:translate-x-0 w-20 px-2'
@@ -100,7 +100,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               className="relative group flex items-center gap-2.5 cursor-pointer"
               aria-label="Página Inicial do Espectro"
             >
-              <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-white font-bold text-base shadow-xs group-hover:scale-105 transition-transform shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-on-primary font-bold text-base shadow-xs group-hover:scale-105 transition-transform shrink-0">
                 E
               </div>
               {isExpanded && (
@@ -129,7 +129,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               }
             }}
             aria-label="Criar Publicação"
-            className={`flex items-center rounded-2xl bg-primary-container text-on-primary shadow-sm hover:bg-primary transition-all duration-200 group relative cursor-pointer my-1 ${
+            className={`flex items-center rounded-2xl border-2 border-on-surface text-on-surface bg-transparent hover:bg-surface-container active:bg-on-surface active:text-surface transition-all duration-200 group relative cursor-pointer my-1 ${
               isExpanded
                 ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center'
                 : 'w-11 h-11 justify-center'
@@ -165,7 +165,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   : 'w-11 h-11 justify-center'
               } ${
                 showSearch
-                  ? 'bg-primary-container text-on-primary shadow-xs font-semibold'
+                  ? 'bg-surface-container text-on-surface font-semibold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
             >
@@ -199,7 +199,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                     : 'w-11 h-11 justify-center'
                 } ${
                   item.active
-                    ? 'bg-primary-container text-on-primary shadow-xs font-semibold'
+                    ? 'bg-surface-container text-on-surface font-semibold'
                     : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
                 }`}
               >
@@ -233,7 +233,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
         </div>
 
         {/* Rodapé: Perfil / Menu do Usuário */}
-        <div className="relative flex flex-col items-center gap-2 pt-3 border-t border-outline-variant/30 w-full">
+        <div className="relative flex flex-col items-center gap-2 pt-3 border-t border-outline-variant w-full">
           {user ? (
             <>
               <button
@@ -285,9 +285,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                     onClick={() => setShowUserMenu(false)}
                   />
                   <div
-                    className="absolute bottom-16 left-3 md:left-full md:ml-3.5 md:bottom-2 z-50 w-56 bg-surface-container-lowest rounded-2xl p-2 shadow-2xl border border-outline-variant/30 flex flex-col animate-in fade-in slide-in-from-bottom-2"
+                    className="absolute bottom-16 left-3 md:left-full md:ml-3.5 md:bottom-2 z-50 w-56 bg-surface-container-lowest rounded-2xl p-2 shadow-2xl border border-outline-variant flex flex-col animate-in fade-in slide-in-from-bottom-2"
                   >
-                    <div className="px-3 py-2 border-b border-outline-variant/20 mb-1">
+                    <div className="px-3 py-2 border-b border-outline-variant mb-1">
                       <p className="text-xs font-bold text-on-surface">@{user.username}</p>
                       <p className="text-[10px] text-on-surface-variant">Conectado ao Espectro</p>
                     </div>
@@ -350,7 +350,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-error hover:bg-error-container/20 transition-colors mt-1 border-t border-outline-variant/20 cursor-pointer text-left"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-error hover:bg-error-container/20 transition-colors mt-1 border-t border-outline-variant cursor-pointer text-left"
                     >
                       <span className="material-symbols-outlined text-[18px]">logout</span>
                       <span>Sair</span>
@@ -396,8 +396,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
             onClick={() => setShowSearch(false)}
           />
-          <aside className="fixed left-0 md:left-20 top-0 h-screen w-full sm:w-80 bg-surface-container-lowest border-r border-outline-variant/30 shadow-2xl z-50 p-4 flex flex-col gap-4 overflow-y-auto animate-in fade-in slide-in-from-left-4 duration-200">
-            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+          <aside className="fixed left-0 md:left-20 top-0 h-screen w-full sm:w-80 bg-surface-container-lowest border-r border-outline-variant shadow-2xl z-50 p-4 flex flex-col gap-4 overflow-y-auto animate-in fade-in slide-in-from-left-4 duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
               <h2 className="text-base font-bold text-on-surface">Pesquisa no Espectro</h2>
               <button
                 type="button"
