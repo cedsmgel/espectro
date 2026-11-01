@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import App, { preloadRoute } from './App';
 import { authStorage } from './lib/api';
@@ -46,5 +46,18 @@ if (rootElement.dataset.ssr === '1' && !authStorage.getToken()) {
       });
     });
 } else {
-  ReactDOM.createRoot(rootElement).render(app);
+  // O HTML do servidor fica escondido por CSS para quem está logado (#root[data-ssr]); depois que o app monta
+  // e o HTML antigo some do #root, a marca sai, senão o app inteiro continuaria escondido
+  const ClearSsrMark: React.FC = () => {
+    useLayoutEffect(() => {
+      rootElement.removeAttribute('data-ssr');
+    }, []);
+    return null;
+  };
+  ReactDOM.createRoot(rootElement).render(
+    <>
+      <ClearSsrMark />
+      {app}
+    </>
+  );
 }
