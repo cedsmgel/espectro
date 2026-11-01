@@ -25,19 +25,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const body: any = await request.json().catch(() => null);
     const current = body?.current;
     const next = body?.next;
-    if (typeof current !== "string" || typeof next !== "string") return errorResponse("Preencha a senha atual e a nova.", 400);
+    if (typeof next !== "string") return errorResponse("Preencha a nova senha.", 400);
     if (next.length < 8 || next.length > 128) return errorResponse("A nova senha deve ter entre 8 e 128 caracteres.", 400);
-    if (next === current) return errorResponse("A nova senha precisa ser diferente da atual.", 400);
 
-    const user = await env.DB.prepare("SELECT username, password_hash FROM users WHERE id = ?")
+    const user = await env.DB.prepare("SELECT username, password_hash, has_password FROM users WHERE id = ?")
       .bind(auth.id)
-      .first<{ username: string; password_hash: string }>();
-    if (!user || !(await verifyPassword(current, user.password_hash))) return errorResponse("Senha atual incorreta.", 403);
+      .first<{ username: string; password_hash: string; has_password: number }>();
+    if (!user) return errorResponse("Conta não encontrada.", 404);
+    // Conta criada pelo Google ainda não tem senha própria: a primeira é definida sem a "atual"
+    if (user.has_password) {
+      if (typeof current !== "string") return errorResponse("Preencha a senha atual e a nova.", 400);
+      if (!(await verifyPassword(current, user.password_hash))) return errorResponse("Senha atual incorreta.", 403);
+      if (next === current) return errorResponse("A nova senha precisa ser diferente da atual.", 400);
+    }
 
     const hash = await hashPassword(next);
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
-      env.DB.prepare("UPDATE users SET password_hash = ?, sessions_valid_after = ? WHERE id = ?").bind(hash, now, auth.id),
+      env.DB.prepare("UPDATE users SET password_hash = ?, sessions_valid_after = ?, has_password = 1 WHERE id = ?").bind(hash, now, auth.id),
       env.DB.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL AND id != ?").bind(auth.id, auth.sid ?? ""),
     ]);
     forgetSuspension(auth.id);

@@ -24,6 +24,7 @@ const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage'
 const DeleteAccount = lazyNamed(() => import('./pages/DeleteAccount'), 'DeleteAccount');
 const ResetPassword = lazyNamed(() => import('./pages/ResetPassword'), 'ResetPassword');
 const VerifyEmail = lazyNamed(() => import('./pages/VerifyEmail'), 'VerifyEmail');
+const GoogleCallback = lazyNamed(() => import('./pages/GoogleCallback'), 'GoogleCallback');
 const Home = lazyNamed(() => import('./pages/Home'), 'Home');
 const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
@@ -91,6 +92,7 @@ export const App: React.FC = () => {
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<ResetPassword />} />
+          <Route path="/entrar/google" element={<GoogleCallback />} />
           <Route path="/confirmar-email" element={<VerifyEmail />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

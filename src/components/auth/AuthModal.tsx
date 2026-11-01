@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { authApi, authFlowApi } from '../../lib/api';
+import { authApi, authFlowApi, googleApi } from '../../lib/api';
+import { currentPath } from '../../lib/authEvents';
 import { AuthRequest } from '../../lib/authEvents';
 
 interface AuthModalProps {
@@ -18,7 +19,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 
 // Login e cadastro em um modal único. Usa as mesmas chamadas e validações do restante do app (authApi).
 export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSuccess }) => {
-  const [mode, setMode] = useState<Mode>(request.mode === 'register' ? 'register' : 'login');
+  const [mode, setMode] = useState<Mode>(request.mfaToken ? 'mfa' : request.mode === 'register' ? 'register' : 'login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -28,7 +29,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const [error, setError] = useState<string | null>(null);
   const [canRecover, setCanRecover] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
-  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaToken, setMfaToken] = useState<string | null>(request.mfaToken ?? null);
+  const [googleReady, setGoogleReady] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [useRecovery, setUseRecovery] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -37,7 +39,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
 
   useEffect(() => {
     void authFlowApi.emailEnabled().then(setCanRecover);
+    void authFlowApi.googleEnabled().then(setGoogleReady);
   }, []);
+
+  const continueWithGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      // Guarda para onde voltar; o navegador sai para o Google e volta em /entrar/google
+      try {
+        sessionStorage.setItem('espectro_google_next', request.redirectTo || currentPath());
+      } catch {}
+      window.location.href = await googleApi.start('login');
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível abrir o Google agora.');
+      setLoading(false);
+    }
+  };
 
   // O pedido pode mudar o modo com o modal aberto (ex.: "Criar conta" clicado de novo)
   useEffect(() => {
@@ -295,6 +313,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             </form>
           )
         ) : (
+        <>
+        {googleReady && (
+          <>
+            <button
+              type="button"
+              onClick={() => void continueWithGoogle()}
+              disabled={loading}
+              className="w-full h-12 rounded-full border border-outline-variant flex items-center justify-center gap-3 text-sm font-semibold hover:bg-surface-container transition-colors disabled:opacity-60 cursor-pointer"
+            >
+              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
+                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+                <path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z" />
+                <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+              </svg>
+              Continuar com o Google
+            </button>
+            <div className="flex items-center gap-3 text-xs text-on-surface-variant" aria-hidden="true">
+              <span className="flex-1 h-px bg-outline-variant" />
+              ou
+              <span className="flex-1 h-px bg-outline-variant" />
+            </div>
+          </>
+        )}
         <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
           {mode === 'login' ? (
             <div className="flex flex-col gap-1.5">
@@ -374,6 +416,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
+        </>
         )}
 
         {mode !== 'forgot' && mode !== 'mfa' && (

@@ -32,7 +32,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     await env.DB.batch([
       // Receber o link provou o controle do e-mail
       env.DB.prepare(
-        "UPDATE users SET password_hash = ?, sessions_valid_after = ?, email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP) WHERE id = ?"
+        "UPDATE users SET password_hash = ?, sessions_valid_after = ?, has_password = 1, email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP) WHERE id = ?"
       ).bind(hash, now, userId),
       env.DB.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL").bind(userId),
     ]);

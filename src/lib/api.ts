@@ -875,6 +875,7 @@ export interface UserProfile {
   is_private?: boolean;
   allow_scraps?: boolean;
   email_verified?: boolean;
+  has_password?: boolean;
   is_friend?: boolean;
   is_self?: boolean;
   friendship_status?: string | null;
@@ -1047,6 +1048,11 @@ export interface AccountSession {
 let emailEnabledCache: Promise<boolean> | null = null;
 export const authFlowApi = {
   // O Espectro só mostra "Esqueci minha senha" quando o servidor consegue enviar e-mails
+  googleEnabled: (): Promise<boolean> =>
+    fetch('/api/config')
+      .then((r) => (r.ok ? (r.json() as Promise<{ google_enabled?: boolean }>) : { google_enabled: false }))
+      .then((c) => Boolean(c.google_enabled))
+      .catch(() => false),
   mfaEnabled: (): Promise<boolean> =>
     fetch('/api/config')
       .then((r) => (r.ok ? (r.json() as Promise<{ mfa_enabled?: boolean }>) : { mfa_enabled: false }))
@@ -1069,6 +1075,15 @@ export const authFlowApi = {
     apiRequest<{ verified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
   resendVerification: () =>
     apiRequest<{ sent?: boolean; already_verified?: boolean }>('/api/auth/resend-verification', { method: 'POST' }),
+};
+
+export const googleApi = {
+  // Devolve o endereço do Google para onde o navegador deve ir
+  start: async (mode: 'login' | 'link') => (await apiRequest<{ url: string }>('/api/auth/google/start', { method: 'POST', body: JSON.stringify({ mode }) })).url,
+  exchange: (code: string) =>
+    apiRequest<LoginResult>('/api/auth/google/exchange', { method: 'POST', body: JSON.stringify({ code }) }),
+  status: () => apiRequest<{ available: boolean; linked: boolean; email: string | null; has_password: boolean }>('/api/account/google', { method: 'GET' }),
+  unlink: () => apiRequest<{ linked: boolean }>('/api/account/google', { method: 'DELETE' }),
 };
 
 export interface MfaStatus {
