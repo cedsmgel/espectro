@@ -20,6 +20,8 @@ const Shorts = lazyNamed(() => import('./pages/Shorts'), 'Shorts');
 const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
+const AccountData = lazyNamed(() => import('./pages/AccountData'), 'AccountData');
+const DeleteAccount = lazyNamed(() => import('./pages/DeleteAccount'), 'DeleteAccount');
 const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
@@ -66,6 +68,8 @@ export const App: React.FC = () => {
           <Route path="/settings/profile" element={<ProfileSettings />} />
           <Route path="/configuracoes/perfil" element={<ProfileSettings />} />
           <Route path="/settings/account" element={<AccountSettings />} />
+          <Route path="/configuracoes/dados" element={<AccountData />} />
+          <Route path="/configuracoes/excluir-conta" element={<DeleteAccount />} />
           <Route path="/configuracoes/conta" element={<AccountSettings />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
           <Route path="/c/:slug" element={<CommunityDetail />} />

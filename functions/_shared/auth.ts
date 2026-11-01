@@ -4,6 +4,7 @@ export interface UserPayload {
   id: number;
   username: string;
   exp?: number;
+  iat?: number;
 }
 
 // Segredo do JWT: sem fallback. Falha se não estiver configurado ou for fraco.
@@ -119,6 +120,7 @@ export async function signJWT(payload: UserPayload, secret: string): Promise<str
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const tokenPayload = {
     ...payload,
+    iat: Math.floor(Date.now() / 1000),
     exp: payload.exp || Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 dias
   };
   const encodedPayload = base64UrlEncode(JSON.stringify(tokenPayload));

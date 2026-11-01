@@ -247,10 +247,15 @@ export const api = {
   },
 
   async login(params: { username: string; password: string }) {
-    const res = await apiRequest<{ token: string; user: User }>('/api/login', {
+    const res = await apiRequest<{ token: string; user: User; deletion_canceled?: boolean }>('/api/login', {
       method: 'POST',
       body: JSON.stringify(params),
     });
+    if (res.deletion_canceled) {
+      try {
+        sessionStorage.setItem('espectro_notice', 'Que bom ter você de volta! A exclusão da sua conta foi cancelada.');
+      } catch {}
+    }
     authStorage.setToken(res.token);
     authStorage.setUser(res.user);
     return res;
@@ -958,6 +963,56 @@ export const accountApi = {
       method: 'PUT',
       body: JSON.stringify(settings),
     });
+  },
+};
+
+export const DELETION_REASON_OPTIONS: { id: string; label: string }[] = [
+  { id: 'privacidade', label: 'Preocupação com privacidade ou meus dados' },
+  { id: 'nao_uso_mais', label: 'Não uso mais o Espectro' },
+  { id: 'muito_tempo', label: 'Estou gastando tempo demais em redes sociais' },
+  { id: 'outra_plataforma', label: 'Encontrei outra plataforma' },
+  { id: 'problemas_tecnicos', label: 'Problemas técnicos ou lentidão' },
+  { id: 'moderacao', label: 'Discordo de regras ou da moderação' },
+  { id: 'assedio', label: 'Sofri assédio ou me senti inseguro(a)' },
+  { id: 'faltam_recursos', label: 'Faltam recursos que eu queria' },
+  { id: 'outro', label: 'Outro motivo' },
+];
+
+export const accountSecurityApi = {
+  changePassword: async (current: string, next: string) => {
+    const res = await apiRequest<{ changed: boolean; token: string }>('/api/account/password', {
+      method: 'POST',
+      body: JSON.stringify({ current, next }),
+    });
+    authStorage.setToken(res.token);
+    return res;
+  },
+  signOutEverywhere: async () => {
+    const res = await apiRequest<{ signed_out_everywhere: boolean; token: string }>('/api/account/sessions', { method: 'DELETE' });
+    authStorage.setToken(res.token);
+    return res;
+  },
+  requestDeletion: (data: { password: string; reasons: string[]; details?: string; would_return?: string }) =>
+    apiRequest<{ scheduled: boolean; grace_days: number }>('/api/account/delete', { method: 'POST', body: JSON.stringify(data) }),
+  downloadMyData: async () => {
+    const token = authStorage.getToken();
+    const response = await fetch('/api/account/export', { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!response.ok) {
+      let message = 'Não foi possível gerar seus dados.';
+      try {
+        message = ((await response.json()) as { error?: string }).error || message;
+      } catch {}
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `espectro-meus-dados-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   },
 };
 

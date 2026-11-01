@@ -74,6 +74,18 @@ export const Feed: React.FC = () => {
     }
   };
 
+  // Aviso deixado pelo login (ex.: exclusão de conta cancelada)
+  useEffect(() => {
+    try {
+      const notice = sessionStorage.getItem('espectro_notice');
+      if (notice) {
+        sessionStorage.removeItem('espectro_notice');
+        showToast(notice);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     loadData();
     if (filterParam === 'trending') {

@@ -1,8 +1,11 @@
+import { purgeDueAccounts } from "../_shared/accountPurge";
 import { areFriends, getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
+  MEDIA_BUCKET?: R2Bucket;
+  BUCKET?: R2Bucket;
 }
 
 const ONLINE_WINDOW_SECONDS = 90;
@@ -23,6 +26,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
       .bind(user.id)
       .run();
+
+    // Rotina de manutenção: apaga contas cujo prazo de exclusão venceu (no máximo uma vez por hora)
+    context.waitUntil(purgeDueAccounts(env).catch(() => 0));
 
     return jsonResponse({ ok: true });
   } catch (err: unknown) {

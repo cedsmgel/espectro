@@ -19,7 +19,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const user = await env.DB.prepare(`
       SELECT id, username, name, bio, avatar_url, music, is_private, allow_scraps, created_at
       FROM users
-      WHERE username = ? COLLATE NOCASE
+      WHERE username = ? COLLATE NOCASE AND deletion_requested_at IS NULL
     `)
       .bind(targetUsername.trim())
       .first<any>();
