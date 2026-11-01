@@ -449,19 +449,35 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* 4. Ações no estilo de rede social: curtir, comentar, compartilhar e salvar, com ícones grandes */}
         <div className="px-2 sm:px-3 pt-1.5 flex items-center justify-between gap-1">
           <div className="flex items-center">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleVoteClick('up');
-              }}
-              aria-label="Curtir (upvote)"
-              aria-pressed={userVote === 'up'}
-              className={`h-10 pl-1.5 pr-2 rounded-full flex items-center gap-1.5 transition-colors cursor-pointer ${userVote === 'up' ? 'text-error' : 'text-on-surface hover:text-on-surface-variant'}`}
-            >
-              <span className="material-symbols-outlined text-[28px]" style={userVote === 'up' ? { fontVariationSettings: "'FILL' 1" } : undefined}>favorite</span>
-              <span className="text-sm font-semibold tabular-nums">{upvotes}</span>
-            </button>
+            <div className="flex items-center h-10 mr-1 rounded-full border border-outline-variant bg-surface-container-low overflow-hidden" role="group" aria-label="Votos">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleVoteClick('up');
+                }}
+                aria-label={`Upvote (${upvotes})`}
+                aria-pressed={userVote === 'up'}
+                className={`h-full pl-3 pr-2.5 flex items-center gap-1 transition-colors cursor-pointer ${userVote === 'up' ? 'text-primary' : 'text-on-surface hover:text-primary'}`}
+              >
+                <span className="material-symbols-outlined text-[24px]" style={userVote === 'up' ? { fontVariationSettings: "'FILL' 1, 'wght' 600" } : undefined}>arrow_upward</span>
+                <span className="text-sm font-semibold tabular-nums">{upvotes}</span>
+              </button>
+              <span className="w-px h-5 bg-outline-variant" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleVoteClick('down');
+                }}
+                aria-label={`Downvote (${downvotes})`}
+                aria-pressed={userVote === 'down'}
+                className={`h-full pl-2.5 pr-3 flex items-center gap-1 transition-colors cursor-pointer ${userVote === 'down' ? 'text-error' : 'text-on-surface hover:text-error'}`}
+              >
+                <span className="material-symbols-outlined text-[24px]" style={userVote === 'down' ? { fontVariationSettings: "'FILL' 1, 'wght' 600" } : undefined}>arrow_downward</span>
+                <span className="text-sm font-semibold tabular-nums">{downvotes}</span>
+              </button>
+            </div>
 
             <button
               type="button"
@@ -484,18 +500,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               text={post.content ? parseScrap(post.content).body.slice(0, 120) : undefined}
             />
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleVoteClick('down');
-              }}
-              aria-label="Não curtir (downvote)"
-              aria-pressed={userVote === 'down'}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer ${userVote === 'down' ? 'text-error' : 'text-on-surface-variant hover:text-error'}`}
-            >
-              <span className="material-symbols-outlined text-[24px]" style={userVote === 'down' ? { fontVariationSettings: "'FILL' 1" } : undefined}>thumb_down</span>
-            </button>
           </div>
 
           <button
