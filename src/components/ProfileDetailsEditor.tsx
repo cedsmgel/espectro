@@ -8,7 +8,7 @@ interface FieldState {
 }
 
 const inputClass =
-  'w-full px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all';
+  'block w-full min-w-0 max-w-full appearance-none px-0 py-2 rounded-none bg-transparent border-0 text-on-surface text-sm outline-none focus:ring-0';
 
 interface ProfileDetailsEditorProps {
   coverUrl: string | null;
@@ -90,7 +90,7 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
       value={fields[key]?.visibility ?? 'private'}
       onChange={(e) => setVisibility(key, e.target.value as Visibility)}
       aria-label={`Quem vê: ${label}`}
-      className="h-10 px-3 rounded-full bg-surface-container-low border border-outline-variant text-xs text-on-surface cursor-pointer shrink-0"
+      className="h-9 px-0 bg-transparent border-0 text-xs text-on-surface-variant cursor-pointer shrink-0 outline-none"
     >
       {VISIBILITY_OPTIONS.map((o) => (
         <option key={o.value} value={o.value}>
@@ -103,7 +103,7 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
   const groupTitle: Record<string, string> = { sobre: 'Sobre você', trabalho: 'Trabalho e estudo', links: 'Links' };
 
   return (
-    <section className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 border border-outline-variant flex flex-col gap-6" aria-label="Informações do perfil">
+    <section className="flex flex-col gap-6 border-t border-outline-variant pt-6" aria-label="Informações do perfil">
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Informações do perfil</h2>
         <p className="text-xs text-on-surface-variant mt-1">Tudo é opcional e começa visível só para você. Escolha quem vê cada informação.</p>
@@ -112,7 +112,7 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
       {/* Capa */}
       <div className="flex flex-col gap-2">
         <h3 className="text-xs font-semibold text-on-surface">Capa</h3>
-        <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden bg-surface-container-low border border-outline-variant">
+        <div className="relative h-28 sm:h-36 overflow-hidden border border-outline-variant">
           {coverUrl && <img src={coverUrl} alt="Capa do perfil" className="w-full h-full object-cover" />}
         </div>
         <div className="flex gap-2">
@@ -120,7 +120,7 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
             {uploading ? 'Enviando...' : coverUrl ? 'Trocar capa' : 'Adicionar capa'}
           </button>
           {coverUrl && (
-            <button type="button" onClick={() => void removeCover()} className="px-4 py-2 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error font-semibold text-xs cursor-pointer">
+            <button type="button" onClick={() => void removeCover()} className="px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant hover:text-error font-semibold text-xs cursor-pointer">
               Remover
             </button>
           )}
@@ -133,10 +133,10 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
       ) : (
         <form onSubmit={save} className="flex flex-col gap-6">
           {(['sobre', 'trabalho', 'links'] as const).map((group) => (
-            <div key={group} className="flex flex-col gap-4">
+            <div key={group} className="flex flex-col gap-3">
               <h3 className="text-xs font-bold text-on-surface">{groupTitle[group]}</h3>
               {PROFILE_FIELDS.filter((f) => f.group === group).map((def) => (
-                <div key={def.key} className="flex flex-col gap-1.5">
+                <div key={def.key} className="flex flex-col pb-3 border-b border-outline-variant">
                   <div className="flex items-center justify-between gap-3">
                     <label htmlFor={`pd-${def.key}`} className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px] text-on-surface-variant">{def.icon}</span>
@@ -167,14 +167,14 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
                   ) : def.kind === 'links' ? (
                     <div className="flex flex-col gap-2">
                       {links.map((link, index) => (
-                        <div key={index} className="flex gap-2">
+                        <div key={index} className="flex gap-2 border-b border-outline-variant last:border-b-0">
                           <input
                             type="text"
                             value={link.label}
                             maxLength={30}
                             onChange={(e) => setLinks((prev) => prev.map((l, i) => (i === index ? { ...l, label: e.target.value } : l)))}
                             aria-label={`Título do link ${index + 1}`}
-                            className={`${inputClass} w-1/3`}
+                            className={`${inputClass} !w-1/3 shrink-0`}
                           />
                           <input
                             type="url"
@@ -190,7 +190,7 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
                         </div>
                       ))}
                       {links.length < 5 && (
-                        <button type="button" onClick={() => setLinks((prev) => [...prev, { label: '', url: 'https://' }])} className="self-start px-4 py-2 rounded-full border border-outline-variant text-xs font-semibold text-on-surface cursor-pointer hover:bg-surface-container-low">
+                        <button type="button" onClick={() => setLinks((prev) => [...prev, { label: '', url: 'https://' }])} className="self-start px-4 py-2 rounded-full border border-outline-variant text-xs font-semibold text-on-surface cursor-pointer hover:bg-surface-container">
                           Adicionar link
                         </button>
                       )}
