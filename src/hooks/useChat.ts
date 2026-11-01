@@ -23,6 +23,7 @@ export interface ChatMessage {
   message_type?: ChatMessageType;
   media_url?: string | null;
   reply_to_id?: number | null;
+  edited_at?: string | null;
   reactions?: Array<{ user_id: number; emoji: string }>;
   status?: MessageStatus;
   created_at: string;
@@ -81,6 +82,7 @@ function toChatMessage(m: DirectMessage): ChatMessage {
     message_type: m.message_type,
     media_url: m.media_url,
     reply_to_id: m.reply_to_id,
+    edited_at: m.edited_at,
     reactions: m.reactions || [],
     status: m.status,
     created_at: m.created_at,
@@ -264,6 +266,16 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
             const deletedId = Number(data.message_id || data.messageId || data.id);
             if (deletedId) {
               setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+              onActivityRef.current?.();
+            }
+          } else if (data.type === 'edit') {
+            const editedId = Number(data.message_id);
+            if (editedId && typeof data.content === 'string') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === editedId ? { ...m, content: data.content, edited_at: data.edited_at ?? new Date().toISOString() } : m
+                )
+              );
               onActivityRef.current?.();
             }
           } else if (data.type === 'typing') {
@@ -571,11 +583,46 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     [messages, syncLatest]
   );
 
+  // Edita o texto de uma mensagem própria; desfaz a troca se o servidor recusar (ex.: prazo vencido)
+  const editMessage = useCallback(
+    async (messageId: number, content: string): Promise<boolean> => {
+      const trimmed = content.trim();
+      if (!trimmed || messageId < 0) return false;
+      const previous = messages.find((m) => m.id === messageId);
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, content: trimmed, edited_at: m.edited_at ?? new Date().toISOString() } : m))
+      );
+      try {
+        const res = await directMessagesApi.edit(messageId, trimmed);
+        if (res.message) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, content: res.message.content, edited_at: res.message.edited_at ?? m.edited_at } : m
+            )
+          );
+        }
+        onActivityRef.current?.();
+        return true;
+      } catch (err: any) {
+        if (previous) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === messageId ? { ...m, content: previous.content, edited_at: previous.edited_at } : m))
+          );
+        }
+        setError(err?.message || 'Não foi possível editar a mensagem.');
+        return false;
+      }
+    },
+    [messages]
+  );
+
   return {
     messages,
     sendMessage,
     sendMediaMessage,
     deleteMessage,
+    editMessage,
     retrySend,
     reactToMessage,
     loadOlder,

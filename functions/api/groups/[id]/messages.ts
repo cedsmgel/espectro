@@ -1,5 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../../../_shared/auth";
 import { membership } from "../../../_shared/groups";
+import { notifyGroup, type ChatEnv } from "../../../_shared/chat";
 import { sanitizeMediaUrl } from "../../../_shared/auth";
 
 const MESSAGE_TYPES = ["text", "gif", "sticker", "image", "video", "audio", "file"];
@@ -12,7 +13,7 @@ const DEFAULT_LABEL: Record<string, string> = {
   file: "Arquivo",
 };
 
-export interface Env {
+export interface Env extends ChatEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -50,6 +51,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       `SELECT x.id, x.content, x.message_type, x.media_url, x.sender_id, u.username AS sender_username,
          strftime('%Y-%m-%dT%H:%M:%SZ', x.created_at) AS created_at,
          x.deleted_at IS NOT NULL AS deleted, x.reply_to_id,
+         strftime('%Y-%m-%dT%H:%M:%SZ', x.edited_at) AS edited_at,
          r.content AS reply_content, r.deleted_at IS NOT NULL AS reply_deleted, ru.username AS reply_sender
        FROM chat_group_messages x
        LEFT JOIN users u ON u.id = x.sender_id
@@ -128,22 +130,33 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(groupId, user.id, content, messageType, mediaUrl, replyToId)
       .run();
 
-    return jsonResponse(
-      {
-        message: {
-          id: Number(inserted.meta.last_row_id),
-          content,
-          message_type: messageType,
-          media_url: mediaUrl,
-          sender_id: user.id,
-          sender_username: user.username,
-          created_at: new Date().toISOString(),
-          deleted: false,
-          reply_to_id: replyToId,
-        },
-      },
-      201
-    );
+    // Dados da mensagem citada, para quem recebe em tempo real
+    const quoted = replyToId
+      ? await env.DB.prepare(
+          `SELECT m.content, u.username FROM chat_group_messages m LEFT JOIN users u ON u.id = m.sender_id WHERE m.id = ?`
+        )
+          .bind(replyToId)
+          .first<{ content: string; username: string | null }>()
+      : null;
+
+    const message = {
+      id: Number(inserted.meta.last_row_id),
+      content,
+      message_type: messageType,
+      media_url: mediaUrl,
+      sender_id: user.id,
+      sender_username: user.username,
+      created_at: new Date().toISOString(),
+      deleted: false,
+      edited_at: null,
+      reply_to_id: replyToId,
+      reply_content: quoted?.content ?? null,
+      reply_sender: quoted?.username ?? null,
+      reply_deleted: false,
+    };
+
+    await notifyGroup(env, groupId, { type: "message", message });
+    return jsonResponse({ message }, 201);
   } catch (err: unknown) {
     return serverError(err, "groups/messages");
   }

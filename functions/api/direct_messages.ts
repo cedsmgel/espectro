@@ -9,7 +9,7 @@ import {
   rateLimit,
   isBlockedBetween,
 } from "../_shared/auth";
-import { MESSAGE_COLUMNS, attachReactions, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
+import { EDIT_WINDOW_SECONDS, MESSAGE_COLUMNS, attachReactions, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 import { pushNewMessage, type PushEnv } from "../_shared/push";
 
 export interface Env extends ChatEnv, PushEnv {
@@ -255,6 +255,62 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     });
 
     return jsonResponse({ success: true, deleted_id: messageId });
+  } catch (err: unknown) {
+    return serverError(err, "direct_messages");
+  }
+};
+
+// PATCH { id, content }: edita uma mensagem de texto própria, até 15 minutos depois de enviada
+export const onRequestPatch: PagesFunction<Env> = async (context) => {
+  try {
+    const { request, env } = context;
+    const user = await getAuthUser(request, getJwtSecret(env));
+    if (!user) return errorResponse("Não autorizado.", 401);
+
+    const limited = await rateLimit(env.DB, request, "dm-edit", 30, 60, user.id);
+    if (limited) return limited;
+
+    const body = (await request.json().catch(() => null)) as { id?: number; content?: string } | null;
+    const messageId = Number(body?.id);
+    const content = typeof body?.content === "string" ? body.content.trim() : "";
+    if (!Number.isInteger(messageId) || messageId <= 0) return errorResponse("ID da mensagem é obrigatório.", 400);
+    if (!content) return errorResponse("A mensagem não pode ficar vazia.", 400);
+    if (content.length > 4000) return errorResponse("Mensagem muito longa (máximo 4000 caracteres).", 400);
+
+    const row = await env.DB.prepare(
+      `SELECT sender_id, receiver_id, content, COALESCE(message_type, 'text') AS message_type,
+         CAST(strftime('%s', 'now') AS INTEGER) - CAST(strftime('%s', created_at) AS INTEGER) AS age
+       FROM direct_messages WHERE id = ?`
+    )
+      .bind(messageId)
+      .first<{ sender_id: number; receiver_id: number; content: string; message_type: string; age: number }>();
+
+    if (!row) return errorResponse("Mensagem não encontrada.", 404);
+    if (row.sender_id !== user.id) return errorResponse("Você só pode editar as suas próprias mensagens.", 403);
+    if (row.message_type !== "text") return errorResponse("Só mensagens de texto podem ser editadas.", 400);
+    if (row.age > EDIT_WINDOW_SECONDS) return errorResponse("O prazo de 15 minutos para editar já passou.", 400);
+    if (await isBlockedBetween(env.DB, row.sender_id, row.receiver_id)) {
+      return errorResponse("Não foi possível editar a mensagem.", 403);
+    }
+
+    // Texto igual ao atual: nada a gravar e a mensagem não ganha a marca de editada
+    if (content !== row.content) {
+      await env.DB.prepare("UPDATE direct_messages SET content = ?, edited_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .bind(content, messageId)
+        .run();
+    }
+
+    const message = await fetchMessage(env.DB, messageId);
+    if (content !== row.content) {
+      await notifyRoom(env, row.sender_id, row.receiver_id, {
+        type: "edit",
+        message_id: messageId,
+        content,
+        edited_at: message?.edited_at ?? null,
+      });
+    }
+
+    return jsonResponse({ message });
   } catch (err: unknown) {
     return serverError(err, "direct_messages");
   }

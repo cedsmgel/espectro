@@ -13,6 +13,7 @@ export interface DirectMessageRow {
   message_type: string;
   media_url: string | null;
   reply_to_id: number | null;
+  edited_at?: string | null;
   client_id: string | null;
   reactions?: Array<{ user_id: number; emoji: string }>;
   status: "sent" | "delivered" | "read";
@@ -31,8 +32,12 @@ export const MESSAGE_COLUMNS = `
   dm.reply_to_id,
   dm.client_id,
   CASE WHEN dm.read_at IS NOT NULL THEN 'read' WHEN dm.delivered_at IS NOT NULL THEN 'delivered' ELSE 'sent' END AS status,
-  strftime('%Y-%m-%dT%H:%M:%SZ', dm.created_at) AS created_at
+  strftime('%Y-%m-%dT%H:%M:%SZ', dm.created_at) AS created_at,
+  strftime('%Y-%m-%dT%H:%M:%SZ', dm.edited_at) AS edited_at
 `;
+
+// Prazo para editar uma mensagem depois de enviada (15 minutos)
+export const EDIT_WINDOW_SECONDS = 15 * 60;
 
 export const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -87,5 +92,39 @@ export async function notifyRoom(
   } catch (err) {
     console.error("notifyRoom falhou:", err);
     return { delivered: false };
+  }
+}
+
+export function groupRoomName(groupId: number): string {
+  return `group_${groupId}`;
+}
+
+// Envia um evento a quem está com o grupo aberto. Nunca lança: a mensagem já está salva no D1.
+export async function notifyGroup(env: ChatEnv, groupId: number, event: Record<string, unknown>): Promise<void> {
+  try {
+    if (!env.CHAT_ROOMS) return;
+    const stub = env.CHAT_ROOMS.get(env.CHAT_ROOMS.idFromName(groupRoomName(groupId)));
+    await stub.fetch("https://chatroom.internal/broadcast", {
+      method: "POST",
+      headers: { "X-Internal-Broadcast": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ event }),
+    });
+  } catch (err) {
+    console.error("notifyGroup falhou:", err);
+  }
+}
+
+// Fecha as conexões abertas de quem saiu ou foi removido, para parar de receber o grupo
+export async function kickFromGroup(env: ChatEnv, groupId: number, userId: number): Promise<void> {
+  try {
+    if (!env.CHAT_ROOMS) return;
+    const stub = env.CHAT_ROOMS.get(env.CHAT_ROOMS.idFromName(groupRoomName(groupId)));
+    await stub.fetch("https://chatroom.internal/broadcast", {
+      method: "POST",
+      headers: { "X-Internal-Broadcast": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ kick: userId }),
+    });
+  } catch (err) {
+    console.error("kickFromGroup falhou:", err);
   }
 }
