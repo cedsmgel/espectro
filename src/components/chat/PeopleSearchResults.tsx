@@ -51,7 +51,7 @@ export const PeopleSearchResults: React.FC<PeopleSearchResultsProps> = ({
   if (!loading && results.length === 0) return null;
 
   return (
-    <div className="mt-2 pt-2 border-t border-outline-variant/30">
+    <div className="mt-2 pt-2 border-t border-outline-variant">
       <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Pessoas</p>
       {loading && results.length === 0 && <p className="px-3 py-2 text-xs text-on-surface-variant">Buscando...</p>}
       {results.map((person) => {

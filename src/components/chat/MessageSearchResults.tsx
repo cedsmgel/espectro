@@ -67,7 +67,7 @@ export const MessageSearchResults: React.FC<MessageSearchResultsProps> = ({ quer
   if (!loading && total === 0) return null;
 
   return (
-    <div className="mt-2 border-t border-outline-variant/20 pt-2">
+    <div className="mt-2 border-t border-outline-variant pt-2">
       <h3 className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Mensagens</h3>
       {loading && <p className="px-3 py-2 text-xs text-on-surface-variant">Procurando...</p>}
 

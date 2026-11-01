@@ -117,7 +117,7 @@ export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange,
         )}
 
         {push.subscribed && (
-          <label className="mt-3 pt-3 border-t border-outline-variant/30 flex items-center justify-between gap-4 cursor-pointer">
+          <label className="mt-3 pt-3 border-t border-outline-variant flex items-center justify-between gap-4 cursor-pointer">
             <span className="text-[11px] text-on-surface">Mostrar o texto da mensagem na notificação</span>
             <input
               type="checkbox"
@@ -183,7 +183,7 @@ export const ChatPrefsModal: React.FC<ChatPrefsModalProps> = ({ prefs, onChange,
       </label>
       {privacyError && <p className="mt-2 text-[11px] text-error">{privacyError}</p>}
 
-      <div className="mt-5 pt-4 border-t border-outline-variant/30">
+      <div className="mt-5 pt-4 border-t border-outline-variant">
         <span className="text-xs font-semibold text-on-surface">Usuários bloqueados</span>
         {blocked.length === 0 ? (
           <p className="mt-1 text-[11px] text-on-surface-variant">Você não bloqueou ninguém.</p>

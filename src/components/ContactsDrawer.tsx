@@ -157,8 +157,8 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
       {/* Drawer Lateral */}
       <aside
-        className={`fixed top-0 right-0 z-50 h-full w-full max-w-sm sm:max-w-md bg-surface-container-lowest border-l border-outline-variant/30 shadow-2xl flex flex-col transition-transform duration-300 ease-out transform ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 z-50 h-full w-full max-w-sm sm:max-w-md bg-surface-container-lowest border-l border-outline-variant flex flex-col transition-transform duration-300 ease-out transform ${
+          isOpen ? 'translate-x-0 shadow-2xl' : 'translate-x-full'
         }`}
       >
         {/* Toast Notifier */}
@@ -170,7 +170,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
         )}
 
         {/* 1. Topo da Gaveta: Identidade ou Chat Header */}
-        <div className="flex items-center justify-between p-4 border-b border-outline-variant/20 bg-surface-container-lowest">
+        <div className="flex items-center justify-between p-4 border-b border-outline-variant bg-surface-container-lowest">
           {selectedFriend ? (
             <div className="flex items-center gap-3 min-w-0">
               <button
@@ -319,7 +319,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                         className={`max-w-[80%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed shadow-xs ${
                           isMe
                             ? 'bg-primary-container text-on-primary rounded-br-xs'
-                            : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant/30'
+                            : 'bg-surface-container-low text-on-surface rounded-bl-xs border border-outline-variant'
                         }`}
                       >
                         {m.content}
@@ -351,14 +351,14 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
             </div>
 
             {/* Input para envio de Mensagem */}
-            <div className="p-3 bg-surface-container-lowest border-t border-outline-variant/20">
+            <div className="p-3 bg-surface-container-lowest border-t border-outline-variant">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={handleInputChange}
                   placeholder={`Mensagem para @${selectedFriend.username}...`}
-                  className="flex-1 bg-surface-container-low border border-outline-variant/30 rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container focus:ring-1 focus:ring-primary-container transition-all"
+                  className="flex-1 bg-surface-container-low border border-outline-variant rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container focus:ring-1 focus:ring-primary-container transition-all"
                 />
                 <button
                   type="submit"
@@ -376,7 +376,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
           /* ========================================================================= */
           <div className="flex-1 flex flex-col min-h-0 bg-surface">
             {/* Tabs: Meus Amigos vs Encontrar Pessoas */}
-            <div className="flex border-b border-outline-variant/20 bg-surface-container-lowest">
+            <div className="flex border-b border-outline-variant bg-surface-container-lowest">
               <button
                 type="button"
                 onClick={() => setActiveTab('friends')}
@@ -409,7 +409,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
             </div>
 
             {/* Input de Busca */}
-            <div className="p-3 bg-surface-container-lowest border-b border-outline-variant/20">
+            <div className="p-3 bg-surface-container-lowest border-b border-outline-variant">
               <div className="relative flex items-center">
                 <span className="material-symbols-outlined absolute left-3 text-on-surface-variant text-[18px]">
                   search
@@ -423,7 +423,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                       ? 'Filtrar meus amigos...'
                       : 'Digitar nome de usuário para adicionar...'
                   }
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-surface-container-low border border-outline-variant/30 text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-surface-container-low border border-outline-variant text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all"
                 />
               </div>
             </div>
@@ -453,7 +453,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                     <div
                       key={friend.friend_id}
                       onClick={() => setSelectedFriend(friend)}
-                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer border border-transparent hover:border-outline-variant/30 group"
+                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-container-low transition-all cursor-pointer border border-transparent hover:border-outline-variant group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="relative flex-shrink-0">
@@ -509,7 +509,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                       return (
                         <div
                           key={usr.id}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20 mb-2"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-low border border-outline-variant mb-2"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs uppercase">
@@ -544,7 +544,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
             </div>
 
             {/* Atalho Rodapé para Tela Completa */}
-            <div className="p-3 border-t border-outline-variant/20 bg-surface-container-lowest">
+            <div className="p-3 border-t border-outline-variant bg-surface-container-lowest">
               <button
                 type="button"
                 onClick={() => {

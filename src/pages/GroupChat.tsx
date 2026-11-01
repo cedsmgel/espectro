@@ -323,7 +323,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   return (
     <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-surface text-on-surface">
       {/* Cabeçalho: mesmo padrão do chat privado */}
-      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between shadow-xs z-10 flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <Link to="/mensagens" className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container md:hidden" aria-label="Voltar">
             <span className="material-symbols-outlined text-[24px]">arrow_back</span>
@@ -403,7 +403,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                       : `px-3 py-2 text-xs leading-relaxed rounded-2xl ${
                           mine
                             ? 'bg-primary-container text-on-primary rounded-br-md'
-                            : 'bg-surface-container-low text-on-surface border border-outline-variant/30 rounded-bl-md'
+                            : 'bg-surface-container-low text-on-surface border border-outline-variant rounded-bl-md'
                         }`
                   }
                 >
@@ -440,7 +440,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
       )}
 
       {/* Entrada: emojis, GIFs e figurinhas, anexo, áudio, texto e enviar */}
-      <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 relative">
+      <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant flex-shrink-0 relative">
         {showEmoji && (
           <div className="absolute bottom-20 left-3 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl">
             <Picker
@@ -518,7 +518,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
               e.preventDefault();
               void sendText();
             }}
-            className="flex items-center gap-1 sm:gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant/30"
+            className="flex items-center gap-1 sm:gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant"
           >
             <button
               type="button"

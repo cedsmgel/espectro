@@ -23,7 +23,7 @@ export const BottomNav: React.FC = () => {
   const fill = (active: boolean) => (active ? { fontVariationSettings: "'FILL' 1" } : undefined);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] md:hidden pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+    <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant md:hidden pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <div className="flex items-center justify-between h-16 px-1 max-w-md mx-auto">
         {/* 1. Início */}
         <Link
@@ -54,7 +54,7 @@ export const BottomNav: React.FC = () => {
             type="button"
             onClick={openCreatePostModal}
             aria-label="Criar nova publicação"
-            className="w-12 h-12 rounded-full bg-primary-container text-on-primary flex items-center justify-center shadow-[0_4px_14px_rgba(79,70,229,0.4)] hover:bg-primary transition-all active:scale-95 cursor-pointer -mt-2 border-2 border-surface-container-lowest"
+            className="w-12 h-12 rounded-full bg-primary-container text-on-primary flex items-center justify-center hover:bg-primary transition-all active:scale-95 cursor-pointer -mt-2 border-2 border-surface-container-lowest"
           >
             <span className="material-symbols-outlined text-[28px]">add</span>
           </button>

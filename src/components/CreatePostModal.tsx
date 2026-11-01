@@ -66,7 +66,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         style={{
           height: isMobile && isKeyboardOpen && height ? `${height}px` : undefined,
         }}
-        className="w-full h-[100dvh] sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-outline-variant/30 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface overscroll-contain"
+        className="w-full h-[100dvh] sm:max-w-2xl sm:h-[88vh] sm:max-h-[820px] bg-surface-container-lowest sm:rounded-2xl border-0 sm:border border-outline-variant shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-250 text-on-surface overscroll-contain"
       >
         <CreatePostForm
           onPostCreated={handlePostSubmit}

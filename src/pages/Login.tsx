@@ -63,11 +63,11 @@ export const Login: React.FC = () => {
 
   return (
     <div className="theme-brand min-h-screen flex items-center justify-center py-12 px-4 bg-surface text-on-surface">
-      <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-md max-w-md w-full p-8 md:p-10 flex flex-col gap-6">
+      <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant shadow-md max-w-md w-full p-8 md:p-10 flex flex-col gap-6">
         {/* Card Header with Espectro Logo */}
         <div className="text-center flex flex-col items-center gap-2">
           <Link to="/" className="inline-flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-on-primary shadow-xs group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined text-[24px]">grain</span>
             </div>
             <span className="text-2xl font-bold tracking-tight text-primary">
@@ -92,7 +92,7 @@ export const Login: React.FC = () => {
         </div>
 
         {/* Capsule Tab Switcher */}
-        <div className="grid grid-cols-2 p-1 rounded-full bg-surface-container-low border border-outline-variant/30">
+        <div className="grid grid-cols-2 p-1 rounded-full bg-surface-container-low border border-outline-variant">
           <button
             type="button"
             onClick={() => {
@@ -145,7 +145,7 @@ export const Login: React.FC = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="seunome"
                 required
-                className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container-low border border-outline-variant/30 rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container-low border border-outline-variant rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container-low border border-outline-variant/30 rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container-low border border-outline-variant rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
                 />
               </div>
             </div>
@@ -188,7 +188,7 @@ export const Login: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full pl-10 pr-10 py-2.5 text-xs bg-surface-container-low border border-outline-variant/30 rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
+                className="w-full pl-10 pr-10 py-2.5 text-xs bg-surface-container-low border border-outline-variant rounded-2xl text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary-container/20 transition-all"
               />
               <button
                 type="button"

@@ -131,7 +131,7 @@ export const AccountSettings: React.FC = () => {
               </div>
 
               {/* Links de navegação entre configurações */}
-              <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant/30 self-start sm:self-auto">
+              <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start sm:self-auto">
                 <Link
                   to="/settings/profile"
                   className="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors"
@@ -145,7 +145,7 @@ export const AccountSettings: React.FC = () => {
             </div>
 
             {/* Card Principal */}
-            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant/30 shadow-xs">
+            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant shadow-xs">
               {loading ? (
                 <div className="py-16 flex flex-col items-center justify-center gap-3 text-on-surface-variant">
                   <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
@@ -178,7 +178,7 @@ export const AccountSettings: React.FC = () => {
                     </h2>
 
                     {/* Toggle: Perfil Privado */}
-                    <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20 hover:border-outline-variant/40 transition-colors">
+                    <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-surface-container-low border border-outline-variant hover:border-outline-variant/40 transition-colors">
                       <div className="flex items-start gap-3.5">
                         <div
                           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
@@ -222,7 +222,7 @@ export const AccountSettings: React.FC = () => {
                     </div>
 
                     {/* Toggle: Permitir Scraps de Estranhos */}
-                    <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-surface-container-low border border-outline-variant/20 hover:border-outline-variant/40 transition-colors">
+                    <div className="flex items-start justify-between gap-4 p-4 rounded-2xl bg-surface-container-low border border-outline-variant hover:border-outline-variant/40 transition-colors">
                       <div className="flex items-start gap-3.5">
                         <div
                           className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
@@ -266,7 +266,7 @@ export const AccountSettings: React.FC = () => {
                   </div>
 
                   {/* Informações da Conta */}
-                  <div className="pt-4 border-t border-outline-variant/20 flex flex-col gap-2">
+                  <div className="pt-4 border-t border-outline-variant flex flex-col gap-2">
                     <h3 className="text-xs font-semibold text-on-surface flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
                         info
@@ -281,7 +281,7 @@ export const AccountSettings: React.FC = () => {
                   </div>
 
                   {/* Botões de Ação */}
-                  <div className="pt-4 border-t border-outline-variant/20 flex items-center justify-between">
+                  <div className="pt-4 border-t border-outline-variant flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => navigate(`/u/${loggedUser.username}`)}

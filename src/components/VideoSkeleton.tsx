@@ -4,7 +4,7 @@ export const VideoSkeleton: React.FC = () => {
   return (
     <div className="flex flex-col gap-3 w-full max-w-[360px] mx-auto animate-pulse">
       {/* 16:9 Thumbnail Block */}
-      <div className="relative w-full aspect-video rounded-2xl bg-surface-container-high border border-outline-variant/20 shadow-xs flex items-center justify-center overflow-hidden">
+      <div className="relative w-full aspect-video rounded-2xl bg-surface-container-high border border-outline-variant shadow-xs flex items-center justify-center overflow-hidden">
         <span className="material-symbols-outlined text-outline-variant/30 text-[48px]">
           movie
         </span>

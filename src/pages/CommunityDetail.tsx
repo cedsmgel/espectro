@@ -248,7 +248,7 @@ export const CommunityDetail: React.FC = () => {
             {loading ? (
               <div className="flex flex-col gap-6">
                 {/* Header Skeleton */}
-                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col gap-4 animate-pulse">
+                <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant flex flex-col gap-4 animate-pulse">
                   <div className="h-36 sm:h-44 rounded-2xl bg-surface-container-high" />
                   <div className="flex items-end gap-4 -mt-12 px-2">
                     <div className="w-20 h-20 rounded-2xl bg-surface-container border-4 border-surface-container-lowest shadow-sm" />
@@ -269,7 +269,7 @@ export const CommunityDetail: React.FC = () => {
                 onRetry={fetchData}
               />
             ) : !community ? (
-              <div className="bg-surface-container-lowest rounded-2xl p-10 text-center space-y-3 border border-outline-variant/30 shadow-sm">
+              <div className="bg-surface-container-lowest rounded-2xl p-10 text-center space-y-3 border border-outline-variant shadow-sm">
                 <h2 className="text-xl font-bold text-on-surface">
                   Comunidade não encontrada
                 </h2>
@@ -287,14 +287,14 @@ export const CommunityDetail: React.FC = () => {
             ) : (
               <>
                 {/* Community Header Banner */}
-                <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30">
+                <div className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm border border-outline-variant">
                   {/* Subtle Gradient Cover */}
                   <div
                     className="h-36 sm:h-44 w-full relative p-4 flex items-end justify-between transition-all"
                     style={{
                       background: community.icon_color
                         ? `linear-gradient(135deg, ${community.icon_color}dd 0%, #1e1b4b 100%)`
-                        : 'linear-gradient(135deg, #712ae2 0%, #4f46e5 50%, #312e81 100%)',
+                        : 'linear-gradient(135deg, #404040 0%, #18181b 50%, #09090b 100%)',
                     }}
                   >
                     <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
@@ -310,7 +310,7 @@ export const CommunityDetail: React.FC = () => {
                         <div className="w-24 h-24 rounded-2xl p-1 bg-surface-container-lowest shadow-md">
                           <div
                             className="w-full h-full rounded-xl flex items-center justify-center font-bold text-3xl text-white shadow-xs"
-                            style={{ backgroundColor: community.icon_color || '#712ae2' }}
+                            style={{ backgroundColor: community.icon_color || '#404040' }}
                           >
                             {community.name.charAt(0).toUpperCase()}
                           </div>
@@ -365,7 +365,7 @@ export const CommunityDetail: React.FC = () => {
                     )}
 
                     {/* Sub-tabs inside community */}
-                    <div className="flex items-center gap-4 pt-4 border-t border-outline-variant/20 text-xs font-semibold">
+                    <div className="flex items-center gap-4 pt-4 border-t border-outline-variant text-xs font-semibold">
                       <button
                         type="button"
                         onClick={() => setActiveTab('discussions')}
@@ -438,8 +438,8 @@ export const CommunityDetail: React.FC = () => {
 
                 {/* ABA DE MEMBROS: Lista da tabela community_members */}
                 {activeTab === 'members' && (
-                  <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-sm flex flex-col gap-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+                  <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant shadow-sm flex flex-col gap-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
                       <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[18px]">group</span>
                         <span>Membros Inscritos na Comunidade</span>
@@ -469,7 +469,7 @@ export const CommunityDetail: React.FC = () => {
                         {members.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20"
+                            className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant"
                           >
                             <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase">
                               {member.username.charAt(0)}

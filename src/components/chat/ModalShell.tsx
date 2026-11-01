@@ -29,7 +29,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children
         aria-label={title}
         className="w-full sm:max-w-md max-h-[90dvh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-surface-container-lowest border border-outline-variant/40 shadow-2xl"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant/30">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
           <h2 className="text-sm font-bold text-on-surface">{title}</h2>
           <button
             type="button"
@@ -41,7 +41,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-outline-variant/30">{footer}</div>}
+        {footer && <div className="px-5 py-3 border-t border-outline-variant">{footer}</div>}
       </div>
     </div>
   );

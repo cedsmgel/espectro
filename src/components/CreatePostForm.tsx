@@ -403,8 +403,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
       {/* Overlay de Drag and Drop (Tarefa 1) */}
       {isDragActive && (
-        <div className="absolute inset-0 z-50 rounded-2xl bg-black/85 backdrop-blur-sm border-2 border-dashed border-blue-500 flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-150">
-          <div className="w-16 h-16 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-400 animate-bounce">
+        <div className="absolute inset-0 z-50 rounded-2xl bg-black/85 backdrop-blur-sm border-2 border-dashed border-primary flex flex-col items-center justify-center gap-3 text-white pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-full bg-primary-container/30 flex items-center justify-center text-primary animate-bounce">
             <span className="material-symbols-outlined text-4xl">cloud_upload</span>
           </div>
           <div className="text-center">
@@ -465,7 +465,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           onClick={() => setPostType('discussion')}
           className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
             postType === 'discussion'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-primary-container text-on-primary shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
@@ -477,7 +477,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           onClick={() => setPostType('scrap')}
           className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
             postType === 'scrap'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-primary-container text-on-primary shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
           }`}
         >
@@ -514,7 +514,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
         {/* Upload Progress com visual limpo */}
         {uploading && (
-          <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/30 flex flex-col gap-2 shadow-sm animate-in fade-in">
+          <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant flex flex-col gap-2 shadow-sm animate-in fade-in">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
@@ -535,7 +535,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             </div>
             <div className="w-full h-1.5 rounded-full bg-surface-container-high overflow-hidden">
               <div
-                className="h-full bg-blue-600 transition-all duration-150 ease-out rounded-full"
+                className="h-full bg-primary-container transition-all duration-150 ease-out rounded-full"
                 style={{ width: `${Math.max(5, uploadProgress)}%` }}
               />
             </div>
@@ -544,7 +544,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
         {/* Autor + Campo de Título (Se Discussão) */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm uppercase shrink-0 shadow-xs">
+          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0 shadow-xs">
             {user.username.charAt(0)}
           </div>
 
@@ -556,7 +556,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={mediaUrl.trim() ? "Título da sua discussão (opcional)..." : "Título da sua discussão..."}
-                className="w-full bg-transparent text-on-surface font-bold text-base sm:text-lg placeholder:text-on-surface-variant/50 focus:outline-none border-b border-outline-variant/20 pb-2 transition-all"
+                className="w-full bg-transparent text-on-surface font-bold text-base sm:text-lg placeholder:text-on-surface-variant/50 focus:outline-none border-b border-outline-variant pb-2 transition-all"
                 autoFocus={!mediaUrl.trim()}
               />
             )}
@@ -598,7 +598,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
 
             {/* PERSONALIZAÇÃO DE GRAFIA PARA O SCRAP (Nostalgia Orkut: Fontes, Cores, Tamanho e Papel) */}
             {postType === 'scrap' && (
-              <div className="flex flex-col gap-2.5 p-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 animate-in fade-in">
+              <div className="flex flex-col gap-2.5 p-3 rounded-2xl bg-surface-container-low border border-outline-variant animate-in fade-in">
                 {/* Seletor de Fontes Nostálgicas */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-12">
@@ -612,8 +612,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                       style={{ fontFamily: SCRAP_FONTS[k].family }}
                       className={`px-3 py-1 rounded-full text-xs transition-all cursor-pointer border ${
                         scrapStyle.f === k
-                          ? 'border-blue-500 bg-blue-500/15 text-blue-400 font-bold shadow-xs'
-                          : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
+                          ? 'border-primary bg-primary-container/15 text-primary font-bold shadow-xs'
+                          : 'border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
                       }`}
                     >
                       {SCRAP_FONTS[k].label}
@@ -622,7 +622,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 </div>
 
                 {/* Linha de Tamanho, Tinta e Papel */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-outline-variant/20">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-outline-variant">
                   {/* Tamanho da Letra */}
                   <div className="flex items-center gap-1">
                     <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-12">
@@ -635,8 +635,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                         onClick={() => setScrapStyle((s) => ({ ...s, s: k }))}
                         className={`w-8 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
                           scrapStyle.s === k
-                            ? 'border-blue-500 bg-blue-500/15 text-blue-400'
-                            : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+                            ? 'border-primary bg-primary-container/15 text-primary'
+                            : 'border-outline-variant text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
                         {SCRAP_SIZES[k].label}
@@ -747,7 +747,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             {mediaType === 'video' || (videoFileName && !localPreviewUrl) ? (
               /* Tarefa 4: Miniatura de vídeo com ícone de play e nome do arquivo */
               <div className="p-4 flex items-center gap-3.5 bg-zinc-950/90">
-                <div className="w-12 h-12 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                <div className="w-12 h-12 rounded-xl bg-primary-container/20 border border-primary flex items-center justify-center text-primary shrink-0 shadow-inner">
                   <span className="material-symbols-outlined text-[30px]">play_circle</span>
                 </div>
                 <div className="flex flex-col min-w-0 pr-8">
@@ -776,7 +776,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       </div>
 
       {/* 4. A BARRA INFERIOR (O "Footer" do Modal): sticky bottom-0 com Safe Area e alinhamento em linha única */}
-      <footer className="sticky bottom-0 bg-surface-container-lowest px-3 sm:px-5 py-2.5 sm:py-3.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] border-t border-outline-variant/30 shrink-0 z-20 flex items-center justify-between gap-1.5 sm:gap-3">
+      <footer className="sticky bottom-0 bg-surface-container-lowest px-3 sm:px-5 py-2.5 sm:py-3.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] border-t border-outline-variant shrink-0 z-20 flex items-center justify-between gap-1.5 sm:gap-3">
         {/* Lado Esquerdo: Ícones Foto, Vídeo, Emoji, GIF e Localização */}
         <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
           {/* Foto */}
@@ -784,7 +784,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={() => handleTriggerUpload('image')}
             disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-blue-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-primary hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             aria-label="Adicionar Foto"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">image</span>
@@ -795,7 +795,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             type="button"
             onClick={() => handleTriggerUpload('video')}
             disabled={uploading}
-            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-indigo-500 hover:text-indigo-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-on-surface-variant hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
             aria-label="Adicionar Vídeo"
           >
             <span className="material-symbols-outlined text-[20px] sm:text-[21px]">videocam</span>
@@ -807,7 +807,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               type="button"
               onClick={() => cameraInputRef.current?.click()}
               disabled={uploading}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-blue-500 hover:text-blue-600 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-surface-container text-primary hover:text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center"
               aria-label="Tirar foto com a câmera"
             >
               <span className="material-symbols-outlined text-[20px] sm:text-[21px]">photo_camera</span>
@@ -818,7 +818,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         {/* Lado Direito: Seletor de Destino e Botão Publicar */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
           {/* Seletor de Destino */}
-          <div className="flex items-center gap-1 bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-full border border-outline-variant/30 text-xs shrink-0 max-w-[130px] sm:max-w-[200px]">
+          <div className="flex items-center gap-1 bg-surface-container-low px-2 sm:px-3 py-1.5 rounded-full border border-outline-variant text-xs shrink-0 max-w-[130px] sm:max-w-[200px]">
             <span className="material-symbols-outlined text-on-surface-variant text-[15px] sm:text-[16px] shrink-0">groups</span>
             <select
               value={communityId}

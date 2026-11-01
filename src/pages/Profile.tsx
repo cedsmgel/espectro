@@ -133,7 +133,7 @@ export const Profile: React.FC = () => {
         <main className="w-full bg-surface py-6">
           <div className="w-full max-w-5xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col gap-8">
             {/* 1. Header do Perfil (Totalmente Conectado aos Dados Reais do D1) */}
-            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-sm border border-outline-variant flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div className="flex items-center gap-5 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
@@ -217,7 +217,7 @@ export const Profile: React.FC = () => {
                 <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                   <Link
                     to="/settings/profile"
-                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                     <span>Editar Perfil</span>
@@ -225,7 +225,7 @@ export const Profile: React.FC = () => {
 
                   <Link
                     to="/settings/account"
-                    className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center cursor-pointer"
+                    className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center cursor-pointer"
                     title="Configurações de Privacidade da Conta"
                   >
                     <span className="material-symbols-outlined text-[18px]">shield</span>
@@ -263,8 +263,8 @@ export const Profile: React.FC = () => {
 
             {/* 2. Mural de Publicações / Bloqueio de Perfil Privado */}
             {isLockedPrivate ? (
-              <div className="bg-surface-container-lowest rounded-3xl p-8 sm:p-12 border border-outline-variant/30 shadow-xs flex flex-col items-center justify-center text-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center text-primary border border-outline-variant/30">
+              <div className="bg-surface-container-lowest rounded-3xl p-8 sm:p-12 border border-outline-variant shadow-xs flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center text-primary border border-outline-variant">
                   <span className="material-symbols-outlined text-[36px]">lock</span>
                 </div>
                 <div className="max-w-md">
@@ -315,7 +315,7 @@ export const Profile: React.FC = () => {
                     description="Ninguém deixou um recadinho ainda. Mande um scrap para um amigo para começar."
                     actionLabel={isSelf ? "Criar primeiro post" : "Explorar o Feed"}
                     onAction={() => navigate('/')}
-                    className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-8"
+                    className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-8"
                   />
                 ) : (
                   <div className="flex flex-col gap-5">

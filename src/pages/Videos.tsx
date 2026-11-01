@@ -68,7 +68,7 @@ export const Videos: React.FC = () => {
         }`}
       >
         {/* Interactive Pill Filter Bar */}
-        <section className="sticky top-16 md:top-0 z-30 bg-surface/95 backdrop-blur-md py-3 px-4 md:px-8 border-b border-outline-variant/30">
+        <section className="sticky top-16 md:top-0 z-30 bg-surface/95 backdrop-blur-md py-3 px-4 md:px-8 border-b border-outline-variant">
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
               {categories.map((cat) => (
@@ -116,7 +116,7 @@ export const Videos: React.FC = () => {
             <div className="flex flex-col gap-8">
               {/* Featured Skeleton */}
               <div className="w-full max-w-3xl mx-auto flex flex-col gap-4 animate-pulse">
-                <div className="w-full aspect-video rounded-3xl bg-surface-container-high border border-outline-variant/20 shadow-sm flex items-center justify-center">
+                <div className="w-full aspect-video rounded-3xl bg-surface-container-high border border-outline-variant shadow-sm flex items-center justify-center">
                   <span className="material-symbols-outlined text-outline-variant/40 text-[56px]">
                     play_circle
                   </span>
@@ -163,7 +163,7 @@ export const Videos: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-4 max-w-4xl mx-auto w-full">
+                  <div className="bg-surface-container-lowest rounded-3xl p-5 shadow-sm border border-outline-variant flex flex-col gap-4 max-w-4xl mx-auto w-full">
                     <div className="w-full max-w-2xl mx-auto">
                       <LazyVideoPlayer src={featuredVideo.media_url!} title={featuredVideo.title || undefined} />
                     </div>
@@ -203,7 +203,7 @@ export const Videos: React.FC = () => {
                     {gridVideos.map((video) => (
                       <div
                         key={video.id}
-                        className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/30 shadow-sm flex flex-col gap-3 group"
+                        className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant shadow-sm flex flex-col gap-3 group"
                       >
                         <LazyVideoPlayer src={video.media_url!} title={video.title || undefined} />
                         <div className="flex flex-col min-w-0">

@@ -16,7 +16,7 @@ export const VoiceRecordingBar: React.FC<VoiceRecordingBarProps> = ({ seconds, o
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant/30"
+      className="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant"
     >
       <button
         type="button"

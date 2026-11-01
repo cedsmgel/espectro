@@ -488,7 +488,7 @@ export const Notifications: React.FC = () => {
                   </div>
 
                   <aside className="lg:col-span-4 w-72 max-w-xs justify-self-end hidden lg:flex flex-col gap-4 sticky top-20">
-                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant flex flex-col gap-3">
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
                         <h2 className="font-bold text-sm text-on-surface">Alertas neste aparelho</h2>
@@ -537,7 +537,7 @@ export const Notifications: React.FC = () => {
 
                     <CommunitySuggestions onJoined={() => communitiesApi.list().then(setCommunities).catch(() => {})} />
 
-                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+                    <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant flex flex-col gap-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="material-symbols-outlined text-primary text-[20px]">groups</span>
@@ -557,7 +557,7 @@ export const Notifications: React.FC = () => {
                             <div className="flex items-center gap-2.5 min-w-0">
                               <div
                                 className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-                                style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                                style={{ backgroundColor: c.icon_color || '#404040' }}
                               >
                                 {c.name.charAt(0).toUpperCase()}
                               </div>
@@ -698,7 +698,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({ item, onOpen, onTog
       className={`group relative rounded-2xl p-4 transition-all duration-200 border ${
         !item.read
           ? 'bg-surface-container-lowest border-primary/25 shadow-xs hover:shadow-md'
-          : 'bg-surface-container-lowest/80 border-outline-variant/20 hover:border-outline-variant/40'
+          : 'bg-surface-container-lowest/80 border-outline-variant hover:border-outline-variant/40'
       }`}
     >
       {!item.read && (

@@ -300,7 +300,7 @@ export const ProfilePage: React.FC = () => {
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
           <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex flex-col gap-6 sm:gap-8">
             {/* 1. Header do Perfil Público com Dados Reais */}
-            <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 shadow-sm border border-outline-variant/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
+            <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 shadow-sm border border-outline-variant flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
               <div className="flex items-center gap-5 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
@@ -414,7 +414,7 @@ export const ProfilePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleUnblock}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface font-semibold text-xs border border-outline-variant/30 hover:bg-surface-container flex items-center justify-center gap-2 cursor-pointer"
+                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface font-semibold text-xs border border-outline-variant hover:bg-surface-container flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">lock_open</span>
                     <span>Desbloquear</span>
@@ -423,7 +423,7 @@ export const ProfilePage: React.FC = () => {
                   <>
                     <Link
                       to="/settings/profile"
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                       <span>Editar Perfil</span>
@@ -431,7 +431,7 @@ export const ProfilePage: React.FC = () => {
 
                     <Link
                       to="/settings/account"
-                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant/30 flex items-center justify-center cursor-pointer"
+                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center cursor-pointer"
                       title="Configurações de Privacidade da Conta"
                     >
                       <span className="material-symbols-outlined text-[18px]">shield</span>
@@ -458,7 +458,7 @@ export const ProfilePage: React.FC = () => {
                       }
                       title="Desfazer amizade"
                       aria-label="Desfazer amizade"
-                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant/30 flex items-center justify-center cursor-pointer disabled:opacity-50"
+                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">person_remove</span>
                     </button>
@@ -466,7 +466,7 @@ export const ProfilePage: React.FC = () => {
                 ) : friendshipPending && userProfile?.friendship_direction === 'outgoing' ? (
                   /* Pedido enviado: aguardando aceite */
                   <>
-                    <span className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-semibold text-xs border border-outline-variant/30 flex items-center justify-center gap-2">
+                    <span className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-semibold text-xs border border-outline-variant flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">schedule</span>
                       <span>Pedido enviado</span>
                     </span>
@@ -520,7 +520,7 @@ export const ProfilePage: React.FC = () => {
                 {!isSelf && userProfile && loggedUser && (
                   <ChatMenu
                     title="Mais opções"
-                    buttonClassName="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 flex items-center justify-center cursor-pointer"
+                    buttonClassName="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
                     items={[
                       {
                         key: 'report',
@@ -563,7 +563,7 @@ export const ProfilePage: React.FC = () => {
 
             {/* 3. Comunidades que ele participa */}
             {communities.length > 0 && !isLockedPrivate && (
-              <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col gap-4">
+              <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-secondary text-[22px]">groups</span>
@@ -579,11 +579,11 @@ export const ProfilePage: React.FC = () => {
                     <Link
                       key={c.id}
                       to={`/c/${c.slug || c.id}`}
-                      className="p-3 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant/20 flex items-center gap-3 group cursor-pointer"
+                      className="p-3 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant flex items-center gap-3 group cursor-pointer"
                     >
                       <div
                         className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0 group-hover:scale-105 transition-transform"
-                        style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                        style={{ backgroundColor: c.icon_color || '#404040' }}
                       >
                         {c.name.charAt(0).toUpperCase()}
                       </div>
@@ -603,7 +603,7 @@ export const ProfilePage: React.FC = () => {
 
             {/* 4. Mural de Publicações / Scraps Públicos */}
             {isLockedPrivate ? (
-              <div className="p-12 rounded-3xl bg-surface-container-lowest border border-outline-variant/30 flex flex-col items-center text-center gap-4 shadow-sm animate-in fade-in">
+              <div className="p-12 rounded-3xl bg-surface-container-lowest border border-outline-variant flex flex-col items-center text-center gap-4 shadow-sm animate-in fade-in">
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
                   <span className="material-symbols-outlined text-[32px]">lock</span>
                 </div>
@@ -650,7 +650,7 @@ export const ProfilePage: React.FC = () => {
                     description="Nenhum scrap ou publicação foi deixada aqui ainda."
                     actionLabel={isSelf ? "Criar primeiro post" : "Explorar o Feed"}
                     onAction={() => navigate('/')}
-                    className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-8"
+                    className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-8"
                   />
                 ) : (
                   <div className="flex flex-col gap-5">

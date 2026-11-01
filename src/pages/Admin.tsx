@@ -67,7 +67,7 @@ const ReportCard: React.FC<{
     'px-3 py-1.5 rounded-full text-[11px] font-semibold cursor-pointer disabled:opacity-50 transition-colors';
 
   return (
-    <article className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 flex flex-col gap-3">
+    <article className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="error">{REASON_LABELS[report.reason] || report.reason}</Badge>
         <span className="text-[11px] text-on-surface-variant">
@@ -218,7 +218,7 @@ const ReportsTab: React.FC<{ onCount: (n: number) => void }> = ({ onCount }) => 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant/30 self-start">
+      <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start">
         {(['open', 'closed'] as const).map((value) => (
           <button
             key={value}
@@ -310,7 +310,7 @@ const UsersTab: React.FC = () => {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar conta por nome de usuário"
         aria-label="Buscar conta"
-        className="w-full h-10 px-4 rounded-full bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
+        className="w-full h-10 px-4 rounded-full bg-surface-container-low border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
       />
       {error && <p className="text-xs text-error bg-error-container/60 rounded-xl px-3 py-2">{error}</p>}
       {loading && <p className="text-xs text-on-surface-variant text-center py-4">Carregando...</p>}
@@ -318,7 +318,7 @@ const UsersTab: React.FC = () => {
 
       <ul className="flex flex-col gap-2.5">
         {users.map((account) => (
-          <li key={account.id} className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3.5 flex flex-col gap-2.5">
+          <li key={account.id} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3.5 flex flex-col gap-2.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <Link to={`/perfil/${encodeURIComponent(account.username)}`} className="text-sm font-semibold text-on-surface hover:text-primary truncate block">
@@ -450,7 +450,7 @@ export const Admin: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant/30 self-start">
+        <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start">
           <button
             type="button"
             onClick={() => setTab('reports')}

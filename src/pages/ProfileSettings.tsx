@@ -197,7 +197,7 @@ export const ProfileSettings: React.FC = () => {
 
               <Link
                 to={`/u/${username || loggedUser.username}`}
-                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container hover:text-primary text-xs font-semibold transition-colors border border-outline-variant/30"
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container hover:text-primary text-xs font-semibold transition-colors border border-outline-variant"
               >
                 <span className="material-symbols-outlined text-[16px]">visibility</span>
                 <span>Ver Perfil</span>
@@ -205,7 +205,7 @@ export const ProfileSettings: React.FC = () => {
             </div>
 
             {/* Card Principal do Formulário */}
-            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant/30 shadow-xs">
+            <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant shadow-xs">
               {loading ? (
                 <div className="py-16 flex flex-col items-center justify-center gap-3 text-on-surface-variant">
                   <span className="material-symbols-outlined text-[36px] text-primary animate-spin">
@@ -231,7 +231,7 @@ export const ProfileSettings: React.FC = () => {
                   )}
 
                   {/* 1. SEÇÃO DE FOTO DE PERFIL / AVATAR */}
-                  <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-outline-variant/20">
+                  <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-outline-variant">
                     <div className="relative group shrink-0">
                       {avatarUrl ? (
                         <img
@@ -319,7 +319,7 @@ export const ProfileSettings: React.FC = () => {
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: Carlos Eduardo"
                         maxLength={50}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
+                        className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
                       />
                       <p className="text-[10px] text-on-surface-variant">
                         Como você quer ser chamado no seu perfil.
@@ -343,7 +343,7 @@ export const ProfileSettings: React.FC = () => {
                           placeholder="seu_usuario"
                           maxLength={30}
                           required
-                          className="w-full pl-8 pr-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
+                          className="w-full pl-8 pr-4 py-2.5 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all"
                         />
                       </div>
                       <p className="text-[10px] text-on-surface-variant">
@@ -362,7 +362,7 @@ export const ProfileSettings: React.FC = () => {
                       type="email"
                       value={email}
                       disabled
-                      className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low/50 border border-outline-variant/20 text-on-surface-variant text-xs cursor-not-allowed select-none"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-surface-container-low/50 border border-outline-variant text-on-surface-variant text-xs cursor-not-allowed select-none"
                     />
                     <p className="text-[10px] text-on-surface-variant">
                       O e-mail da sua conta não é exibido publicamente.
@@ -386,12 +386,12 @@ export const ProfileSettings: React.FC = () => {
                       placeholder="Conte um pouco sobre você, seus interesses e hobbies no Espectro..."
                       rows={3}
                       maxLength={160}
-                      className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all resize-none"
+                      className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all resize-none"
                     />
                   </div>
 
                   {/* Botões de Ação */}
-                  <div className="pt-4 border-t border-outline-variant/20 flex items-center justify-between gap-4">
+                  <div className="pt-4 border-t border-outline-variant flex items-center justify-between gap-4">
                     <button
                       type="button"
                       onClick={() => navigate(`/u/${username || loggedUser.username}`)}

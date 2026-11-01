@@ -49,9 +49,9 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in overflow-y-auto">
-      <div className="w-full max-w-xl max-h-[92dvh] bg-surface-container-lowest dark:bg-[#121212] rounded-3xl overflow-hidden border border-outline-variant/30 shadow-2xl flex flex-col animate-in zoom-in-95 my-auto">
+      <div className="w-full max-w-xl max-h-[92dvh] bg-surface-container-lowest dark:bg-[#121212] rounded-3xl overflow-hidden border border-outline-variant shadow-2xl flex flex-col animate-in zoom-in-95 my-auto">
         {/* Topo do Modal */}
-        <div className="px-5 py-3.5 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
+        <div className="px-5 py-3.5 border-b border-outline-variant flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">crop</span>
             <h3 className="font-bold text-sm text-on-surface">Ajustar e Recortar Imagem</h3>
@@ -78,7 +78,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             onCropComplete={onCropComplete}
             classes={{
               containerClassName: 'relative w-full h-full',
-              cropAreaClassName: 'rounded-lg border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]',
+              cropAreaClassName: 'rounded-lg border-2 border-primary',
             }}
           />
         </div>
@@ -157,7 +157,7 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
               type="button"
               onClick={handleApplyCrop}
               disabled={processing}
-              className="px-5 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 rounded-full bg-primary-container hover:bg-surface-container-high text-on-primary text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {processing ? (
                 <>

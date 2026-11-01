@@ -125,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   return (
     <>
       {/* 1. HEADER GLOBAL FULL-WIDTH (Visible Spectrum Social) */}
-      <header className="fixed top-0 left-0 right-0 w-full h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_6px_rgba(0,0,0,0.03)] z-40 px-3 sm:px-6 flex md:hidden items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 w-full h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface-container-lowest border-b border-outline-variant z-40 px-3 sm:px-6 flex md:hidden items-center justify-between">
         <div className="h-full w-full flex items-center justify-between gap-2 sm:gap-4 max-w-7xl mx-auto">
           {/* Canto Esquerdo: Botão Toggle Hamburger (Desktop) + Logo Oficial Espectro */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
             <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-olive flex items-center justify-center text-white font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 rounded-xl bg-olive flex items-center justify-center text-on-primary font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
                 E
               </div>
               <span className="text-lg sm:text-xl font-bold text-on-surface tracking-tight">
@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
             {/* Dropdown com Resultados Agrupados: Pessoas, Comunidades e Posts */}
             {showSearchResults && searchQuery.trim().length > 0 && (
-              <div className="absolute top-full left-2 right-2 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute top-full left-2 right-2 mt-2 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant overflow-hidden z-50 max-h-[75vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
                 {isSearching && !searchResults && (
                   <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
                     <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -194,7 +194,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   <>
                     {/* 1. Grupo: Pessoas */}
                     {searchResults.users.length > 0 && (
-                      <div className="p-2 border-b border-outline-variant/20">
+                      <div className="p-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary">
                           <span className="material-symbols-outlined text-[16px]">person</span>
                           <span>Pessoas ({searchResults.users.length})</span>
@@ -234,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
                     {/* 2. Grupo: Comunidades */}
                     {searchResults.communities.length > 0 && (
-                      <div className="p-2 border-b border-outline-variant/20">
+                      <div className="p-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-secondary">
                           <span className="material-symbols-outlined text-[16px]">groups</span>
                           <span>Comunidades ({searchResults.communities.length})</span>
@@ -249,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                             >
                               <div
                                 className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-xs shrink-0"
-                                style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                                style={{ backgroundColor: c.icon_color || '#404040' }}
                               >
                                 {c.name.charAt(0).toUpperCase()}
                               </div>
@@ -312,7 +312,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                       )}
 
                     {/* Rodapé: Pressione enter */}
-                    <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-on-surface-variant">
+                    <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant flex items-center justify-between text-[11px] text-on-surface-variant">
                       <span>Pressione <strong className="font-semibold text-on-surface">Enter</strong> para ver mais no Feed</span>
                       <button
                         type="button"
@@ -412,7 +412,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           {/* Container Superior Fixo da Pesquisa no Mobile (w-full) */}
           <div
             ref={mobileSearchRef}
-            className="md:hidden fixed inset-x-0 top-0 z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-md pt-[env(safe-area-inset-top)] animate-in slide-in-from-top-2 duration-150"
+            className="md:hidden fixed inset-x-0 top-0 z-50 bg-surface-container-lowest border-b border-outline-variant shadow-md pt-[env(safe-area-inset-top)] animate-in slide-in-from-top-2 duration-150"
           >
             {/* Barra de Input com largura total */}
             <div className="relative w-full px-3 py-2.5 flex items-center gap-2">
@@ -461,7 +461,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
               {/* Dropdown de Resultados no Mobile: absolute top-full left-0 w-full z-50 max-h-[60vh] overflow-y-auto */}
               {showSearchResults && searchQuery.trim().length > 0 && (
-                <div className="absolute top-full left-0 w-full z-50 max-h-[60vh] overflow-y-auto bg-surface-container-lowest border-b border-outline-variant/30 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="absolute top-full left-0 w-full z-50 max-h-[60vh] overflow-y-auto bg-surface-container-lowest border-b border-outline-variant shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                   {/* Carregando */}
                   {isSearching && !searchResults && (
                     <div className="p-6 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
@@ -518,7 +518,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
                               className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0 shadow-xs"
-                              style={{ backgroundColor: c.icon_color || '#712ae2' }}
+                              style={{ backgroundColor: c.icon_color || '#404040' }}
                             >
                               {c.name.charAt(0).toUpperCase()}
                             </div>
@@ -590,7 +590,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                       {(searchResults.users.length > 0 ||
                         searchResults.communities.length > 0 ||
                         searchResults.posts.length > 0) && (
-                        <div className="pt-2 mt-1 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant">
+                        <div className="pt-2 mt-1 border-t border-outline-variant flex items-center justify-between text-xs text-on-surface-variant">
                           <span>Ver resultados completos</span>
                           <button
                             type="button"
