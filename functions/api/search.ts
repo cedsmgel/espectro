@@ -33,6 +33,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       SELECT id, username, name, avatar_url, bio
       FROM users
       WHERE (LOWER(username) LIKE ? ESCAPE '\\' OR (name IS NOT NULL AND LOWER(name) LIKE ? ESCAPE '\\'))
+        AND deletion_requested_at IS NULL
         AND id NOT IN (
           SELECT blocked_id FROM blocks WHERE blocker_id = ?
           UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?

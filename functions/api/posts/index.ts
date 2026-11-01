@@ -45,7 +45,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       FROM posts p
       JOIN users u ON p.author_id = u.id
       LEFT JOIN communities c ON p.community_id = c.id
-      WHERE 1=1
+      WHERE u.deletion_requested_at IS NULL
     `;
 
     const params: unknown[] = [];

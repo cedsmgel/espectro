@@ -38,10 +38,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Busca usuário no banco D1
     const user = await env.DB.prepare(
-      "SELECT id, username, password_hash, suspended_at, suspended_reason FROM users WHERE username = ? COLLATE NOCASE"
+      "SELECT id, username, password_hash, suspended_at, suspended_reason, deletion_requested_at FROM users WHERE username = ? COLLATE NOCASE"
     )
       .bind(cleanUsername)
-      .first<{ id: number; username: string; password_hash: string; suspended_at: string | null; suspended_reason: string | null }>();
+      .first<{ id: number; username: string; password_hash: string; suspended_at: string | null; suspended_reason: string | null; deletion_requested_at: string | null }>();
 
     if (!user) {
       // Executa o mesmo custo de hash para não revelar se o usuário existe pelo tempo de resposta
@@ -63,6 +63,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    // Entrar durante o prazo de arrependimento cancela a exclusão
+    const deletionCanceled = Boolean(user.deletion_requested_at);
+    if (deletionCanceled) {
+      await env.DB.prepare("UPDATE users SET deletion_requested_at = NULL, deletion_scheduled_for = NULL WHERE id = ?").bind(user.id).run();
+    }
+
     const secret = getJwtSecret(env);
 
     // Gera o token JWT
@@ -76,6 +82,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     return jsonResponse({
       token,
+      deletion_canceled: deletionCanceled,
       user: {
         id: user.id,
         username: user.username,

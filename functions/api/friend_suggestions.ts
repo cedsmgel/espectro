@@ -44,6 +44,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          FROM users u
          WHERE u.id != ?1
            AND u.suspended_at IS NULL
+           AND u.deletion_requested_at IS NULL
            AND u.id NOT IN (SELECT rid FROM related)
            AND u.id NOT IN (SELECT suggested_id FROM dismissed_suggestions WHERE user_id = ?1)
            AND u.id NOT IN (

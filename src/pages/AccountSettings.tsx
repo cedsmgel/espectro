@@ -280,6 +280,17 @@ export const AccountSettings: React.FC = () => {
                     </p>
                   </div>
 
+                  <Link
+                    to="/configuracoes/dados"
+                    className="flex items-center justify-between gap-3 py-3 border-y border-outline-variant text-sm font-semibold text-on-surface hover:bg-surface-container-low/60 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[20px] text-on-surface-variant">lock</span>
+                      Senha, dados e exclusão da conta
+                    </span>
+                    <span className="material-symbols-outlined text-[20px] text-on-surface-variant">chevron_right</span>
+                  </Link>
+
                   {/* Botões de Ação */}
                   <div className="pt-4 border-t border-outline-variant flex items-center justify-between">
                     <button

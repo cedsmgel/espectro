@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 1. Busca perfil público por nome de usuário (?username=...)
     if (targetUsername) {
       const user = await env.DB.prepare(
-        "SELECT id, username, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE"
+        "SELECT id, username, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE username = ? COLLATE NOCASE AND deletion_requested_at IS NULL"
       )
         .bind(targetUsername.trim())
         .first<any>();
