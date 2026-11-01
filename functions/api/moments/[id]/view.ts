@@ -18,13 +18,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const id = Number(params.id);
     if (!Number.isInteger(id) || id <= 0) return errorResponse("ID inválido.", 400);
 
-    const moment = await env.DB.prepare("SELECT user_id FROM moments WHERE id = ? AND expires_at > CURRENT_TIMESTAMP")
+    const moment = await env.DB.prepare("SELECT user_id, audience FROM moments WHERE id = ? AND expires_at > CURRENT_TIMESTAMP")
       .bind(id)
-      .first<{ user_id: number }>();
+      .first<{ user_id: number; audience: string }>();
     if (!moment) return errorResponse("Momentum não encontrado.", 404);
     if (moment.user_id === user.id) return jsonResponse({ ok: true });
     if (!(await areFriends(env.DB, user.id, moment.user_id)) || (await isBlockedBetween(env.DB, user.id, moment.user_id))) {
       return errorResponse("Momentum não encontrado.", 404);
+    }
+    // Público "melhores amigos": só quem está na lista do autor
+    if (moment.audience === "close_friends") {
+      const inList = await env.DB.prepare("SELECT 1 FROM close_friends WHERE user_id = ? AND friend_id = ?").bind(moment.user_id, user.id).first();
+      if (!inList) return errorResponse("Momentum não encontrado.", 404);
     }
 
     await env.DB.prepare("INSERT OR IGNORE INTO moment_views (moment_id, viewer_id) VALUES (?, ?)").bind(id, user.id).run();

@@ -401,28 +401,6 @@ export const ProfilePage: React.FC = () => {
 
                   </div>
 
-                  {userProfile && !isLockedPrivate && (
-                    <div className="order-4 mt-3 flex items-center gap-2">
-                      <ShareButton
-                        variant="pill"
-                        url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
-                        title={`@${userProfile.username} no Espectro`}
-                        text={userProfile.bio || undefined}
-                      />
-                      <ChatMenu
-                        title="Mais do perfil"
-                        buttonClassName="h-10 w-10 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
-                        items={[
-                          { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
-                          { key: 'amigos', label: 'Amigos', icon: 'group', onSelect: () => navigate(isSelf ? '/amigos' : `/perfil/${encodeURIComponent(userProfile.username)}/amigos`) },
-                          { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
-                          { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
-                          { key: 'atividade', label: 'Atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/atividade`) },
-                        ]}
-                      />
-                    </div>
-                  )}
-
                   {!isLockedPrivate && (
                     <div className="order-2 grid grid-cols-3 sm:flex sm:flex-wrap sm:gap-x-10 gap-y-2 mt-2 sm:mt-4 sm:py-4 sm:border-y sm:border-outline-variant text-xs sm:text-sm text-on-surface-variant text-center sm:text-left [&>*]:flex [&>*]:flex-col [&>*]:items-center sm:[&>*]:items-start [&_strong]:text-xl sm:[&_strong]:text-2xl [&_strong]:leading-tight [&_strong]:font-bold">
                       <div>
@@ -574,21 +552,30 @@ export const ProfilePage: React.FC = () => {
                   </button>
                 )}
 
-                {!isSelf && userProfile && loggedUser && (
+                {userProfile && !isLockedPrivate && (
+                  <ShareButton
+                    variant="icon"
+                    url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
+                    title={`@${userProfile.username} no Espectro`}
+                    text={userProfile.bio || undefined}
+                  />
+                )}
+
+                {userProfile && (
                   <ChatMenu
                     title="Mais opções"
-                    buttonClassName="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
+                    buttonClassName="h-10 w-10 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
                     items={[
-                      {
-                        key: 'report',
-                        label: 'Denunciar',
-                        icon: 'flag',
-                        danger: true,
-                        onSelect: () => setShowReport(true),
-                      },
+                      { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
+                      { key: 'amigos', label: 'Amigos', icon: 'group', onSelect: () => navigate(isSelf ? '/amigos' : `/perfil/${encodeURIComponent(userProfile.username)}/amigos`) },
+                      { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
+                      { key: 'melhores', label: 'Melhores amigos', icon: 'star', hidden: !isSelf, onSelect: () => navigate('/melhores-amigos') },
+                      { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
+                      { key: 'atividade', label: 'Sua atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/atividade`) },
+                      { key: 'report', label: 'Denunciar', icon: 'flag', danger: true, hidden: isSelf || !loggedUser, onSelect: () => setShowReport(true) },
                       userProfile.blocked_by_me
-                        ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', onSelect: handleUnblock }
-                        : { key: 'block', label: 'Bloquear', icon: 'block', danger: true, onSelect: handleBlock },
+                        ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', hidden: isSelf || !loggedUser, onSelect: handleUnblock }
+                        : { key: 'block', label: 'Bloquear', icon: 'block', danger: true, hidden: isSelf || !loggedUser, onSelect: handleBlock },
                     ]}
                   />
                 )}

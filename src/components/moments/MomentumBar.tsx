@@ -65,7 +65,7 @@ export const MomentumBar: React.FC = () => {
             className="flex flex-col items-center gap-1.5 flex-shrink-0 cursor-pointer group"
             aria-label={`Ver Momentum de @${g.username}`}
           >
-            <div className={`rounded-full p-[2px] border-2 group-hover:scale-105 transition-transform ${g.all_viewed ? 'border-outline-variant' : 'border-on-surface'}`}>
+            <div className={`rounded-full p-[2px] border-2 group-hover:scale-105 transition-transform ${g.all_viewed ? 'border-outline-variant' : g.items.some((i) => i.audience === 'close_friends' && !i.viewed) ? 'border-emerald-500' : 'border-on-surface'}`}>
               <div className="rounded-full bg-surface p-[2px]">{avatar(g.username, g.avatar_url, 'w-14 h-14')}</div>
             </div>
             <span className={`text-[11px] text-center max-w-[68px] truncate ${g.all_viewed ? 'text-on-surface-variant' : 'font-semibold text-on-surface'}`}>{g.username}</span>
