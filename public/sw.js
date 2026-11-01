@@ -72,7 +72,10 @@ async function networkFirstPage(event) {
   const cache = await caches.open(UI_CACHE);
   try {
     const response = await fetch(event.request);
-    event.waitUntil(storeResponse(cache, SHELL_URL, response.clone(), 'html'));
+    // O HTML de /post/ e /u/ traz a prévia de uma página específica: não serve de app offline
+    if (!/^\/(post|u)\//.test(new URL(event.request.url).pathname)) {
+      event.waitUntil(storeResponse(cache, SHELL_URL, response.clone(), 'html'));
+    }
     return response;
   } catch (err) {
     const cached = await cache.match(SHELL_URL);

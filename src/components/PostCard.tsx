@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, postsApi, authStorage, adminApi } from '../lib/api';
 import { ReportModal } from './chat/ReportModal';
+import { ShareButton } from './ShareButton';
 import { useIsAdmin } from '../hooks/useIsAdmin';
 import { renderMarkdown } from '../lib/markdown';
 import { LazyVideoPlayer } from './LazyVideoPlayer';
@@ -475,20 +476,11 @@ export const PostCard: React.FC<PostCardProps> = ({
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(
-                  window.location.origin + `/post/${post.id}`
-                );
-                alert('Link copiado para a área de transferência!');
-              }}
-              className="p-1.5 rounded-full hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
-              title="Copiar link da publicação"
-            >
-              <span className="material-symbols-outlined text-[19px]">share</span>
-            </button>
+            <ShareButton
+              url={`${window.location.origin}/post/${post.id}`}
+              title={post.title?.trim() || `Publicação de @${post.author_name}`}
+              text={post.content ? parseScrap(post.content).body.slice(0, 120) : undefined}
+            />
           </div>
         </div>
       </article>

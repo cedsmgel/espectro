@@ -7,6 +7,7 @@ import { SidebarNav } from '../components/SidebarNav';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
+import { CommunitySuggestions } from '../components/CommunitySuggestions';
 
 export const Communities: React.FC = () => {
   const navigate = useNavigate();
@@ -103,6 +104,9 @@ export const Communities: React.FC = () => {
                 className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
             </div>
+
+            {/* Recomendadas para a pessoa logada (some durante a busca) */}
+            {user && !search.trim() && <CommunitySuggestions onJoined={loadCommunities} />}
 
             {/* Lista de Comunidades */}
             {loading ? (

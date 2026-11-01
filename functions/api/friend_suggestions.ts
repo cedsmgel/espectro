@@ -5,7 +5,8 @@ export interface Env {
   JWT_SECRET: string;
 }
 
-// GET: recomendações de amigos, ordenadas por amigos em comum e comunidades em comum
+// GET: recomendações de amigos, pontuadas por amigos em comum, comunidades em comum,
+// conversas nas publicações um do outro e atividade recente
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -22,28 +23,36 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          SELECT CASE WHEN user_id = ?1 THEN friend_id ELSE user_id END AS rid
          FROM friendships
          WHERE user_id = ?1 OR friend_id = ?1
+       ),
+       candidates AS (
+         SELECT
+           u.id,
+           u.username,
+           u.name,
+           u.avatar_url,
+           (SELECT COUNT(*) FROM friendships f
+              WHERE f.status = 'accepted'
+                AND ((f.user_id = u.id AND f.friend_id IN (SELECT fid FROM my_friends))
+                  OR (f.friend_id = u.id AND f.user_id IN (SELECT fid FROM my_friends)))) AS mutual_friends,
+           (SELECT COUNT(*) FROM community_members a
+              JOIN community_members b ON a.community_id = b.community_id
+              WHERE a.user_id = ?1 AND b.user_id = u.id) AS shared_communities,
+           (SELECT COUNT(*) FROM comments c JOIN posts p ON p.id = c.post_id
+              WHERE (c.author_id = u.id AND p.author_id = ?1)
+                 OR (c.author_id = ?1 AND p.author_id = u.id)) AS interactions,
+           CASE WHEN u.last_seen_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END AS recently_active
+         FROM users u
+         WHERE u.id != ?1
+           AND u.suspended_at IS NULL
+           AND u.id NOT IN (SELECT rid FROM related)
+           AND u.id NOT IN (SELECT suggested_id FROM dismissed_suggestions WHERE user_id = ?1)
+           AND u.id NOT IN (
+             SELECT blocked_id FROM blocks WHERE blocker_id = ?1
+             UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?1
+           )
        )
-       SELECT
-         u.id,
-         u.username,
-         u.name,
-         u.avatar_url,
-         (SELECT COUNT(*) FROM friendships f
-            WHERE f.status = 'accepted'
-              AND ((f.user_id = u.id AND f.friend_id IN (SELECT fid FROM my_friends))
-                OR (f.friend_id = u.id AND f.user_id IN (SELECT fid FROM my_friends)))) AS mutual_friends,
-         (SELECT COUNT(*) FROM community_members a
-            JOIN community_members b ON a.community_id = b.community_id
-            WHERE a.user_id = ?1 AND b.user_id = u.id) AS shared_communities
-       FROM users u
-       WHERE u.id != ?1
-         AND u.id NOT IN (SELECT rid FROM related)
-         AND u.id NOT IN (SELECT suggested_id FROM dismissed_suggestions WHERE user_id = ?1)
-         AND u.id NOT IN (
-           SELECT blocked_id FROM blocks WHERE blocker_id = ?1
-           UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?1
-         )
-       ORDER BY mutual_friends DESC, shared_communities DESC, u.id DESC
+       SELECT * FROM candidates
+       ORDER BY (mutual_friends * 5 + shared_communities * 3 + interactions * 2 + recently_active) DESC, id DESC
        LIMIT 12`
     )
       .bind(user.id)

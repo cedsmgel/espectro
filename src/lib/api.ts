@@ -475,7 +475,29 @@ export interface FriendSuggestion {
   avatar_url?: string | null;
   mutual_friends: number;
   shared_communities: number;
+  interactions?: number;
 }
+
+export interface CommunitySuggestion {
+  id: number;
+  name: string;
+  slug?: string | null;
+  description?: string | null;
+  icon_color?: string | null;
+  members_count: number;
+  friends_in: number;
+  recent_posts: number;
+}
+
+export const communitySuggestionsApi = {
+  list: () => apiRequest<CommunitySuggestion[]>('/api/community_suggestions', { method: 'GET' }),
+  dismiss: (communityId: number) =>
+    apiRequest<{ dismissed: boolean }>('/api/community_suggestions', {
+      method: 'POST',
+      body: JSON.stringify({ dismiss_id: communityId }),
+    }),
+  join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
+};
 
 export const notificationsApi = {
   list: (beforeId?: number) =>
