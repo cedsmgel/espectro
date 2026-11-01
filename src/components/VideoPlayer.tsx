@@ -104,17 +104,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
 
-  // Padrão de dimensionamento X/Twitter, Reddit e Facebook:
-  // Landscape 16:9 -> 480x270px; Portrait 9:16 -> 240x360px; Square 1:1 -> 320x320px
-  const [containerStyle, setContainerStyle] = useState<{
-    aspectRatio: string;
-    maxWidth: string;
-    maxHeight: string;
-  }>({
-    aspectRatio: '16 / 9',
-    maxWidth: '480px',
-    maxHeight: '270px',
-  });
+  // O quadro segue a proporção do vídeo, limitada entre 4:5 (vertical) e 1,91:1 (horizontal),
+  // como no Instagram e no Reddit: o vídeo inteiro cabe e o que sobra fica preto
+  const [aspect, setAspect] = useState(16 / 9);
 
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSeekingRef = useRef(false);
@@ -164,43 +156,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      const total = videoRef.current.duration;
-      setDuration(Number.isFinite(total) ? total : 0);
-      updateSessionPosition(videoRef.current);
-      const { videoWidth, videoHeight } = videoRef.current;
-      if (videoWidth && videoHeight) {
-        const ratio = videoWidth / videoHeight;
-        if (ratio >= 1.5) {
-          // Horizontal (16:9) estilo X/Twitter e YouTube feed
-          setContainerStyle({
-            aspectRatio: '16 / 9',
-            maxWidth: '480px',
-            maxHeight: '270px',
-          });
-        } else if (ratio <= 0.75) {
-          // Vertical (9:16) estilo Reels/Shorts/TikTok
-          setContainerStyle({
-            aspectRatio: '9 / 16',
-            maxWidth: '240px',
-            maxHeight: '360px',
-          });
-        } else if (ratio >= 0.9 && ratio <= 1.1) {
-          // Quadrado (1:1) estilo Instagram/Facebook
-          setContainerStyle({
-            aspectRatio: '1 / 1',
-            maxWidth: '320px',
-            maxHeight: '320px',
-          });
-        } else {
-          const calcMaxW = ratio > 1 ? '480px' : '300px';
-          setContainerStyle({
-            aspectRatio: `${videoWidth} / ${videoHeight}`,
-            maxWidth: calcMaxW,
-            maxHeight: '300px',
-          });
-        }
-      }
+    if (!videoRef.current) return;
+    const total = videoRef.current.duration;
+    setDuration(Number.isFinite(total) ? total : 0);
+    updateSessionPosition(videoRef.current);
+    const { videoWidth, videoHeight } = videoRef.current;
+    if (videoWidth && videoHeight) {
+      setAspect(Math.min(1.91, Math.max(0.8, videoWidth / videoHeight)));
     }
   };
 
@@ -323,12 +285,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseMove={resetControlsTimeout}
       onMouseEnter={() => setShowControls(true)}
       onPointerDown={handlePointerDown}
-      style={{
-        aspectRatio: containerStyle.aspectRatio,
-        maxWidth: containerStyle.maxWidth,
-        maxHeight: containerStyle.maxHeight,
-      }}
-      className={`relative w-full mx-auto overflow-hidden rounded-xl bg-black group select-none shadow-sm border border-outline-variant/30 flex items-center justify-center ${className}`}
+      style={{ aspectRatio: aspect }}
+      className={`relative w-full max-h-[min(72vh,560px)] mx-auto overflow-hidden rounded-xl bg-black group select-none shadow-sm border border-outline-variant/30 flex items-center justify-center ${className}`}
     >
       {/* Elemento de Vídeo */}
       <video
@@ -346,7 +304,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
         onCanPlay={() => setIsBuffering(false)}
-        className={`w-full h-full cursor-pointer ${isFullscreen ? 'object-contain' : 'object-cover'}`}
+        className="w-full h-full cursor-pointer object-contain"
       />
 
       {/* Top Header Badge (Estilo X / Reddit / Stitch) */}
