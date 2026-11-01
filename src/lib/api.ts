@@ -883,6 +883,7 @@ export interface Moment {
   overlay: string | null;
   created_at: string;
   expires_at: string;
+  audience?: 'friends' | 'close_friends';
   viewed: boolean;
   views_count: number;
 }
@@ -905,11 +906,26 @@ export interface MomentViewer {
 
 export const momentsApi = {
   list: () => apiRequest<MomentGroup[]>('/api/moments', { method: 'GET' }),
-  create: (data: { media_url?: string; media_type: 'image' | 'video' | 'text'; text?: string; bg?: string; overlay?: MomentOverlay }) =>
+  create: (data: { media_url?: string; media_type: 'image' | 'video' | 'text'; text?: string; bg?: string; overlay?: MomentOverlay; audience?: 'friends' | 'close_friends' }) =>
     apiRequest<{ id: number }>('/api/moments', { method: 'POST', body: JSON.stringify(data) }),
   remove: (id: number) => apiRequest<{ deleted: boolean }>(`/api/moments/${id}`, { method: 'DELETE' }),
   markViewed: (id: number) => apiRequest<{ ok: boolean }>(`/api/moments/${id}/view`, { method: 'POST' }),
   viewers: (id: number) => apiRequest<MomentViewer[]>(`/api/moments/${id}/view`, { method: 'GET' }),
+};
+
+export interface CloseFriendRow {
+  id: number;
+  username: string;
+  name: string | null;
+  avatar_url: string | null;
+  close: boolean;
+}
+
+// Melhores amigos: lista privada; só amigos aceitos entram
+export const closeFriendsApi = {
+  list: (q?: string) => apiRequest<{ friends: CloseFriendRow[]; close_count: number }>(`/api/close_friends${q ? `?q=${encodeURIComponent(q)}` : ''}`, { method: 'GET' }),
+  set: (friendId: number, close: boolean) =>
+    apiRequest<{ close: boolean; close_count: number }>('/api/close_friends', { method: 'POST', body: JSON.stringify({ friend_id: friendId, close }) }),
 };
 
 export const uploadApi = {

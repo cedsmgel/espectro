@@ -73,6 +73,9 @@ export const MomentCreator: React.FC<MomentCreatorProps> = ({ onClose, onPublish
     setMode('media');
   };
 
+  // Público: todos os amigos ou só os melhores amigos (lista privada)
+  const [audience, setAudience] = useState<'friends' | 'close_friends'>('friends');
+
   const publish = async () => {
     setError(null);
     try {
@@ -82,7 +85,7 @@ export const MomentCreator: React.FC<MomentCreatorProps> = ({ onClose, onPublish
           return;
         }
         setProgress(0);
-        await momentsApi.create({ media_type: 'text', text: text.trim(), bg });
+        await momentsApi.create({ media_type: 'text', text: text.trim(), bg, audience });
       } else if (file) {
         setProgress(0);
         const uploaded = await uploadApi.upload(file, { context: 'moment', onProgress: setProgress });
@@ -91,6 +94,7 @@ export const MomentCreator: React.FC<MomentCreatorProps> = ({ onClose, onPublish
           media_type: mediaType,
           text: text.trim() || undefined,
           overlay,
+          audience,
         });
       } else {
         return;
@@ -228,6 +232,17 @@ export const MomentCreator: React.FC<MomentCreatorProps> = ({ onClose, onPublish
 
       {mode !== 'choose' && (
         <div className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-black flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setAudience((a) => (a === 'friends' ? 'close_friends' : 'friends'))}
+            aria-pressed={audience === 'close_friends'}
+            className={`h-11 px-4 rounded-full text-xs font-semibold cursor-pointer flex items-center gap-1.5 border ${
+              audience === 'close_friends' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-transparent border-white/30 text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]" style={audience === 'close_friends' ? { fontVariationSettings: "'FILL' 1" } : undefined}>star</span>
+            {audience === 'close_friends' ? 'Melhores amigos' : 'Amigos'}
+          </button>
           {error && <p className="flex-1 text-xs text-red-300" role="alert">{error}</p>}
           {!error && <div className="flex-1" />}
           <button

@@ -57,3 +57,6 @@
 
 /profile/*/*
   X-Robots-Tag: noindex, nofollow
+
+/melhores-amigos
+  X-Robots-Tag: noindex, nofollow

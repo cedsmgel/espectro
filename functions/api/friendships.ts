@@ -246,6 +246,8 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     `)
       .bind(user.id, friendId, friendId, user.id)
       .run();
+    // Sem amizade não há melhor amigo
+    await env.DB.prepare("DELETE FROM close_friends WHERE (user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1)").bind(user.id, friendId).run();
 
     return jsonResponse({ message: "Amizade removida com sucesso." });
   } catch (err: unknown) {
