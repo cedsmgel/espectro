@@ -22,11 +22,6 @@ export interface PageMeta {
 
 export const SITE_NAME = "Espectro";
 
-// Quem está logado não deve ver o conteúdo público piscar antes do app montar
-const SESSION_GUARD = `    <script>try{if(localStorage.getItem('espectro_token'))document.documentElement.classList.add('has-session')}catch(e){}</script>
-    <style>html.has-session #root[data-ssr]>*{visibility:hidden}</style>
-`;
-
 // Cache de borda (Cache API) para visitantes: a primeira visita monta a página, as seguintes saem prontas por 60 s.
 // Poupa banco e CPU (limite de 10 ms no plano gratuito). Quem manda Authorization ou no-cache fica de fora.
 export async function cachedPage(request: Request, build: () => Promise<Response>): Promise<Response> {
@@ -125,7 +120,7 @@ export async function renderShell(request: Request, env: SeoEnv, meta: PageMeta)
     })
     .on("head", {
       element(el) {
-        el.append("\n    " + metaTags(meta, origin) + "\n" + (meta.bodyHtml ? SESSION_GUARD : ""), { html: true });
+        el.append("\n    " + metaTags(meta, origin) + "\n", { html: true });
       },
     })
     // Corpo renderizado no servidor. Fica em #root com data-ssr="static": o app não hidrata, ele troca o conteúdo

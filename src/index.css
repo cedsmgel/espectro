@@ -277,3 +277,8 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     font-size: 16px;
   }
 }
+
+/* HTML pronto do servidor (landing/páginas públicas) fica escondido para quem está logado até o app montar (a marca sai em main.tsx) */
+html.has-session #root[data-ssr] > * {
+  visibility: hidden;
+}
