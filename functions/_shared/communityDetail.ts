@@ -4,7 +4,7 @@ import { getMembership, isActive, isMod } from "./communities";
 export async function loadCommunityDetail(db: D1Database, slugOrId: string, viewerId: number | null): Promise<Record<string, unknown> | null> {
   const base = await db
     .prepare(
-      `SELECT c.id, c.name, c.slug, c.description, c.icon_color, c.owner_id, c.created_at, c.type, c.welcome_message, c.require_tag,
+      `SELECT c.id, c.name, c.slug, c.description, c.icon_color, c.icon_url, c.banner_url, c.owner_id, c.created_at, c.type, c.welcome_message, c.require_tag,
               u.username AS owner_name,
               (SELECT COUNT(1) FROM community_members m WHERE m.community_id = c.id AND m.status = 'active') AS members_count
        FROM communities c JOIN users u ON u.id = c.owner_id

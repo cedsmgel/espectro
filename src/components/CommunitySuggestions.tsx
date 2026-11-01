@@ -59,12 +59,16 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
       <ul className="flex flex-col gap-1">
         {items.map((c) => (
           <li key={c.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-container transition-colors">
-            <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
-              style={{ backgroundColor: c.icon_color || '#404040' }}
-            >
-              {c.name.charAt(0).toUpperCase()}
-            </div>
+            {c.icon_url ? (
+              <img src={c.icon_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+            ) : (
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"
+                style={{ backgroundColor: c.icon_color || '#404040' }}
+              >
+                {c.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <Link to={`/e/${c.slug || c.id}`} className="block text-xs font-semibold text-on-surface truncate hover:text-primary">
                 e/{c.name}

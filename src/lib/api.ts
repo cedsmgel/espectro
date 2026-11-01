@@ -35,6 +35,8 @@ export interface Community {
   slug?: string;
   description: string | null;
   icon_color?: string | null;
+  icon_url?: string | null;
+  banner_url?: string | null;
   owner_id: number;
   owner_name?: string;
   created_at: string;
@@ -608,6 +610,7 @@ export interface CommunitySuggestion {
   slug?: string | null;
   description?: string | null;
   icon_color?: string | null;
+  icon_url?: string | null;
   members_count: number;
   friends_in: number;
   recent_posts: number;
@@ -964,6 +967,7 @@ export interface SearchResults {
     slug?: string | null;
     description?: string | null;
     icon_color?: string | null;
+    icon_url?: string | null;
     members_count?: number;
   }>;
   posts: Array<{

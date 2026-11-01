@@ -156,9 +156,13 @@ export const Explore: React.FC = () => {
                         <SectionTitle icon="groups">Comunidades</SectionTitle>
                         {results.communities.map((c) => (
                           <Link key={c.id} to={`/e/${c.slug || c.id}`} onClick={close} className={rowCls}>
-                            <span className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shrink-0" style={{ backgroundColor: c.icon_color || '#404040' }}>
-                              {c.name.charAt(0).toUpperCase()}
-                            </span>
+                            {c.icon_url ? (
+                              <img src={c.icon_url} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0" />
+                            ) : (
+                              <span className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shrink-0" style={{ backgroundColor: c.icon_color || '#404040' }}>
+                                {c.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
                             <span className="flex flex-col min-w-0">
                               <span className="text-sm font-semibold truncate">e/{c.name}</span>
                               <span className="text-xs text-on-surface-variant truncate">

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { communityModApi, Community, CommunityType, ModLogEntry, ModMember } from '../lib/api';
+import { communityModApi, uploadApi, Community, CommunityType, ModLogEntry, ModMember } from '../lib/api';
 
 interface Props {
   community: Community;
@@ -47,6 +47,33 @@ export const CommunityModPanel: React.FC<Props> = ({ community, onChanged }) => 
     (community.rules || []).map((r) => ({ title: r.title, description: r.description || '' }))
   );
   const [saved, setSaved] = useState(false);
+  const [color, setColor] = useState(community.icon_color || '#404040');
+  const [iconUrl, setIconUrl] = useState<string | null>(community.icon_url || null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(community.banner_url || null);
+  const [uploading, setUploading] = useState<'icon' | 'banner' | null>(null);
+
+  const pickImage = async (kind: 'icon' | 'banner', file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Escolha um arquivo de imagem (PNG, JPG ou WEBP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('A imagem deve ter no máximo 5MB.');
+      return;
+    }
+    setError(null);
+    setUploading(kind);
+    try {
+      const res = await uploadApi.upload(file);
+      if (kind === 'icon') setIconUrl(res.url);
+      else setBannerUrl(res.url);
+    } catch (e: any) {
+      setError(e.message || 'Não foi possível enviar a imagem.');
+    } finally {
+      setUploading(null);
+    }
+  };
 
   const load = useCallback(async () => {
     if (section === 'settings') return;
@@ -102,6 +129,9 @@ export const CommunityModPanel: React.FC<Props> = ({ community, onChanged }) => 
         tags,
         require_tag: requireTag,
         rules: rules.filter((r) => r.title.trim()),
+        icon_color: color,
+        icon_url: iconUrl,
+        banner_url: bannerUrl,
         ...(isOwner ? { type } : {}),
       });
       setSaved(true);
@@ -141,6 +171,38 @@ export const CommunityModPanel: React.FC<Props> = ({ community, onChanged }) => 
 
       {section === 'settings' ? (
         <form onSubmit={saveSettings} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-on-surface">Aparência</span>
+            <div
+              className="relative h-28 rounded-xl border border-outline-variant overflow-hidden"
+              style={{ background: bannerUrl ? `center / cover no-repeat url("${bannerUrl}")` : `linear-gradient(135deg, ${color}dd 0%, #1e1b4b 100%)` }}
+            >
+              <div className="absolute left-3 bottom-3 w-14 h-14 rounded-xl border-2 border-surface-container-lowest overflow-hidden flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: color }}>
+                {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : community.name.charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className={`${btnCls} bg-surface-container text-on-surface`}>
+                {uploading === 'banner' ? 'Enviando...' : bannerUrl ? 'Trocar banner' : 'Enviar banner'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploading !== null} onChange={(e) => { pickImage('banner', e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+              {bannerUrl && (
+                <button type="button" onClick={() => setBannerUrl(null)} className={`${btnCls} bg-surface-container text-on-surface-variant`}>Remover banner</button>
+              )}
+              <label className={`${btnCls} bg-surface-container text-on-surface`}>
+                {uploading === 'icon' ? 'Enviando...' : iconUrl ? 'Trocar ícone' : 'Enviar ícone'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploading !== null} onChange={(e) => { pickImage('icon', e.target.files?.[0]); e.target.value = ''; }} />
+              </label>
+              {iconUrl && (
+                <button type="button" onClick={() => setIconUrl(null)} className={`${btnCls} bg-surface-container text-on-surface-variant`}>Remover ícone</button>
+              )}
+            </div>
+            <label className="flex items-center gap-3 text-xs text-on-surface">
+              Cor da comunidade
+              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-9 h-9 rounded-lg border-0 p-0 bg-transparent cursor-pointer" />
+              <span className="font-mono text-on-surface-variant">{color}</span>
+            </label>
+          </div>
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-on-surface">
             Descrição
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={500} className={inputCls + ' resize-none'} />
