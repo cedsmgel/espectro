@@ -85,9 +85,18 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .bind(user.id, user.id)
       .first<{ total: number }>();
 
+    const [followers, following, iFollow] = await Promise.all([
+      env.DB.prepare("SELECT COUNT(1) AS n FROM follows WHERE following_id = ?").bind(user.id).first<{ n: number }>(),
+      env.DB.prepare("SELECT COUNT(1) AS n FROM follows WHERE follower_id = ?").bind(user.id).first<{ n: number }>(),
+      auth ? env.DB.prepare("SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?").bind(auth.id, user.id).first() : Promise.resolve(null),
+    ]);
+
     return jsonResponse({
       user: {
         ...user,
+        followers_count: followers?.n ?? 0,
+        following_count: following?.n ?? 0,
+        i_follow: Boolean(iFollow),
         friends_count: Number(friendsCount?.total || 0),
         blocked_by_me: blockedByMe,
         friendship_direction: friendshipDirection,

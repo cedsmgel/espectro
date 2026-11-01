@@ -76,3 +76,12 @@ IP completo, país, região, cidade, fuso, ASN, navegador, sistema e tipo de apa
 - **Exibição:** a pessoa vê só a localização aproximada e o IP com o final oculto (`203.0.113.xxx`); outras pessoas nunca veem.
 - **Finalidade:** não usar IP ou localização para publicidade, perfil de interesses ou decisões automáticas que bloqueiem a conta. Divergência de local gera **aviso**, nunca bloqueio, porque VPN, Tor e redes móveis geram falsos positivos.
 - Ao excluir a conta, as linhas de sessão vão junto. Se a obrigação de guarda for exigida em ordem judicial, o registro precisa ser preservado antes da exclusão.
+
+## Atividade de leitura e personalização do feed
+
+- **O que se guarda:** para cada publicação de outra pessoa, o Espectro registra que ela **apareceu na tela** (depois de 1 segundo com metade visível), que foi **aberta** e por **quanto tempo** ficou visível. Nada de conteúdo de mensagens, localização ou IP entra aqui.
+- **Finalidade:** ordenar o feed e medir se a ordenação funciona. Não é usado para publicidade nem vendido.
+- **Base legal:** legítimo interesse, com **opção de desligar** em Configurações → Privacidade ("Personalizar o feed com minha atividade"). Desligar para de registrar e **apaga o histórico** na hora. Falta apenas citar isso na política de privacidade pública.
+- **Retenção:** 90 dias (limpeza ocasional dentro do próprio endpoint de eventos).
+- **Exclusão da conta:** os eventos e os vínculos de seguir saem junto na exclusão definitiva.
+- **Seguir:** relação de mão única; perfis privados não podem ser seguidos (só amizade) e bloquear desfaz o seguir nos dois sentidos.

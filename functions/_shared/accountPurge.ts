@@ -64,6 +64,8 @@ export async function purgeAccount(env: PurgeEnv, userId: number): Promise<void>
   // Tabelas sem exclusão em cascata saem primeiro; o resto cai junto com a conta
   await db.batch([
     db.prepare("DELETE FROM community_members WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM post_events WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM follows WHERE follower_id = ?1 OR following_id = ?1").bind(userId),
     db.prepare("DELETE FROM posts WHERE author_id = ?").bind(userId),
     db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
   ]);

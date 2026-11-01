@@ -41,6 +41,7 @@ export const PrivacySettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [allowScraps, setAllowScraps] = useState(true);
+  const [personalization, setPersonalization] = useState(true);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -49,25 +50,29 @@ export const PrivacySettings: React.FC = () => {
       .then((s) => {
         setIsPrivate(s.is_private);
         setAllowScraps(s.allow_scraps);
+        setPersonalization(s.personalization);
       })
       .catch(() => setMessage({ kind: 'error', text: 'Não foi possível carregar suas preferências.' }))
       .finally(() => setLoading(false));
   }, []);
 
-  const update = async (patch: { is_private?: boolean; allow_scraps?: boolean }) => {
-    const previous = { isPrivate, allowScraps };
+  const update = async (patch: { is_private?: boolean; allow_scraps?: boolean; personalization?: boolean }) => {
+    const previous = { isPrivate, allowScraps, personalization };
     if (patch.is_private !== undefined) setIsPrivate(patch.is_private);
     if (patch.allow_scraps !== undefined) setAllowScraps(patch.allow_scraps);
+    if (patch.personalization !== undefined) setPersonalization(patch.personalization);
     setSaving(true);
     setMessage(null);
     try {
       const res = await accountApi.updateSettings(patch);
       setIsPrivate(res.settings.is_private);
       setAllowScraps(res.settings.allow_scraps);
+      setPersonalization(res.settings.personalization);
       setMessage({ kind: 'ok', text: 'Preferência salva.' });
     } catch (err: any) {
       setIsPrivate(previous.isPrivate);
       setAllowScraps(previous.allowScraps);
+      setPersonalization(previous.personalization);
       setMessage({ kind: 'error', text: err?.message || 'Não foi possível salvar.' });
     } finally {
       setSaving(false);
@@ -98,6 +103,13 @@ export const PrivacySettings: React.FC = () => {
             checked={allowScraps}
             disabled={saving}
             onChange={(value) => void update({ allow_scraps: value })}
+          />
+          <ToggleRow
+            title="Personalizar o feed com minha atividade"
+            description="O Espectro guarda por 90 dias o que você viu e abriu para mostrar publicações mais relevantes. Desligar apaga esse histórico e para de registrar."
+            checked={personalization}
+            disabled={saving}
+            onChange={(value) => void update({ personalization: value })}
           />
           {message && (
             <p role="status" className={`text-sm pt-3 ${message.kind === 'ok' ? 'text-on-surface-variant' : 'text-error'}`}>

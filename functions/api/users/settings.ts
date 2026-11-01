@@ -17,7 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const row = await env.DB.prepare(
-      "SELECT id, username, is_private, allow_scraps, show_last_seen FROM users WHERE id = ?"
+      "SELECT id, username, is_private, allow_scraps, show_last_seen, personalization FROM users WHERE id = ?"
     )
       .bind(user.id)
       .first<any>();
@@ -31,6 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         is_private: Boolean(row.is_private),
         allow_scraps: Boolean(row.allow_scraps ?? 1),
         show_last_seen: Boolean(row.show_last_seen ?? 1),
+        personalization: Boolean(row.personalization ?? 1),
       },
     });
   } catch (err: any) {
@@ -63,7 +64,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const showLastSeenVal =
       body.show_last_seen !== undefined ? (body.show_last_seen ? 1 : 0) : null;
 
-    if (isPrivateVal === null && allowScrapsVal === null && showLastSeenVal === null) {
+    const personalizationVal =
+      body.personalization !== undefined ? (body.personalization ? 1 : 0) : null;
+
+    if (isPrivateVal === null && allowScrapsVal === null && showLastSeenVal === null && personalizationVal === null) {
       return errorResponse("Nenhuma preferência fornecida para atualização.", 400);
     }
 
@@ -72,15 +76,21 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       `UPDATE users 
        SET is_private = COALESCE(?, is_private), 
            allow_scraps = COALESCE(?, allow_scraps),
-           show_last_seen = COALESCE(?, show_last_seen)
+           show_last_seen = COALESCE(?, show_last_seen),
+           personalization = COALESCE(?, personalization)
        WHERE id = ?`
     )
-      .bind(isPrivateVal, allowScrapsVal, showLastSeenVal, user.id)
+      .bind(isPrivateVal, allowScrapsVal, showLastSeenVal, personalizationVal, user.id)
       .run();
+
+    // Quem desliga a personalização também apaga o histórico já guardado
+    if (personalizationVal === 0) {
+      await env.DB.prepare("DELETE FROM post_events WHERE user_id = ?").bind(user.id).run();
+    }
 
     // 4. Busca os dados atualizados no banco
     const updated = await env.DB.prepare(
-      "SELECT id, username, is_private, allow_scraps, show_last_seen FROM users WHERE id = ?"
+      "SELECT id, username, is_private, allow_scraps, show_last_seen, personalization FROM users WHERE id = ?"
     )
       .bind(user.id)
       .first<any>();
@@ -92,6 +102,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         is_private: Boolean(updated?.is_private),
         allow_scraps: Boolean(updated?.allow_scraps ?? 1),
         show_last_seen: Boolean(updated?.show_last_seen ?? 1),
+        personalization: Boolean(updated?.personalization ?? 1),
       },
     });
   } catch (err: any) {

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, postsApi, authStorage, adminApi, savedApi } from '../lib/api';
 import { requestAuth } from '../lib/authEvents';
 import { ReportModal } from './chat/ReportModal';
 import { ShareButton } from './ShareButton';
 import { useIsAdmin } from '../hooks/useIsAdmin';
+import { usePostTracking } from '../hooks/usePostTracking';
+import { trackPost } from '../lib/events';
 import { renderMarkdown } from '../lib/markdown';
 import { LazyVideoPlayer } from './LazyVideoPlayer';
 import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
@@ -41,6 +43,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const user = authStorage.getUser();
+  const cardRef = useRef<HTMLElement>(null);
+  usePostTracking(cardRef, post.id, !isDetail && Boolean(user) && post.author_id !== user?.id);
   const [upvotes, setUpvotes] = useState(post.upvotes);
   const [downvotes, setDownvotes] = useState(post.downvotes);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
@@ -118,6 +122,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     ) {
       return;
     }
+    if (user && post.author_id !== user.id) trackPost({ post_id: post.id, type: 'open' });
     navigate(`/post/${post.id}`);
   };
 
@@ -197,6 +202,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   return (
     <>
       <article
+        ref={cardRef}
         onClick={handleCardClick}
         className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant flex flex-col transition-all hover:shadow-md ${
           !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
