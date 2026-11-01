@@ -259,10 +259,6 @@ export async function rateLimit(
       .bind(key, bucket)
       .first<{ count: number }>();
 
-    if (Math.random() < 0.01) {
-      await db.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(now - 86400).run();
-    }
-
     if (row && row.count > limit) {
       const retryAfter = Math.max(1, bucket + windowSec - now);
       return new Response(JSON.stringify({ error: "Muitas requisições. Tente novamente em instantes." }), {

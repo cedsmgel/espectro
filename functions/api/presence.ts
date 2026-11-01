@@ -1,4 +1,3 @@
-import { purgeDueAccounts } from "../_shared/accountPurge";
 import { ONLINE_WINDOW_SECONDS, touchPresence } from "../_shared/pulse";
 import { areFriends, getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../_shared/auth";
 
@@ -18,9 +17,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!user) return errorResponse("Não autorizado.", 401);
 
     await touchPresence(env.DB, user.id);
-
-    // Rotina de manutenção: apaga contas cujo prazo de exclusão venceu (no máximo uma vez por hora)
-    context.waitUntil(purgeDueAccounts(env).catch(() => 0));
 
     return jsonResponse({ ok: true });
   } catch (err: unknown) {

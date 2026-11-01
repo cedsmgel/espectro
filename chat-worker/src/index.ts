@@ -12,9 +12,25 @@ interface BroadcastBody {
   kick?: number | null;
 }
 
+import { runMaintenance } from '../../functions/_shared/maintenance';
+
+interface Env {
+  DB: D1Database;
+  MEDIA_BUCKET: R2Bucket;
+}
+
 export default {
   async fetch(): Promise<Response> {
     return new Response('Not found', { status: 404 });
+  },
+
+  // Cron Trigger (wrangler.toml): exclusão definitiva de contas e limpeza de eventos e limites antigos
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      runMaintenance(env)
+        .then((result) => console.log('manutenção concluída', JSON.stringify(result)))
+        .catch((err) => console.error('manutenção falhou', err))
+    );
   },
 };
 
