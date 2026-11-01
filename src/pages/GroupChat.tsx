@@ -37,6 +37,8 @@ type SendPayload = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 // Mensagens que aparecem sem balão, como no chat privado
 const BARE_TYPES = new Set(['gif', 'sticker', 'image', 'video']);
+const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\s){1,12}$/u;
+const isEmojiOnly = (m: GroupMessage) => m.message_type === 'text' && !m.media_url && EMOJI_ONLY.test(m.content || '');
 
 function mediaTypeOf(file: File): 'image' | 'video' | 'audio' | 'file' {
   if (file.type.startsWith('image/')) return 'image';
@@ -63,6 +65,30 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const [showManage, setShowManage] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  // Menu da mensagem: mesmo padrão do chat privado (⋮ no hover ou toque longo)
+  const [kebabId, setKebabId] = useState<number | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startLongPress = (id: number) => {
+    longPressRef.current = setTimeout(() => setKebabId(id), 450);
+  };
+  const cancelLongPress = () => {
+    if (longPressRef.current) clearTimeout(longPressRef.current);
+    longPressRef.current = null;
+  };
+  useEffect(() => {
+    if (kebabId === null) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-kebab-menu], [data-kebab-button]')) return;
+      setKebabId(null);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+    };
+  }, [kebabId]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -316,6 +342,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
           </a>
         ) : null;
       default:
+        if (isEmojiOnly(m)) return <p className="text-4xl leading-tight whitespace-pre-wrap">{m.content}</p>;
         return <span className="whitespace-pre-wrap break-words">{m.content}</span>;
     }
   };
@@ -377,13 +404,15 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
           const prev = messages[idx - 1];
           const sameAsPrev = prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
           const sender = m.sender_id ? roleOf.get(m.sender_id) : undefined;
-          const bare = !m.deleted && BARE_TYPES.has(m.message_type);
-          const menuItems = [
+          const bare = !m.deleted && (BARE_TYPES.has(m.message_type) || isEmojiOnly(m));
+          const menuItemsFor = (m: GroupMessage) => [
             { key: 'reply', label: 'Responder', icon: 'reply', onSelect: () => { setReplyingTo(m); inputRef.current?.focus(); }, hidden: m.deleted },
             { key: 'edit', label: 'Editar', icon: 'edit', onSelect: () => handleStartEdit(m), hidden: m.deleted || !mine || m.message_type !== 'text' || !canEditMessage(m.created_at) },
             { key: 'copy', label: 'Copiar', icon: 'content_copy', onSelect: () => handleCopy(m), hidden: m.deleted || m.message_type !== 'text' },
             { key: 'delete', label: 'Apagar', icon: 'delete', danger: true, onSelect: () => void handleDelete(m), hidden: m.deleted || !(mine || isAdmin) },
           ];
+          const visibleItems = menuItemsFor(m).filter((item) => !item.hidden);
+          const kebabOpen = kebabId === m.id;
 
           return (
             <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${sameAsPrev ? 'mt-0.5' : 'mt-3'}`}>
@@ -397,13 +426,67 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                   </span>
                 )}
                 <div
+                  className={`relative group ${kebabOpen ? 'z-50' : 'z-10'}`}
+                  onTouchStart={() => startLongPress(m.id)}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                >
+                  {visibleItems.length > 0 && (
+                    <div
+                      className={`absolute top-1 z-30 ${mine ? '-left-8' : '-right-8'} transition-all duration-150 ${
+                        kebabOpen ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        data-kebab-button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setKebabId(kebabOpen ? null : m.id);
+                        }}
+                        className="w-7 h-7 rounded-full bg-surface-container-high/90 dark:bg-zinc-900 border border-outline-variant text-on-surface-variant hover:text-on-surface flex items-center justify-center shadow-md transition-all cursor-pointer"
+                        title="Opções da mensagem"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {kebabOpen && (
+                    <div
+                      data-kebab-menu
+                      className={`absolute z-50 ${mine ? 'right-0' : 'left-0'} top-full mt-1.5 min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {visibleItems.map((item) => (
+                        <React.Fragment key={item.key}>
+                          {item.danger && <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setKebabId(null);
+                              item.onSelect();
+                            }}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-colors text-left cursor-pointer ${
+                              item.danger ? 'text-error hover:bg-error/15' : 'text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <span className={`material-symbols-outlined text-[18px] ${item.danger ? '' : 'text-on-surface-variant'}`}>{item.icon}</span>
+                            <span className="font-medium">{item.danger ? 'Excluir' : item.label}</span>
+                          </button>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+
+                <div
                   className={
                     bare
                       ? ''
-                      : `px-3 py-2 text-xs leading-relaxed rounded-2xl ${
+                      : `p-3 text-xs leading-relaxed shadow-xs rounded-2xl ${
                           mine
-                            ? 'bg-primary-container text-on-primary rounded-br-md'
-                            : 'bg-surface-container-low text-on-surface border border-outline-variant rounded-bl-md'
+                            ? 'bg-primary-container text-on-primary rounded-br-xs'
+                            : 'bg-surface-container-low text-on-surface border border-outline-variant rounded-bl-xs'
                         }`
                   }
                 >
@@ -419,12 +502,12 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                   )}
                   {renderBody(m)}
                 </div>
+                </div>
                 <div className="flex items-center gap-1 mt-0.5 mx-1">
                   <span className="text-[10px] text-on-surface-variant">
                     {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   {m.edited_at && !m.deleted && <span className="text-[10px] text-on-surface-variant">· editada</span>}
-                  {menuItems.some((item) => !item.hidden) && <ChatMenu title="Mensagem" items={menuItems} />}
                 </div>
               </div>
             </div>
@@ -566,7 +649,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
               value={text}
               maxLength={2000}
               onChange={(e) => setText(e.target.value)}
-              placeholder={`Mensagem para ${detail.group.name}...`}
+              aria-label={`Mensagem para ${detail.group.name}`}
               className="flex-1 min-w-0 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
             />
             {!text.trim() && (
