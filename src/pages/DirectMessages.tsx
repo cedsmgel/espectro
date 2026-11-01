@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Header } from '../components/Header';
@@ -25,6 +25,8 @@ import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
 import { ReportModal } from '../components/chat/ReportModal';
 import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
+import { GroupChatPanel } from './GroupChat';
+import { AudioMessage } from '../components/chat/AudioMessage';
 import { lastSeenLabel, useFriendPresence } from '../hooks/usePresence';
 import { themeColor, wallpaperStyle } from '../lib/chatThemes';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
@@ -124,6 +126,8 @@ const isBareMessage = (m: ChatMessage): boolean => {
 export const DirectMessages: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded, setHideBottomNav } = useSidebar();
+  const { id: groupParam } = useParams<{ id: string }>();
+  const activeGroupId = groupParam ? Number(groupParam) : null;
   const user = authStorage.getUser();
   const userId = user?.id;
 
@@ -370,7 +374,7 @@ export const DirectMessages: React.FC = () => {
 
   // Controle de visibilidade da BottomNav no chat mobile (tela cheia)
   useEffect(() => {
-    if (activeFriend && window.innerWidth < 768) {
+    if ((activeFriend || activeGroupId) && window.innerWidth < 768) {
       setHideBottomNav(true);
     } else {
       setHideBottomNav(false);
@@ -379,7 +383,7 @@ export const DirectMessages: React.FC = () => {
     return () => {
       setHideBottomNav(false);
     };
-  }, [activeFriend, setHideBottomNav]);
+  }, [activeFriend, activeGroupId, setHideBottomNav]);
 
   // Carrega amigos reais do D1
   const loadFriends = async () => {
@@ -400,7 +404,7 @@ export const DirectMessages: React.FC = () => {
 
         if (found) {
           setActiveFriend(found);
-        } else if (window.innerWidth >= 768) {
+        } else if (window.innerWidth >= 768 && !window.location.pathname.startsWith('/grupos/')) {
           setActiveFriend(data[0]);
         } else {
           setActiveFriend(null);
@@ -992,7 +996,7 @@ export const DirectMessages: React.FC = () => {
       }
 
       if (msgType === 'audio') {
-        return <audio controls preload="metadata" src={m.media_url} className="max-w-[240px] h-10" />;
+        return <AudioMessage src={m.media_url} />;
       }
 
       if (msgType === 'gif' || msgType === 'sticker') {
@@ -1046,7 +1050,7 @@ export const DirectMessages: React.FC = () => {
       }}
       className="w-full h-dvh md:h-screen overflow-hidden bg-surface text-on-surface flex flex-col md:flex-row fixed inset-x-0 top-0 md:static"
     >
-      {!activeFriend && <Header />}
+      {!activeFriend && !activeGroupId && <Header />}
       <SidebarNav />
 
       {/* Hidden File Inputs para Fotos, Câmera e Documentos */}
@@ -1135,7 +1139,7 @@ export const DirectMessages: React.FC = () => {
               {/* COLUNA 1: Diretório Direct (No mobile: tela cheia quando activeFriend é null) */}
               <aside
                 className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex-col bg-surface-container-lowest border-r border-outline-variant/30 shadow-xs z-10 ${
-                  activeFriend ? 'hidden md:flex' : 'flex'
+                  activeFriend || activeGroupId ? 'hidden md:flex' : 'flex'
                 }`}
               >
                 <div className="p-4 pb-2 flex items-center justify-between">
@@ -1263,7 +1267,10 @@ export const DirectMessages: React.FC = () => {
                     filteredConversations.map((c) => (
                       <div
                         key={c.friend_id}
-                        onClick={() => setActiveFriend(c)}
+                        onClick={() => {
+                          setActiveFriend(c);
+                          if (activeGroupId) navigate('/mensagens');
+                        }}
                         className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                           activeFriend?.friend_id === c.friend_id
                             ? 'bg-surface-container-low border border-outline-variant/30 shadow-xs'
@@ -1395,7 +1402,14 @@ export const DirectMessages: React.FC = () => {
                 </div>
               </aside>
 
+              {activeGroupId && (
+                <section className="flex-1 flex flex-col bg-surface min-w-0 relative">
+                  <GroupChatPanel key={activeGroupId} groupId={activeGroupId} />
+                </section>
+              )}
+
               {/* COLUNA 2: Conversa Ativa (No mobile: tela cheia quando activeFriend existe) */}
+              {!activeGroupId && (
               <section
                 className={`flex-1 flex-col bg-surface min-w-0 relative ${
                   !activeFriend ? 'hidden md:flex' : 'flex'
@@ -2251,6 +2265,7 @@ export const DirectMessages: React.FC = () => {
                   </>
                 )}
               </section>
+              )}
             </div>
           )}
         </main>

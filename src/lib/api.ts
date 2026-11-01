@@ -540,6 +540,11 @@ export interface GroupMember {
 }
 
 export interface GroupMessage {
+  reply_to_id?: number | null;
+  reply_content?: string | null;
+  reply_sender?: string | null;
+  reply_deleted?: boolean;
+  deleted?: boolean;
   id: number;
   content: string;
   message_type: 'text' | 'gif' | 'sticker' | 'system' | 'image' | 'video' | 'audio' | 'file';
@@ -563,8 +568,10 @@ export const groupsApi = {
       `/api/groups/${id}/messages${beforeId ? `?before_id=${beforeId}` : ""}`,
       { method: "GET" }
     ),
-  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file'; media_url?: string }) =>
+  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file'; media_url?: string; reply_to_id?: number | null }) =>
     apiRequest<{ message: GroupMessage }>(`/api/groups/${id}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
+  remove: (id: number, messageId: number) =>
+    apiRequest<{ ok: boolean }>(`/api/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
   manage: (id: number, body: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>(`/api/groups/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),
 };

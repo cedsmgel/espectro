@@ -17,6 +17,19 @@ export interface Env {
   JWT_SECRET: string;
 }
 
+// Mensagem apagada não expõe conteúdo nem mídia, nem quando é citada em outra resposta
+function publicMessage(row: Record<string, unknown>): Record<string, unknown> {
+  const { deleted, reply_deleted, reply_content, content, media_url, ...rest } = row;
+  return {
+    ...rest,
+    content: deleted ? "" : content,
+    media_url: deleted ? null : media_url,
+    deleted: Boolean(deleted),
+    reply_content: reply_deleted ? null : reply_content ?? null,
+    reply_deleted: Boolean(reply_deleted),
+  };
+}
+
 // GET /api/groups/:id/messages?before_id=: mensagens desde a minha entrada no grupo
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
@@ -35,16 +48,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const { results } = await env.DB.prepare(
       `SELECT x.id, x.content, x.message_type, x.media_url, x.sender_id, u.username AS sender_username,
-         strftime('%Y-%m-%dT%H:%M:%SZ', x.created_at) AS created_at
-       FROM chat_group_messages x LEFT JOIN users u ON u.id = x.sender_id
+         strftime('%Y-%m-%dT%H:%M:%SZ', x.created_at) AS created_at,
+         x.deleted_at IS NOT NULL AS deleted, x.reply_to_id,
+         r.content AS reply_content, r.deleted_at IS NOT NULL AS reply_deleted, ru.username AS reply_sender
+       FROM chat_group_messages x
+       LEFT JOIN users u ON u.id = x.sender_id
+       LEFT JOIN chat_group_messages r ON r.id = x.reply_to_id
+       LEFT JOIN users ru ON ru.id = r.sender_id
        WHERE x.group_id = ?1 AND x.created_at >= ?2 AND (?3 IS NULL OR x.id < ?3)
        ORDER BY x.id DESC LIMIT ?4`
     )
       .bind(groupId, me.joined_at, beforeId, limit + 1)
       .all<Record<string, unknown>>();
 
-    const rows = results || [];
-    const messages = rows.slice(0, limit).reverse();
+    const rows = (results || []) as Record<string, unknown>[];
+    const messages = rows.slice(0, limit).reverse().map(publicMessage);
 
     // Marca como lidas até a mensagem mais recente (só na primeira página)
     if (beforeId === null && messages.length > 0) {
@@ -82,7 +100,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("Só os administradores podem enviar mensagens neste grupo.", 403);
     }
 
-    const body = (await request.json().catch(() => null)) as { content?: string; message_type?: string; media_url?: string } | null;
+    const body = (await request.json().catch(() => null)) as { content?: string; message_type?: string; media_url?: string; reply_to_id?: number } | null;
     const messageType = MESSAGE_TYPES.includes(body?.message_type || "") ? (body!.message_type as string) : "text";
     const mediaUrl = sanitizeMediaUrl(body?.media_url);
     if (messageType !== "text" && !mediaUrl) return errorResponse("Arquivo inválido.", 400);
@@ -92,10 +110,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!content && !mediaUrl) return errorResponse("A mensagem não pode ser vazia.", 400);
     if (content.length > 2000) return errorResponse("A mensagem deve ter no máximo 2000 caracteres.", 400);
 
+    const replyParam = Number(body?.reply_to_id);
+    let replyToId: number | null = null;
+    if (Number.isInteger(replyParam) && replyParam > 0) {
+      const target = await env.DB.prepare(
+        "SELECT id FROM chat_group_messages WHERE id = ? AND group_id = ? AND deleted_at IS NULL"
+      )
+        .bind(replyParam, groupId)
+        .first();
+      if (!target) return errorResponse("A mensagem respondida não existe mais.", 400);
+      replyToId = replyParam;
+    }
+
     const inserted = await env.DB.prepare(
-      "INSERT INTO chat_group_messages (group_id, sender_id, content, message_type, media_url) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO chat_group_messages (group_id, sender_id, content, message_type, media_url, reply_to_id) VALUES (?, ?, ?, ?, ?, ?)"
     )
-      .bind(groupId, user.id, content, messageType, mediaUrl)
+      .bind(groupId, user.id, content, messageType, mediaUrl, replyToId)
       .run();
 
     return jsonResponse(
@@ -108,6 +138,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           sender_id: user.id,
           sender_username: user.username,
           created_at: new Date().toISOString(),
+          deleted: false,
+          reply_to_id: replyToId,
         },
       },
       201
