@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   authStorage,
   friendsApi,
+  chatExtrasApi,
   Friend,
+  GroupInfo,
   GroupMember,
   GroupMessage,
   groupsApi,
@@ -23,9 +25,16 @@ import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { useGroupSocket } from '../hooks/useGroupSocket';
 import { canEditMessage } from '../lib/chatEdit';
+import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
+import { ChatLibraryModal } from '../components/chat/ChatLibraryModal';
+import { StarredModal } from '../components/chat/StarredModal';
+import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
+import { ShareGroupModal, GroupPermissionsModal } from '../components/chat/GroupModals';
+import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
+import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 type Detail = {
-  group: { id: number; name: string; description: string | null; only_admins_send: boolean };
+  group: GroupInfo;
   members: GroupMember[];
   my_role: 'admin' | 'member';
 };
@@ -35,6 +44,7 @@ type SendPayload = {
   message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file';
   media_url?: string;
   reply_to_id?: number | null;
+  view_once?: boolean;
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -42,6 +52,17 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const BARE_TYPES = new Set(['gif', 'sticker', 'image', 'video']);
 const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}|\p{Emoji_Component}|\s){1,12}$/u;
 const isEmojiOnly = (m: GroupMessage) => m.message_type === 'text' && !m.media_url && EMOJI_ONLY.test(m.content || '');
+
+const dateLabel = (iso: string): string => {
+  const date = new Date(iso);
+  const now = new Date();
+  const same = (a: Date, b: Date) => a.getDate() === b.getDate() && a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (same(date, now)) return 'Hoje';
+  if (same(date, yesterday)) return 'Ontem';
+  return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+};
 
 function mediaTypeOf(file: File): 'image' | 'video' | 'audio' | 'file' {
   if (file.type.startsWith('image/')) return 'image';
@@ -68,6 +89,13 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const [showManage, setShowManage] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modal, setModal] = useState<null | 'library' | 'starred' | 'disappear' | 'share' | 'permissions'>(null);
+  const [starredIds, setStarredIds] = useState<Set<number>>(new Set());
+  // Próxima foto/vídeo vai como visualização única
+  const [viewOnceNext, setViewOnceNext] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // Menu da mensagem: mesmo padrão do chat privado (⋮ no hover ou toque longo)
   const [kebabId, setKebabId] = useState<number | null>(null);
   // Quem está escrevendo ou gravando áudio agora
@@ -177,6 +205,14 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     },
     onEdit: ({ message_id, content, edited_at }) =>
       setMessages((prev) => prev.map((m) => (m.id === message_id ? { ...m, content, edited_at } : m))),
+    onReaction: ({ message_id, user_id, emoji }) =>
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === message_id
+            ? { ...m, reactions: [...(m.reactions || []).filter((r) => r.user_id !== user_id), ...(emoji ? [{ user_id, emoji }] : [])] }
+            : m
+        )
+      ),
     onDelete: (messageId) =>
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, deleted: true, content: '', media_url: null } : m))),
     onRefresh: () => {
@@ -203,6 +239,13 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     const timer = window.setInterval(() => void loadLatest(), connected ? 30000 : 4000);
     return () => window.clearInterval(timer);
   }, [loadLatest, connected]);
+
+  useEffect(() => {
+    chatExtrasApi
+      .starred()
+      .then((list) => setStarredIds(new Set(list.filter((i) => i.kind === 'group' && i.chat_id === groupId).map((i) => i.message_id))))
+      .catch(() => {});
+  }, [groupId, modal === 'starred']);
 
   useEffect(() => {
     scrollToEnd(bottomRef.current);
@@ -278,10 +321,12 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     try {
       const type = mediaTypeOf(file);
       const res = await uploadApi.upload(file, type === 'audio' ? { context: 'audio' } : undefined);
+      const once = viewOnceNext && (type === 'image' || type === 'video');
       await sendPayload(
-        { message_type: type, media_url: res.url, content: type === 'file' ? file.name : undefined, reply_to_id: replied?.id ?? null },
+        { message_type: type, media_url: res.url, content: type === 'file' ? file.name : undefined, reply_to_id: replied?.id ?? null, view_once: once || undefined },
         replied
       );
+      if (once) setViewOnceNext(false);
     } catch (err: any) {
       setError(err?.message || 'Não foi possível enviar o arquivo.');
     } finally {
@@ -340,6 +385,70 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     navigator.clipboard?.writeText(m.content).catch(() => setError('Não foi possível copiar.'));
   };
 
+  const reactTo = (m: GroupMessage, emoji: string | null) => {
+    const myId = user?.id;
+    if (!myId) return;
+    setMessages((prev) =>
+      prev.map((x) =>
+        x.id === m.id ? { ...x, reactions: [...(x.reactions || []).filter((r) => r.user_id !== myId), ...(emoji ? [{ user_id: myId, emoji }] : [])] } : x
+      )
+    );
+    groupsApi.react(groupId, m.id, emoji).catch((err: any) => {
+      setError(err?.message || 'Não foi possível reagir.');
+      void loadLatest();
+    });
+  };
+
+  const toggleStar = (m: GroupMessage) => {
+    const starred = !starredIds.has(m.id);
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (starred) next.add(m.id);
+      else next.delete(m.id);
+      return next;
+    });
+    chatExtrasApi.setStarred('group', m.id, starred).catch(() => setError('Não foi possível favoritar.'));
+  };
+
+  // Baixa todo o histórico visível para você, página a página
+  const exportConversation = async () => {
+    if (!detail || exporting) return;
+    setExporting(true);
+    try {
+      let all: GroupMessage[] = [];
+      let before: number | undefined;
+      for (let page = 0; page < 200; page++) {
+        const res = await groupsApi.messages(groupId, before);
+        all = [...res.messages, ...all];
+        if (!res.has_more || res.messages.length === 0) break;
+        before = res.messages[0].id;
+      }
+      downloadConversation(
+        detail.group.name,
+        all.map((m) => ({
+          created_at: m.created_at,
+          sender: m.message_type === 'system' ? 'Aviso' : `@${m.sender_username ?? 'usuário'}`,
+          text: m.deleted ? '<mensagem apagada>' : describeMessage(m.message_type, m.content, m.media_url, m.view_once),
+        }))
+      );
+    } catch {
+      setError('Não foi possível exportar a conversa.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const saveDisappear = async (seconds: number) => {
+    try {
+      await groupsApi.manage(groupId, { action: 'update', disappear_seconds: seconds });
+      void loadDetail();
+      void loadLatest();
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível salvar.');
+      throw err;
+    }
+  };
+
   const leave = async () => {
     if (!window.confirm('Sair deste grupo? Você deixará de ver as mensagens novas.')) return;
     try {
@@ -367,9 +476,23 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const isAdmin = detail.my_role === 'admin';
   const canSend = isAdmin || !detail.group.only_admins_send;
   const roleOf = new Map(detail.members.map((m) => [m.id, m]));
+  const term = searchTerm.trim().toLowerCase();
+  const shown = term ? messages.filter((m) => m.message_type !== 'system' && !m.deleted && (m.content || '').toLowerCase().includes(term)) : messages;
 
   const renderBody = (m: GroupMessage) => {
     if (m.deleted) return <span className="italic opacity-70">Mensagem apagada</span>;
+    if (m.view_once && (m.message_type === 'image' || m.message_type === 'video')) {
+      return (
+        <ViewOnceMedia
+          kind="group"
+          messageId={m.id}
+          type={m.message_type}
+          mine={m.sender_id === user?.id}
+          viewed={Boolean(m.viewed)}
+          onOpened={() => setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, viewed: true } : x)))}
+        />
+      );
+    }
     switch (m.message_type) {
       case 'gif':
         return m.media_url ? <img src={m.media_url} alt="GIF" className="max-w-[240px] rounded-xl" /> : null;
@@ -422,14 +545,69 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
             </span>
           </button>
         </div>
-        <ChatMenu
-          title="Opções do grupo"
-          items={[
-            { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
-            { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
-          ]}
-        />
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setSearchOpen((open) => !open);
+              setSearchTerm('');
+            }}
+            title="Pesquisar na conversa"
+            aria-label="Pesquisar na conversa"
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
+              searchOpen ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">search</span>
+          </button>
+          <ChatMenu
+            title="Opções do grupo"
+            buttonClassName="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+            items={[
+              { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
+              { key: 'search', label: 'Pesquisar na conversa', icon: 'search', onSelect: () => setSearchOpen(true) },
+              { key: 'share', label: 'Compartilhar grupo', icon: 'share', onSelect: () => setModal('share'), hidden: !isAdmin && !detail.group.members_can_invite },
+              { key: 'library', label: 'Mídias, links e docs', icon: 'perm_media', onSelect: () => setModal('library') },
+              { key: 'starred', label: 'Mensagens favoritas', icon: 'star', onSelect: () => setModal('starred') },
+              {
+                key: 'disappear',
+                label: `Mensagens temporárias · ${disappearLabel(detail.group.disappear_seconds)}`,
+                icon: 'timer',
+                onSelect: () => setModal('disappear'),
+                hidden: !isAdmin,
+              },
+              { key: 'permissions', label: 'Permissões do grupo', icon: 'admin_panel_settings', onSelect: () => setModal('permissions'), hidden: !isAdmin },
+              { key: 'export', label: exporting ? 'Exportando...' : 'Exportar conversa', icon: 'download', onSelect: () => void exportConversation() },
+              { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
+            ]}
+          />
+        </div>
       </div>
+
+      {searchOpen && (
+        <div className="px-3 sm:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant flex items-center gap-2 flex-shrink-0">
+          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">search</span>
+          <input
+            autoFocus
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar nas mensagens carregadas..."
+            className="flex-1 h-8 bg-transparent text-xs text-on-surface placeholder:text-on-surface-variant outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              setSearchOpen(false);
+            }}
+            aria-label="Fechar busca"
+            className="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Histórico */}
       <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
@@ -448,46 +626,89 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
           </div>
         )}
 
-        {messages.map((m, idx) => {
+        {term && shown.length === 0 && <p className="text-center text-xs text-on-surface-variant py-10">Nada encontrado.</p>}
+
+        {shown.map((m, idx) => {
+          const dayLabel = dateLabel(m.created_at);
+          const prev = shown[idx - 1];
+          const next = shown[idx + 1];
+          const showDate = !prev || dateLabel(prev.created_at) !== dayLabel;
+          const dateBadge = showDate ? (
+            <div className="flex justify-center my-3 select-none">
+              <span className="text-[11px] font-semibold text-on-surface-variant bg-surface-container-high/90 px-3.5 py-1 rounded-full shadow-xs border border-outline-variant">
+                {dayLabel}
+              </span>
+            </div>
+          ) : null;
+
           if (m.message_type === 'system') {
             return (
-              <div key={m.id} className="flex justify-center my-2">
-                <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">{m.content}</span>
-              </div>
+              <React.Fragment key={m.id}>
+                {dateBadge}
+                <div className="flex justify-center my-2">
+                  <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">{m.content}</span>
+                </div>
+              </React.Fragment>
             );
           }
 
           const mine = m.sender_id === user?.id;
-          const prev = messages[idx - 1];
-          const sameAsPrev = prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
+          const sameAsPrev = !showDate && prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
+          const nextShowsDate = next && dateLabel(next.created_at) !== dayLabel;
+          const sameAsNext = next && !nextShowsDate && next.sender_id === m.sender_id && next.message_type !== 'system';
+          const isFirstInBlock = !sameAsPrev;
+          const isLastInBlock = !sameAsNext;
           const sender = m.sender_id ? roleOf.get(m.sender_id) : undefined;
-          const bare = !m.deleted && (BARE_TYPES.has(m.message_type) || isEmojiOnly(m));
+          const bare = !m.deleted && !m.view_once && (BARE_TYPES.has(m.message_type) || isEmojiOnly(m));
+          const starred = starredIds.has(m.id);
+          const myReaction = (m.reactions || []).find((r) => r.user_id === user?.id)?.emoji;
           const menuItemsFor = (m: GroupMessage) => [
             { key: 'reply', label: 'Responder', icon: 'reply', onSelect: () => { setReplyingTo(m); inputRef.current?.focus(); }, hidden: m.deleted },
+            { key: 'star', label: starredIds.has(m.id) ? 'Desfavoritar' : 'Favoritar', icon: 'star', onSelect: () => toggleStar(m), hidden: m.deleted },
             { key: 'edit', label: 'Editar', icon: 'edit', onSelect: () => handleStartEdit(m), hidden: m.deleted || !mine || m.message_type !== 'text' || !canEditMessage(m.created_at) },
             { key: 'copy', label: 'Copiar', icon: 'content_copy', onSelect: () => handleCopy(m), hidden: m.deleted || m.message_type !== 'text' },
             { key: 'delete', label: 'Apagar', icon: 'delete', danger: true, onSelect: () => void handleDelete(m), hidden: m.deleted || !(mine || isAdmin) },
           ];
           const visibleItems = menuItemsFor(m).filter((item) => !item.hidden);
           const kebabOpen = kebabId === m.id;
+          const reactionChips = groupReactions(m.reactions, user?.id);
 
           return (
-            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${sameAsPrev ? 'mt-0.5' : 'mt-3'}`}>
-              <div className={`flex flex-col max-w-[85%] sm:max-w-md ${mine ? 'items-end' : 'items-start'}`}>
-                {!mine && !sameAsPrev && (
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold mb-0.5 ml-1" style={{ color: nameColor(m.sender_id) }}>
-                    @{m.sender_username}
-                    {sender?.role === 'admin' && (
-                      <span className="text-[9px] px-1.5 rounded-full bg-primary/15 text-primary font-semibold">admin</span>
-                    )}
-                  </span>
-                )}
+            <React.Fragment key={m.id}>
+              {dateBadge}
+              <div
+                id={`msg-${m.id}`}
+                className={`group relative flex items-end gap-2 max-w-xl ${isFirstInBlock ? 'mt-3' : 'mt-1'} ${
+                  mine ? 'ml-auto justify-end' : 'mr-auto justify-start'
+                } ${kebabOpen ? 'z-50' : 'z-10'}`}
+              >
+                {/* Foto de quem enviou, só na última mensagem do bloco */}
+                {!mine &&
+                  (isLastInBlock ? (
+                    <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase overflow-hidden">
+                      {sender?.avatar_url || m.sender_avatar ? (
+                        <img src={(sender?.avatar_url || m.sender_avatar) as string} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (m.sender_username || '?').charAt(0)
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 flex-shrink-0" />
+                  ))}
+
                 <div
-                  className={`relative group ${kebabOpen ? 'z-50' : 'z-10'}`}
+                  className="relative flex flex-col max-w-[85%] sm:max-w-md select-text"
                   onTouchStart={() => startLongPress(m.id)}
                   onTouchEnd={cancelLongPress}
                   onTouchCancel={cancelLongPress}
                 >
+                  {!mine && isFirstInBlock && (
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold mb-0.5 ml-1" style={{ color: nameColor(m.sender_id) }}>
+                      @{m.sender_username}
+                      {sender?.role === 'admin' && <span className="text-[9px] px-1.5 rounded-full bg-primary/15 text-primary font-semibold">admin</span>}
+                    </span>
+                  )}
+
                   {visibleItems.length > 0 && (
                     <div
                       className={`absolute top-1 z-30 ${mine ? '-left-8' : '-right-8'} transition-all duration-150 ${
@@ -515,6 +736,27 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                       className={`absolute z-50 ${mine ? 'right-0' : 'left-0'} top-full mt-1.5 min-w-[200px] rounded-2xl bg-surface-container-high dark:bg-[#18181b] border border-outline-variant/40 dark:border-zinc-800 shadow-2xl py-1.5 animate-in fade-in zoom-in-95 duration-150`}
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {!m.deleted && (
+                        <div className="flex items-center justify-between gap-1 px-3 pb-2 mb-1 border-b border-outline-variant dark:border-zinc-800">
+                          {REACTION_EMOJIS.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              aria-label={`Reagir com ${emoji}`}
+                              aria-pressed={myReaction === emoji}
+                              onClick={() => {
+                                reactTo(m, myReaction === emoji ? null : emoji);
+                                setKebabId(null);
+                              }}
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-lg transition-transform hover:scale-125 cursor-pointer ${
+                                myReaction === emoji ? 'bg-primary/20' : ''
+                              }`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {visibleItems.map((item) => (
                         <React.Fragment key={item.key}>
                           {item.danger && <div className="my-1 border-t border-outline-variant dark:border-zinc-800" />}
@@ -536,38 +778,64 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                     </div>
                   )}
 
-                <div
-                  className={
-                    bare
-                      ? ''
-                      : `p-3 text-xs leading-relaxed shadow-xs rounded-2xl ${
-                          mine
-                            ? 'bg-primary-container text-on-primary rounded-br-xs'
-                            : 'bg-surface-container-low text-on-surface border border-outline-variant rounded-bl-xs'
-                        }`
-                  }
-                >
-                  {m.reply_to_id && !m.deleted && (
-                    <div
-                      className={`mb-1.5 px-2 py-1 rounded-lg border-l-2 text-[11px] max-w-[260px] ${
-                        mine ? 'bg-black/10 border-on-primary' : 'bg-surface-container border-primary'
-                      }`}
-                    >
-                      <span className="block font-semibold truncate">@{m.reply_sender || 'usuário'}</span>
-                      <span className="block truncate opacity-80">{m.reply_content ?? 'Mensagem apagada'}</span>
+                  {/* Balão: mesmo formato do chat privado */}
+                  <div
+                    className={`p-3 text-xs leading-relaxed shadow-xs transition-all ${bare ? '!bg-transparent !shadow-none !p-0 !border-0 ' : ''}${
+                      mine
+                        ? `bg-primary-container text-on-primary rounded-2xl ${isFirstInBlock ? 'rounded-tr-2xl' : 'rounded-tr-md'} ${
+                            isLastInBlock ? 'rounded-br-xs' : 'rounded-br-md'
+                          } rounded-l-2xl`
+                        : `bg-surface-container-low text-on-surface rounded-2xl border border-outline-variant ${
+                            isFirstInBlock ? 'rounded-tl-2xl' : 'rounded-tl-md'
+                          } ${isLastInBlock ? 'rounded-bl-xs' : 'rounded-bl-md'} rounded-r-2xl`
+                    }`}
+                  >
+                    {m.reply_to_id && !m.deleted && (
+                      <div
+                        onClick={() => document.getElementById(`msg-${m.reply_to_id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                        className={`mb-2 p-2 rounded-xl text-left border-l-2 text-xs cursor-pointer transition-opacity hover:opacity-90 ${
+                          mine ? 'bg-black/20 border-on-primary/70 text-on-primary' : 'bg-surface-container border-primary text-on-surface'
+                        }`}
+                      >
+                        <span className="font-bold text-[11px] block truncate">@{m.reply_sender || 'usuário'}</span>
+                        <span className="text-[11px] opacity-80 block truncate">{m.reply_content ?? 'Mensagem apagada'}</span>
+                      </div>
+                    )}
+                    {renderBody(m)}
+                  </div>
+
+                  {reactionChips.length > 0 && (
+                    <div className={`flex flex-wrap gap-1 -mt-1.5 ${mine ? 'justify-end mr-2' : 'ml-2'}`}>
+                      {reactionChips.map((chip) => (
+                        <button
+                          key={chip.emoji}
+                          type="button"
+                          onClick={() => reactTo(m, chip.mine ? null : chip.emoji)}
+                          title={chip.mine ? 'Remover sua reação' : 'Reagir igual'}
+                          className={`h-6 px-1.5 rounded-full text-xs flex items-center gap-1 border shadow-xs cursor-pointer transition-colors ${
+                            chip.mine ? 'bg-primary/15 border-primary/40' : 'bg-surface-container-high border-outline-variant/40 hover:bg-surface-container-highest'
+                          }`}
+                        >
+                          <span>{chip.emoji}</span>
+                          {chip.count > 1 && <span className="text-[10px] font-semibold text-on-surface-variant">{chip.count}</span>}
+                        </button>
+                      ))}
                     </div>
                   )}
-                  {renderBody(m)}
-                </div>
-                </div>
-                <div className="flex items-center gap-1 mt-0.5 mx-1">
-                  <span className="text-[10px] text-on-surface-variant">
-                    {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {m.edited_at && !m.deleted && <span className="text-[10px] text-on-surface-variant">· editada</span>}
+
+                  <div className={`text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-1 ${mine ? 'justify-end mr-1' : 'ml-1'}`}>
+                    {starred && (
+                      <span className="material-symbols-outlined text-[12px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }} title="Favorita">
+                        star
+                      </span>
+                    )}
+                    {m.expires_at && <span className="material-symbols-outlined text-[12px]" title="Mensagem temporária">timer</span>}
+                    <span>{new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                    {m.edited_at && !m.deleted && <span>· editada</span>}
+                  </div>
                 </div>
               </div>
-            </div>
+            </React.Fragment>
           );
         })}
         {typerList.map((t) => (
@@ -703,6 +971,18 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
             >
               <span className="material-symbols-outlined text-[20px]">attach_file</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setViewOnceNext((v) => !v)}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
+                viewOnceNext ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+              }`}
+              title={viewOnceNext ? 'A próxima foto ou vídeo será temporário (toque para desligar)' : 'Enviar a próxima foto ou vídeo como temporário'}
+              aria-pressed={viewOnceNext}
+              aria-label="Foto temporária"
+            >
+              <span className="material-symbols-outlined text-[20px]">timer</span>
+            </button>
             <input
               ref={inputRef}
               type="text"
@@ -748,6 +1028,21 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
         />
       </div>
 
+      {modal === 'library' && <ChatLibraryModal onClose={() => setModal(null)} scope={{ kind: 'group', id: groupId, name: detail.group.name }} />}
+      {modal === 'starred' && <StarredModal onClose={() => setModal(null)} onOpenDirect={(_id, username) => navigate(`/mensagens?u=${encodeURIComponent(username)}`)} />}
+      {modal === 'disappear' && <DisappearingModal current={detail.group.disappear_seconds} onSave={saveDisappear} onClose={() => setModal(null)} />}
+      {modal === 'share' && <ShareGroupModal groupId={groupId} groupName={detail.group.name} isAdmin={isAdmin} onClose={() => setModal(null)} />}
+      {modal === 'permissions' && (
+        <GroupPermissionsModal
+          groupId={groupId}
+          group={detail.group}
+          onClose={() => setModal(null)}
+          onChanged={() => {
+            void loadDetail();
+          }}
+        />
+      )}
+
       {showManage && (
         <ManageGroupModal
           groupId={groupId}
@@ -777,15 +1072,16 @@ interface ManageProps {
 
 const ManageGroupModal: React.FC<ManageProps> = ({ groupId, detail, onClose, onChanged }) => {
   const isAdmin = detail.my_role === 'admin';
+  const canEditInfo = isAdmin || detail.group.members_can_edit_info;
+  const canAdd = isAdmin || detail.group.members_can_add;
   const [name, setName] = useState(detail.group.name);
   const [description, setDescription] = useState(detail.group.description || '');
-  const [onlyAdmins, setOnlyAdmins] = useState(detail.group.only_admins_send);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [picked, setPicked] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canAdd) return;
     friendsApi
       .list()
       .then((list) => {
@@ -793,7 +1089,7 @@ const ManageGroupModal: React.FC<ManageProps> = ({ groupId, detail, onClose, onC
         setFriends(list.filter((f: any) => !inGroup.has(f.friend_id)).map((f: any) => ({ ...f, friend_id: f.friend_id })));
       })
       .catch(() => {});
-  }, [isAdmin, detail.members]);
+  }, [canAdd, detail.members]);
 
   const run = async (body: Record<string, unknown>) => {
     setError(null);
@@ -807,7 +1103,7 @@ const ManageGroupModal: React.FC<ManageProps> = ({ groupId, detail, onClose, onC
 
   return (
     <ModalShell title="Dados do grupo" onClose={onClose}>
-      {isAdmin && (
+      {canEditInfo && (
         <section className="mb-5 space-y-3">
           <label className="block text-xs font-semibold">
             Nome
@@ -817,14 +1113,7 @@ const ManageGroupModal: React.FC<ManageProps> = ({ groupId, detail, onClose, onC
             Descrição
             <textarea value={description} maxLength={300} rows={2} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full p-3 rounded-xl bg-surface-container-low text-xs outline-none resize-none" />
           </label>
-          <label className="flex items-center justify-between gap-3 text-xs">
-            <span>
-              <span className="block font-semibold">Só admins enviam mensagens</span>
-              <span className="block text-[11px] text-on-surface-variant">Os outros membros só leem.</span>
-            </span>
-            <input type="checkbox" checked={onlyAdmins} onChange={(e) => setOnlyAdmins(e.target.checked)} className="w-5 h-5 accent-[var(--color-primary,#2563eb)]" />
-          </label>
-          <button type="button" onClick={() => run({ action: 'update', name, description, only_admins_send: onlyAdmins })} className="px-4 py-2 rounded-full text-xs font-semibold bg-primary-container text-on-primary">
+          <button type="button" onClick={() => run({ action: 'update', name, description })} className="px-4 py-2 rounded-full text-xs font-semibold bg-primary-container text-on-primary">
             Salvar alterações
           </button>
         </section>
@@ -856,7 +1145,7 @@ const ManageGroupModal: React.FC<ManageProps> = ({ groupId, detail, onClose, onC
         </ul>
       </section>
 
-      {isAdmin && friends.length > 0 && (
+      {canAdd && friends.length > 0 && (
         <section className="mb-4">
           <h3 className="text-xs font-semibold mb-2">Adicionar amigos</h3>
           <ul className="space-y-1 max-h-48 overflow-y-auto">

@@ -5,6 +5,7 @@ export interface GroupSocketHandlers {
   onMessage: (message: GroupMessage) => void;
   onEdit: (event: { message_id: number; content: string; edited_at: string | null }) => void;
   onDelete: (messageId: number) => void;
+  onReaction?: (event: { message_id: number; user_id: number; emoji: string | null }) => void;
   // Mudança no grupo (membros, nome, regras) ou volta da conexão: recarregar tudo
   onRefresh: () => void;
   // Alguém começou ou parou de escrever/gravar áudio
@@ -74,6 +75,9 @@ export function useGroupSocket(
         else if (data.type === 'edit') {
           current.onEdit({ message_id: Number(data.message_id), content: String(data.content ?? ''), edited_at: data.edited_at ?? null });
         } else if (data.type === 'delete') current.onDelete(Number(data.message_id));
+        else if (data.type === 'reaction') {
+          current.onReaction?.({ message_id: Number(data.message_id), user_id: Number(data.user_id), emoji: data.emoji ?? null });
+        }
         else if (data.type === 'refresh') current.onRefresh();
         else if (data.type === 'typing' && data.sender_id) {
           current.onTyping?.({

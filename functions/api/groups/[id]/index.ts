@@ -18,7 +18,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     if (!me) return errorResponse("Grupo não encontrado.", 404);
 
     const group = await env.DB.prepare(
-      "SELECT id, name, description, only_admins_send, created_by FROM chat_groups WHERE id = ?"
+      "SELECT id, name, description, only_admins_send, created_by, disappear_seconds, members_can_edit_info, members_can_add, members_can_invite FROM chat_groups WHERE id = ?"
     )
       .bind(groupId)
       .first<Record<string, unknown>>();
@@ -34,7 +34,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .all();
 
     return jsonResponse({
-      group: { ...group, only_admins_send: Boolean(group.only_admins_send) },
+      group: {
+        ...group,
+        only_admins_send: Boolean(group.only_admins_send),
+        members_can_edit_info: Boolean(group.members_can_edit_info),
+        members_can_add: Boolean(group.members_can_add),
+        members_can_invite: Boolean(group.members_can_invite),
+      },
       members: results || [],
       my_role: me.role,
     });

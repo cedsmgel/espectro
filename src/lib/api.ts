@@ -110,6 +110,9 @@ export interface DirectMessage {
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
   edited_at?: string | null;
+  view_once?: boolean;
+  viewed?: boolean;
+  expires_at?: string | null;
 }
 
 export interface Conversation {
@@ -545,6 +548,7 @@ export const directMessagesApi = {
     media_url?: string | null;
     reply_to_id?: number | null;
     client_id?: string;
+    view_once?: boolean;
   }) =>
     apiRequest<{ message: DirectMessage; duplicate?: boolean }>('/api/direct_messages', {
       method: 'POST',
@@ -814,6 +818,11 @@ export interface GroupMessage {
   reply_sender?: string | null;
   reply_deleted?: boolean;
   deleted?: boolean;
+  view_once?: boolean;
+  viewed?: boolean;
+  expires_at?: string | null;
+  sender_avatar?: string | null;
+  reactions?: Array<{ user_id: number; emoji: string }>;
   id: number;
   content: string;
   message_type: 'text' | 'gif' | 'sticker' | 'system' | 'image' | 'video' | 'audio' | 'file';
@@ -823,12 +832,74 @@ export interface GroupMessage {
   created_at: string;
 }
 
+export interface GroupInfo {
+  id: number;
+  name: string;
+  description: string | null;
+  only_admins_send: boolean;
+  disappear_seconds: number;
+  members_can_edit_info: boolean;
+  members_can_add: boolean;
+  members_can_invite: boolean;
+}
+
+export interface LibraryItem {
+  kind: 'dm' | 'group';
+  message_id: number;
+  message_type: string;
+  media_url: string | null;
+  content: string;
+  sender_username: string | null;
+  chat_id: number;
+  chat_name: string;
+  created_at: string;
+  href?: string;
+}
+
+export interface StarredItem extends LibraryItem {}
+
+export const chatExtrasApi = {
+  library: (section: 'media' | 'links' | 'docs', scope?: { kind: 'dm' | 'group'; id: number }) => {
+    const params = new URLSearchParams({ section });
+    if (scope) {
+      params.set('kind', scope.kind);
+      params.set('id', String(scope.id));
+    }
+    return apiRequest<LibraryItem[]>(`/api/chat_library?${params.toString()}`, { method: 'GET' });
+  },
+  starred: () => apiRequest<StarredItem[]>('/api/starred', { method: 'GET' }),
+  setStarred: (kind: 'dm' | 'group', messageId: number, starred: boolean) =>
+    apiRequest<{ starred: boolean }>('/api/starred', {
+      method: 'PUT',
+      body: JSON.stringify({ kind, message_id: messageId, starred }),
+    }),
+  openViewOnce: (kind: 'dm' | 'group', messageId: number) =>
+    apiRequest<{ media_url: string }>('/api/view_once', {
+      method: 'POST',
+      body: JSON.stringify({ kind, message_id: messageId }),
+    }),
+  dmDisappear: (friendId: number) =>
+    apiRequest<{ disappear_seconds: number }>(`/api/chat_settings?friend_id=${friendId}`, { method: 'GET' }),
+  setDmDisappear: (friendId: number, seconds: number) =>
+    apiRequest<{ disappear_seconds: number }>('/api/chat_settings', {
+      method: 'PUT',
+      body: JSON.stringify({ friend_id: friendId, disappear_seconds: seconds }),
+    }),
+  invitePreview: (code: string) =>
+    apiRequest<{ id: number; name: string; description: string | null; members_count: number; already_member: boolean }>(
+      `/api/groups/join?code=${encodeURIComponent(code)}`,
+      { method: 'GET' }
+    ),
+  joinGroup: (code: string) =>
+    apiRequest<{ id: number; joined: boolean }>('/api/groups/join', { method: 'POST', body: JSON.stringify({ code }) }),
+};
+
 export const groupsApi = {
   list: () => apiRequest<GroupSummary[]>("/api/groups", { method: "GET" }),
   create: (data: { name: string; description?: string; member_ids: number[] }) =>
     apiRequest<{ id: number; name: string }>("/api/groups", { method: "POST", body: JSON.stringify(data) }),
   detail: (id: number) =>
-    apiRequest<{ group: { id: number; name: string; description: string | null; only_admins_send: boolean }; members: GroupMember[]; my_role: "admin" | "member" }>(
+    apiRequest<{ group: GroupInfo; members: GroupMember[]; my_role: "admin" | "member" }>(
       `/api/groups/${id}`,
       { method: "GET" }
     ),
@@ -837,7 +908,7 @@ export const groupsApi = {
       `/api/groups/${id}/messages${beforeId ? `?before_id=${beforeId}` : ""}`,
       { method: "GET" }
     ),
-  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file'; media_url?: string; reply_to_id?: number | null }) =>
+  send: (id: number, payload: { content?: string; message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file'; media_url?: string; reply_to_id?: number | null; view_once?: boolean }) =>
     apiRequest<{ message: GroupMessage }>(`/api/groups/${id}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
   remove: (id: number, messageId: number) =>
     apiRequest<{ ok: boolean }>(`/api/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
@@ -845,6 +916,11 @@ export const groupsApi = {
     apiRequest<{ edited: boolean; content: string; edited_at?: string | null }>(`/api/groups/${id}/messages/${messageId}`, {
       method: 'PATCH',
       body: JSON.stringify({ content }),
+    }),
+  react: (id: number, messageId: number, emoji: string | null) =>
+    apiRequest<{ emoji: string | null }>(`/api/groups/${id}/reactions`, {
+      method: 'PUT',
+      body: JSON.stringify({ message_id: messageId, emoji }),
     }),
   manage: (id: number, body: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>(`/api/groups/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),

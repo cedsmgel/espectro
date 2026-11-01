@@ -18,6 +18,8 @@ import {
   groupsApi,
   directMessagesApi,
   blocksApi,
+  chatExtrasApi,
+  DirectMessage,
 } from '../lib/api';
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
@@ -46,6 +48,12 @@ import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
 import { useVisualViewport } from '../hooks/useVisualViewport';
+import { ChatLibraryModal } from '../components/chat/ChatLibraryModal';
+import { StarredModal } from '../components/chat/StarredModal';
+import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
+import { InviteJoinModal } from '../components/chat/GroupModals';
+import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
+import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 // Emojis populares pré-selecionados para o seletor rápido
 const QUICK_EMOJIS = [
@@ -213,9 +221,34 @@ export const DirectMessages: React.FC = () => {
   const [convSearchOpen, setConvSearchOpen] = useState(false);
   const [convSearch, setConvSearch] = useState('');
   const [activeSettings, setActiveSettings] = useState<ConversationSettings | null>(null);
+  const [extraModal, setExtraModal] = useState<null | 'library' | 'starred' | 'disappear'>(null);
+  const [disappearSeconds, setDisappearSeconds] = useState(0);
+  const [starredIds, setStarredIds] = useState<Set<number>>(new Set());
+  const [openedOnce, setOpenedOnce] = useState<Set<number>>(new Set());
+  const viewOnceNextRef = useRef(false);
+  const [inviteCode] = useState<string | null>(() => {
+    try {
+      const code = new URLSearchParams(window.location.search).get('convite');
+      return code && /^[a-f0-9]{16}$/.test(code) ? code : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showInvite, setShowInvite] = useState(Boolean(inviteCode));
   const { prefs, update: updatePrefs } = useChatPrefs();
   const push = usePush();
   const presence = useFriendPresence(activeFriend?.friend_id);
+
+  useEffect(() => {
+    const friendId = activeFriend?.friend_id;
+    setDisappearSeconds(0);
+    if (!friendId) return;
+    chatExtrasApi.dmDisappear(friendId).then((r) => setDisappearSeconds(r.disappear_seconds)).catch(() => {});
+    chatExtrasApi
+      .starred()
+      .then((list) => setStarredIds(new Set(list.filter((i) => i.kind === 'dm' && i.chat_id === friendId).map((i) => i.message_id))))
+      .catch(() => {});
+  }, [activeFriend?.friend_id, extraModal === 'starred']);
 
   useEffect(() => {
     if (push.error) setToastMessage(push.error);
@@ -586,7 +619,9 @@ export const DirectMessages: React.FC = () => {
         message_type: msgType,
         filename: file.name,
         reply_to_id: replyingTo?.id || null,
+        view_once: viewOnceNextRef.current && (msgType === 'image' || msgType === 'video') ? true : undefined,
       });
+      viewOnceNextRef.current = false;
       setReplyingTo(null);
     } catch (err: any) {
       if (err.message?.includes('cancelado')) {
@@ -628,6 +663,53 @@ export const DirectMessages: React.FC = () => {
     if (!m.id || m.id < 0) return;
     setReplyingTo(m);
     inputRef.current?.focus();
+  };
+
+  const toggleStar = (m: ChatMessage) => {
+    if (!m.id || m.id <= 0) return;
+    const starred = !starredIds.has(m.id);
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (starred) next.add(m.id!);
+      else next.delete(m.id!);
+      return next;
+    });
+    chatExtrasApi.setStarred('dm', m.id, starred).catch(() => setToastMessage('Não foi possível favoritar.'));
+  };
+
+  const saveDisappear = async (seconds: number) => {
+    if (!activeFriend) return;
+    try {
+      await chatExtrasApi.setDmDisappear(activeFriend.friend_id, seconds);
+      setDisappearSeconds(seconds);
+    } catch (err: any) {
+      setToastMessage(err?.message || 'Não foi possível salvar.');
+      throw err;
+    }
+  };
+
+  const exportConversation = async () => {
+    if (!activeFriend || !user) return;
+    try {
+      let all: DirectMessage[] = [];
+      let before: number | undefined;
+      for (let page = 0; page < 200; page++) {
+        const res = await directMessagesApi.list(activeFriend.friend_id, { beforeId: before, limit: 100 });
+        all = [...res.messages, ...all];
+        if (!res.has_more || res.messages.length === 0) break;
+        before = res.messages[0].id;
+      }
+      downloadConversation(
+        `@${activeFriend.username}`,
+        all.map((m) => ({
+          created_at: m.created_at,
+          sender: `@${m.sender_username}`,
+          text: describeMessage(m.message_type, m.content, m.media_url, m.view_once),
+        }))
+      );
+    } catch {
+      setToastMessage('Não foi possível exportar a conversa.');
+    }
   };
 
   const handleCopyMessage = async (m: ChatMessage) => {
@@ -960,6 +1042,18 @@ export const DirectMessages: React.FC = () => {
   // Renderizador rico de mensagens por tipo (Tarefa 3)
   // Renderizador rico de mensagens por tipo e verificação de media_url (Tarefa 2)
   const renderMessageContent = (m: ChatMessage, isMe: boolean) => {
+    if (m.view_once && (m.message_type === 'image' || m.message_type === 'video')) {
+      return (
+        <ViewOnceMedia
+          kind="dm"
+          messageId={m.id || 0}
+          type={m.message_type}
+          mine={isMe}
+          viewed={Boolean(m.viewed) || (m.id !== undefined && openedOnce.has(m.id))}
+          onOpened={() => m.id && setOpenedOnce((prev) => new Set(prev).add(m.id!))}
+        />
+      );
+    }
     // Se a mensagem possuir media_url (Tarefa 2)
     if (m.media_url) {
       let msgType: ChatMessageType = m.message_type || 'image';
@@ -1163,6 +1257,35 @@ export const DirectMessages: React.FC = () => {
         </div>
       )}
 
+      {extraModal === 'library' && (
+        <ChatLibraryModal
+          onClose={() => setExtraModal(null)}
+          scope={activeFriend ? { kind: 'dm', id: activeFriend.friend_id, name: `@${activeFriend.username}` } : undefined}
+        />
+      )}
+      {extraModal === 'starred' && (
+        <StarredModal
+          onClose={() => setExtraModal(null)}
+          onOpenDirect={(friendId) => {
+            const found = friends.find((f) => f.friend_id === friendId);
+            if (found) {
+              setActiveFriend(found);
+              if (activeGroupId) navigate('/mensagens');
+            }
+          }}
+        />
+      )}
+      {extraModal === 'disappear' && <DisappearingModal current={disappearSeconds} onSave={saveDisappear} onClose={() => setExtraModal(null)} />}
+      {showInvite && inviteCode && (
+        <InviteJoinModal
+          code={inviteCode}
+          onClose={() => {
+            setShowInvite(false);
+            window.history.replaceState(null, '', window.location.pathname);
+          }}
+        />
+      )}
+
       <div
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out ${
           !activeFriend && !activeGroupId ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0' : 'pt-0'
@@ -1230,6 +1353,18 @@ export const DirectMessages: React.FC = () => {
                         icon: push.subscribed ? 'notifications_off' : 'notifications_active',
                         hidden: !push.supported || push.permission === 'denied',
                         onSelect: () => (push.subscribed ? push.disable() : push.enable()),
+                      },
+                      {
+                        key: 'library-all',
+                        label: 'Mídias, links e docs',
+                        icon: 'perm_media',
+                        onSelect: () => setExtraModal('library'),
+                      },
+                      {
+                        key: 'starred-all',
+                        label: 'Mensagens favoritas',
+                        icon: 'star',
+                        onSelect: () => setExtraModal('starred'),
                       },
                       {
                         key: 'prefs',
@@ -1585,6 +1720,30 @@ export const DirectMessages: React.FC = () => {
                               onSelect: () => setConvSearchOpen(true),
                             },
                             {
+                              key: 'library',
+                              label: 'Mídias, links e docs',
+                              icon: 'perm_media',
+                              onSelect: () => setExtraModal('library'),
+                            },
+                            {
+                              key: 'starred',
+                              label: 'Mensagens favoritas',
+                              icon: 'star',
+                              onSelect: () => setExtraModal('starred'),
+                            },
+                            {
+                              key: 'disappear',
+                              label: `Mensagens temporárias · ${disappearLabel(disappearSeconds)}`,
+                              icon: 'timer',
+                              onSelect: () => setExtraModal('disappear'),
+                            },
+                            {
+                              key: 'export',
+                              label: 'Exportar conversa',
+                              icon: 'download',
+                              onSelect: () => void exportConversation(),
+                            },
+                            {
                               key: 'customize',
                               label: 'Personalizar conversa',
                               icon: 'palette',
@@ -1880,6 +2039,20 @@ export const DirectMessages: React.FC = () => {
                                         </button>
                                       )}
 
+                                      {m.id && m.id > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            toggleStar(m);
+                                            setActiveKebabMessage(null);
+                                          }}
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                        >
+                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">star</span>
+                                          <span className="font-medium">{starredIds.has(m.id) ? 'Desfavoritar' : 'Favoritar'}</span>
+                                        </button>
+                                      )}
+
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -2000,6 +2173,12 @@ export const DirectMessages: React.FC = () => {
                                       isMe ? 'justify-end mr-1' : 'ml-1'
                                     }`}
                                   >
+                                    {m.id !== undefined && starredIds.has(m.id) && (
+                                      <span className="material-symbols-outlined text-[12px] text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }} title="Favorita">
+                                        star
+                                      </span>
+                                    )}
+                                    {m.expires_at && <span className="material-symbols-outlined text-[12px]" title="Mensagem temporária">timer</span>}
                                     <span>
                                       {new Date(m.created_at).toLocaleTimeString('pt-BR', {
                                         hour: '2-digit',
@@ -2161,12 +2340,27 @@ export const DirectMessages: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setShowAttachMenu(false);
+                            viewOnceNextRef.current = false;
                             fileInputRef.current?.click();
                           }}
                           className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
                         >
                           <span className="material-symbols-outlined text-[20px] text-primary">photo_library</span>
                           <span>Foto ou Vídeo</span>
+                        </button>
+
+                        {/* Foto ou vídeo que some depois de aberto */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAttachMenu(false);
+                            viewOnceNextRef.current = true;
+                            fileInputRef.current?.click();
+                          }}
+                          className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-on-surface hover:bg-surface-container transition-colors cursor-pointer text-left"
+                        >
+                          <span className="material-symbols-outlined text-[20px] text-primary">timer</span>
+                          <span>Foto temporária</span>
                         </button>
 
                         {/* Câmera (somente celular) */}

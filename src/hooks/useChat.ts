@@ -25,6 +25,9 @@ export interface ChatMessage {
   reply_to_id?: number | null;
   edited_at?: string | null;
   reactions?: Array<{ user_id: number; emoji: string }>;
+  view_once?: boolean;
+  viewed?: boolean;
+  expires_at?: string | null;
   status?: MessageStatus;
   created_at: string;
 }
@@ -84,6 +87,9 @@ function toChatMessage(m: DirectMessage): ChatMessage {
     reply_to_id: m.reply_to_id,
     edited_at: m.edited_at,
     reactions: m.reactions || [],
+    view_once: m.view_once,
+    viewed: m.viewed,
+    expires_at: m.expires_at,
     status: m.status,
     created_at: m.created_at,
   };
@@ -440,6 +446,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
           media_url: entry.draft.media_url,
           reply_to_id: entry.draft.reply_to_id,
           client_id: clientId,
+          view_once: entry.draft.view_once || undefined,
         });
         outboxRef.current.delete(clientId);
         if (activeFriendRef.current === entry.friendId) {
@@ -457,7 +464,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
   );
 
   const enqueue = useCallback(
-    (content: string, type: ChatMessageType, mediaUrl: string | null, replyToId: number | null) => {
+    (content: string, type: ChatMessageType, mediaUrl: string | null, replyToId: number | null, viewOnce = false) => {
       const friendId = activeFriendRef.current;
       if (!userId || !friendId) return false;
       if (!content && !mediaUrl) return false;
@@ -473,6 +480,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
         message_type: type,
         media_url: mediaUrl,
         reply_to_id: replyToId && replyToId > 0 ? replyToId : null,
+        view_once: viewOnce || undefined,
         created_at: new Date().toISOString(),
       };
 
@@ -515,7 +523,8 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
       message_type: 'image' | 'video' | 'file' | 'audio';
       filename?: string;
       reply_to_id?: number | null;
-    }) => enqueue(options.filename || '', options.message_type, options.media_url, options.reply_to_id ?? null),
+      view_once?: boolean;
+    }) => enqueue(options.filename || '', options.message_type, options.media_url, options.reply_to_id ?? null, options.view_once),
     [enqueue]
   );
 

@@ -16,6 +16,9 @@ export interface DirectMessageRow {
   edited_at?: string | null;
   client_id: string | null;
   reactions?: Array<{ user_id: number; emoji: string }>;
+  view_once?: number | boolean;
+  viewed?: boolean;
+  expires_at?: string | null;
   status: "sent" | "delivered" | "read";
   created_at: string;
 }
@@ -28,7 +31,9 @@ export const MESSAGE_COLUMNS = `
   u.username AS sender_username,
   dm.content,
   COALESCE(dm.message_type, 'text') AS message_type,
-  dm.media_url,
+  CASE WHEN dm.view_once = 1 THEN NULL ELSE dm.media_url END AS media_url,
+  dm.view_once,
+  strftime('%Y-%m-%dT%H:%M:%SZ', dm.expires_at) AS expires_at,
   dm.reply_to_id,
   dm.client_id,
   CASE WHEN dm.read_at IS NOT NULL THEN 'read' WHEN dm.delivered_at IS NOT NULL THEN 'delivered' ELSE 'sent' END AS status,
@@ -59,6 +64,34 @@ export async function attachReactions<T extends { id: number; reactions?: Array<
     byMessage.set(row.message_id, [...(byMessage.get(row.message_id) || []), { user_id: row.user_id, emoji: row.emoji }]);
   }
   return messages.map((m) => ({ ...m, reactions: byMessage.get(m.id) || [] }));
+}
+
+// Prazos permitidos para mensagens temporárias, em segundos (0 = desligado)
+export const DISAPPEAR_OPTIONS = [0, 24 * 3600, 7 * 24 * 3600, 90 * 24 * 3600];
+
+// Filtro SQL: some da conversa a mensagem cujo prazo acabou
+export const NOT_EXPIRED = "(%T.expires_at IS NULL OR %T.expires_at > datetime('now'))";
+export const notExpired = (alias: string) => NOT_EXPIRED.replaceAll("%T", alias);
+
+export function userPair(a: number, b: number): [number, number] {
+  return a < b ? [a, b] : [b, a];
+}
+
+// Marca em cada mensagem de visualização única se quem consulta já abriu (a mídia nunca vai na lista)
+export async function attachViewed<T extends { id: number; view_once?: number | boolean; viewed?: boolean }>(
+  db: D1Database,
+  kind: "dm" | "group",
+  userId: number,
+  messages: T[]
+): Promise<T[]> {
+  const ids = messages.filter((m) => Number(m.view_once) === 1).map((m) => m.id);
+  if (ids.length === 0) return messages.map((m) => ({ ...m, view_once: Number(m.view_once) === 1 }));
+  const { results } = await db
+    .prepare(`SELECT message_id FROM view_once_views WHERE kind = ? AND user_id = ? AND message_id IN (${ids.map(() => "?").join(",")})`)
+    .bind(kind, userId, ...ids)
+    .all<{ message_id: number }>();
+  const seen = new Set((results || []).map((r) => r.message_id));
+  return messages.map((m) => ({ ...m, view_once: Number(m.view_once) === 1, viewed: seen.has(m.id) }));
 }
 
 export const CONVERSATION_THEMES = ["default", "violet", "rose", "amber", "emerald", "sky", "slate", "orange"];
