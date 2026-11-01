@@ -5,6 +5,7 @@ import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
 import { authStorage, profileApi, uploadApi, UserProfile } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
+import { ProfileDetailsEditor } from '../components/ProfileDetailsEditor';
 
 export const ProfileSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export const ProfileSettings: React.FC = () => {
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   // Estados de feedback
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export const ProfileSettings: React.FC = () => {
         setEmail(data.email || '');
         setBio(data.bio || '');
         setAvatarUrl(data.avatar_url || null);
+        setCoverUrl(data.cover_url || null);
       } catch (err: any) {
         console.error('Erro ao carregar perfil:', err);
         setErrorMessage(err.message || 'Falha ao carregar seus dados de perfil.');
@@ -423,6 +426,8 @@ export const ProfileSettings: React.FC = () => {
                 </form>
               )}
             </div>
+
+            {!loading && <ProfileDetailsEditor coverUrl={coverUrl} onCoverChange={setCoverUrl} />}
           </div>
         </main>
       </div>

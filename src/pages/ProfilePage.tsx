@@ -21,6 +21,7 @@ import { ChatMenu } from '../components/chat/ChatMenu';
 import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
+import { ProfileAbout } from '../components/ProfileAbout';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -305,6 +306,13 @@ export const ProfilePage: React.FC = () => {
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
           <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex flex-col gap-6 sm:gap-8">
+            {/* Capa do perfil */}
+            {userProfile?.cover_url && !isLockedPrivate && (
+              <div className="-mb-2 h-32 sm:h-52 rounded-3xl overflow-hidden border border-outline-variant bg-surface-container-low">
+                <img src={userProfile.cover_url} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
+
             {/* 1. Header do Perfil Público com Dados Reais */}
             <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 shadow-sm border border-outline-variant flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
               <div className="flex items-center gap-5 min-w-0">
@@ -608,6 +616,8 @@ export const ProfilePage: React.FC = () => {
             )}
 
             {/* 4. Mural de Publicações / Scraps Públicos */}
+            {userProfile && !isLockedPrivate && <ProfileAbout username={userProfile.username} isSelf={isSelf} />}
+
             {isLockedPrivate ? (
               <div className="p-12 rounded-3xl bg-surface-container-lowest border border-outline-variant flex flex-col items-center text-center gap-4 shadow-sm animate-in fade-in">
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
