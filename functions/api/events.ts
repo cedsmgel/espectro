@@ -58,10 +58,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     }
     if (stmts.length) await env.DB.batch(stmts);
 
-    // Faxina: eventos com mais de 90 dias saem (de vez em quando, sem agendador)
-    if (Math.random() < 0.01) {
-      await env.DB.prepare("DELETE FROM post_events WHERE created_at < datetime('now', '-90 days')").run();
-    }
     return jsonResponse({ recorded: stmts.length });
   } catch (err: unknown) {
     return serverError(err, "events");
