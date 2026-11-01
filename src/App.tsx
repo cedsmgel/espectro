@@ -12,6 +12,7 @@ import { lazyNamed } from './lib/lazy';
 import { PushPrompt } from './components/PushPrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
+import { LoadingBar, RouteLoading } from './components/LoadingBar';
 
 // Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
 const Activity = lazyNamed(() => import('./pages/Activity'), 'Activity');
@@ -42,12 +43,6 @@ const RedirectToCommunity: React.FC = () => {
   return <Navigate to={`/e/${encodeURIComponent(slug || '')}`} replace />;
 };
 
-const RouteFallback: React.FC = () => (
-  <div className="min-h-dvh flex items-center justify-center" role="status" aria-label="Carregando">
-    <div className="w-8 h-8 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-  </div>
-);
-
 const GlobalCreatePostModal: React.FC = () => {
   const { isCreatePostOpen, closeCreatePostModal } = useSidebar();
   return (
@@ -74,7 +69,8 @@ export const AppContent: React.FC = () => {
       <ThemeProvider>
         <AuthProvider>
         <SidebarProvider>
-          <Suspense fallback={<RouteFallback />}>
+          <LoadingBar />
+          <Suspense fallback={<RouteLoading />}>
           <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/post/:id" element={<PostDetail />} />

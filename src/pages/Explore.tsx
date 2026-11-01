@@ -109,7 +109,7 @@ export const Explore: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
-      <div className="pt-16 md:pt-0 md:pl-20">
+      <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64">
         <main className="w-full max-w-4xl mx-auto px-4 pt-4 pb-24 md:pb-8 flex flex-col gap-4">
           <div ref={boxRef} className="relative">
             <form onSubmit={submit} className="relative">

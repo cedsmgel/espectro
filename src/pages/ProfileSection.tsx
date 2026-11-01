@@ -283,7 +283,7 @@ export const ProfileSection: React.FC = () => {
       <div className="min-h-screen bg-surface text-on-surface flex flex-col">
         <Header />
         <SidebarNav />
-        <div className="pt-16 md:pt-0 md:pl-20 flex-1 flex items-center justify-center p-6">
+        <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64 flex-1 flex items-center justify-center p-6">
           <EmptyState icon="account_circle" title="Acesse um perfil" description="Entre na sua conta para ver perfis." actionLabel="Entrar" actionLink="/login" className="max-w-md w-full" />
         </div>
       </div>
@@ -294,7 +294,7 @@ export const ProfileSection: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
-      <div className="pt-16 md:pt-0 md:pl-20">
+      <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64">
         <main className="w-full max-w-2xl mx-auto px-4 pt-4 pb-24 md:pb-8">
           <div className="flex items-center gap-3 pb-4">
             <Link to={base} aria-label="Voltar ao perfil" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">

@@ -85,7 +85,7 @@ export const Friends: React.FC = () => {
       <div className="min-h-screen bg-surface text-on-surface flex flex-col">
         <Header />
         <SidebarNav />
-        <div className="pt-16 md:pt-0 md:pl-20 flex-1 flex items-center justify-center p-6">
+        <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64 flex-1 flex items-center justify-center p-6">
           <EmptyState icon="group" title="Seus amigos" description="Entre na sua conta para ver e gerenciar seus amigos." actionLabel="Entrar" actionLink="/login" className="max-w-md w-full" />
         </div>
       </div>
@@ -221,7 +221,7 @@ export const Friends: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
-      <div className="pt-16 md:pt-0 md:pl-20">
+      <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64">
         <main className="w-full max-w-2xl mx-auto px-4 pt-4 pb-24 md:pb-8">
           <h1 className="text-xl font-bold text-on-surface pb-3">Amigos</h1>
           <input

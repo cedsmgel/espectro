@@ -13,6 +13,8 @@ import { MomentumBar } from '../components/moments/MomentumBar';
 import { FeedPreferences } from '../components/FeedPreferences';
 import { TrendingHashtags } from '../components/TrendingHashtags';
 import { useFeedPrefs } from '../hooks/useFeedPrefs';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { startLoading, stopLoading } from '../lib/loadingBar';
 
 export const Feed: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,9 +38,11 @@ export const Feed: React.FC = () => {
   const typeParam = searchParams.get('type');
   const filterParam = searchParams.get('filter');
 
-  const loadData = async () => {
-    setLoading(true);
+  // silent: atualização do feed já carregado (botão ou puxar para baixo), sem trocar a lista por skeletons
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     setHasError(false);
+    startLoading();
     try {
       const token = authStorage.getToken();
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
@@ -75,8 +79,20 @@ export const Feed: React.FC = () => {
       setCommunities([]);
     } finally {
       setLoading(false);
+      stopLoading();
     }
   };
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshFeed = async () => {
+    setRefreshing(true);
+    try {
+      await loadData(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const { pull, refreshing: pulling, ready } = usePullToRefresh(refreshFeed);
 
   // Aviso deixado pelo login (ex.: exclusão de conta cancelada)
   useEffect(() => {
@@ -176,6 +192,23 @@ export const Feed: React.FC = () => {
       {/* 1. Header Mobile (Visível apenas em telas pequenas < md) */}
       <Header />
 
+      {/* Puxar para baixo para atualizar (celular) */}
+      {(pull > 0 || pulling) && (
+        <div
+          className="md:hidden fixed left-0 right-0 z-40 flex justify-center pointer-events-none"
+          style={{ top: 'calc(3.5rem + env(safe-area-inset-top))', transform: `translateY(${pull * 0.6}px)`, opacity: Math.min(1, pull / 50) }}
+        >
+          <div className="w-9 h-9 rounded-full bg-surface-container-lowest border border-outline-variant shadow-md flex items-center justify-center">
+            <span
+              className={`material-symbols-outlined text-[20px] text-on-surface ${pulling ? 'animate-spin' : ''}`}
+              style={pulling ? undefined : { transform: `rotate(${ready ? 180 : pull * 2}deg)`, transition: 'transform 150ms' }}
+            >
+              {pulling ? 'progress_activity' : 'arrow_downward'}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 2. Coluna Esquerda: Navegação fixa (Tarefa 2: w-20 ou w-64, sticky top-0 h-screen, fluxo real) */}
       <SidebarNav onOpenCreateModal={openCreatePostModal} />
 
@@ -220,6 +253,16 @@ export const Feed: React.FC = () => {
                 Comunidades
               </Link>
             </div>
+            <button
+              type="button"
+              onClick={refreshFeed}
+              disabled={refreshing || loading}
+              aria-label="Atualizar feed"
+              title="Atualizar feed"
+              className="hidden md:flex w-9 h-9 shrink-0 rounded-full items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <span className={`material-symbols-outlined text-[20px] ${refreshing ? 'animate-spin' : ''}`}>refresh</span>
+            </button>
             <FeedPreferences prefs={prefs} isCustom={isCustom} onChange={updatePrefs} onReset={resetPrefs} />
           </div>
 
@@ -236,7 +279,7 @@ export const Feed: React.FC = () => {
             <ErrorState
               title="O Espectro perdeu o sinal com o banco de dados"
               message="Não conseguimos carregar as publicações neste momento. Verifique sua conexão e tente novamente."
-              onRetry={loadData}
+              onRetry={() => loadData()}
             />
           ) : filteredPosts.length === 0 ? (
             typeParam === 'scrap' ? (
