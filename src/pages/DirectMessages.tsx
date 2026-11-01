@@ -882,6 +882,27 @@ export const DirectMessages: React.FC = () => {
       return a.username.localeCompare(b.username);
     });
 
+  // Grupos entram na lista como qualquer conversa: ordem pela última atividade, sem fixar no topo
+  const visibleGroups = showArchived
+    ? []
+    : groups.filter((g) => !searchConv.trim() || g.name.toLowerCase().includes(searchConv.trim().toLowerCase()));
+  const activityTime = (value?: string | null) => {
+    if (!value) return 0;
+    const t = Date.parse(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
+    return Number.isNaN(t) ? 0 : t;
+  };
+  const listOrder = new Map<string, number>();
+  [
+    ...filteredConversations.map((c) => ({
+      key: `c-${c.friend_id}`,
+      pinned: conversations[c.friend_id]?.pinned ? 1 : 0,
+      time: activityTime(conversations[c.friend_id]?.last_created_at),
+    })),
+    ...visibleGroups.map((g) => ({ key: `g-${g.id}`, pinned: 0, time: activityTime(g.last_created_at) })),
+  ]
+    .sort((a, b) => b.pinned - a.pinned || b.time - a.time)
+    .forEach((item, index) => listOrder.set(item.key, index + 1));
+
   const conversationPreview = (c: Conversation, myId: number): string => {
     const prefix = c.last_sender_id === myId ? 'Você: ' : '';
     switch (c.last_message_type) {
@@ -1135,7 +1156,7 @@ export const DirectMessages: React.FC = () => {
 
       <div
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out ${
-          !activeFriend ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0' : 'pt-0'
+          !activeFriend && !activeGroupId ? 'pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0' : 'pt-0'
         }`}
       >
         <main className="w-full flex-1 flex h-full overflow-hidden">
@@ -1233,7 +1254,7 @@ export const DirectMessages: React.FC = () => {
                 </div>
 
                 {/* Lista de Conversas / Amigos */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-2">
+                <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-2">
                   {(showArchived || Object.values(conversations).some((c) => c.archived)) && (
                     <button
                       type="button"
@@ -1244,10 +1265,9 @@ export const DirectMessages: React.FC = () => {
                       <span>{showArchived ? 'Voltar às conversas' : 'Arquivadas'}</span>
                     </button>
                   )}
-                  {!showArchived && groups
-                    .filter((g) => !searchConv.trim() || g.name.toLowerCase().includes(searchConv.trim().toLowerCase()))
+                  {visibleGroups
                     .map((g) => (
-                      <Link key={`g-${g.id}`} to={`/grupos/${g.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container-low/60">
+                      <Link key={`g-${g.id}`} to={`/grupos/${g.id}`} style={{ order: listOrder.get(`g-${g.id}`) }} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container-low/60">
                         <div className="w-11 h-11 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm flex-shrink-0">
                           {g.name.charAt(0).toUpperCase()}
                         </div>
@@ -1271,7 +1291,7 @@ export const DirectMessages: React.FC = () => {
                         </div>
                       </Link>
                     ))}
-                  {filteredConversations.length === 0 ? (
+                  {filteredConversations.length === 0 && visibleGroups.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">
                         search_off
@@ -1291,6 +1311,7 @@ export const DirectMessages: React.FC = () => {
                     filteredConversations.map((c) => (
                       <div
                         key={c.friend_id}
+                        style={{ order: listOrder.get(`c-${c.friend_id}`) }}
                         onClick={() => {
                           setActiveFriend(c);
                           if (activeGroupId) navigate('/mensagens');
@@ -2303,7 +2324,7 @@ export const DirectMessages: React.FC = () => {
                           type="text"
                           value={inputText}
                           onChange={handleInputChange}
-                          placeholder={`Mensagem para @${activeFriend.username}...`}
+                          aria-label={`Mensagem para @${activeFriend.username}`}
                           className="flex-1 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
                         />
 

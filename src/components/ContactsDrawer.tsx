@@ -357,7 +357,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
                   type="text"
                   value={newMessage}
                   onChange={handleInputChange}
-                  placeholder={`Mensagem para @${selectedFriend.username}...`}
+                  aria-label={`Mensagem para @${selectedFriend.username}`}
                   className="flex-1 bg-surface-container-low border border-outline-variant rounded-full px-4 py-2 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container focus:ring-1 focus:ring-primary-container transition-all"
                 />
                 <button
