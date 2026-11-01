@@ -5,7 +5,7 @@ import { communitiesApi, communityModApi, postsApi, Community, Post, CreatePostD
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
-import { CreatePostForm } from '../components/CreatePostForm';
+import { CreatePostModal } from '../components/CreatePostModal';
 import { PostCard } from '../components/PostCard';
 import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
@@ -29,6 +29,7 @@ export const CommunityDetail: React.FC = () => {
   const [allCommunities, setAllCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [pinned, setPinned] = useState<Post[]>([]);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [sort, setSort] = useState<'new' | 'hot' | 'top'>('new');
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [postsLoading, setPostsLoading] = useState(false);
@@ -237,12 +238,8 @@ export const CommunityDetail: React.FC = () => {
     }
   };
 
-  const handlePostCreated = async (data: CreatePostData) => {
+  const handlePostCreated = (newPost: Post) => {
     if (!community) return;
-    const newPost = await postsApi.create({
-      ...data,
-      community_id: community.id,
-    });
     // Garante propriedades completas e atualiza a lista imediatamente
     const postWithComm: Post = {
       ...newPost,
@@ -569,13 +566,27 @@ export const CommunityDetail: React.FC = () => {
                   <>
                     {/* Composer com communityId pré-selecionado */}
                     {community.can_post_here ? (
-                      <CreatePostForm
-                        onPostCreated={handlePostCreated}
-                        defaultCommunityId={community.id}
-                        communities={allCommunities}
-                        communityTags={community.tags}
-                        requireTag={community.require_tag}
-                      />
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setComposerOpen(true)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-left cursor-pointer"
+                        >
+                          <span className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0">
+                            {(user?.username || '?').charAt(0)}
+                          </span>
+                          <span className="flex-1 text-sm text-on-surface-variant">Criar publicação em e/{community.name}</span>
+                          <span className="material-symbols-outlined text-[20px] text-on-surface-variant">edit_square</span>
+                        </button>
+                        <CreatePostModal
+                          isOpen={composerOpen}
+                          onClose={() => setComposerOpen(false)}
+                          onPostCreated={handlePostCreated}
+                          defaultCommunityId={community.id}
+                          communityTags={community.tags}
+                          requireTag={community.require_tag}
+                        />
+                      </>
                     ) : (
                       myStatus !== 'banned' && (
                         <div className="p-3 rounded-xl bg-surface-container text-on-surface-variant text-xs">
