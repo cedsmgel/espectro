@@ -154,6 +154,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
     });
 
+    // Miniatura opcional (JPEG pequeno gerado no navegador), guardada ao lado da foto
+    const thumb = formData.get("thumbnail");
+    if (allowed.kind === "image" && ["jpg", "jpeg", "png", "webp"].includes(extFromName) && thumb && typeof thumb !== "string") {
+      const thumbFile = thumb as File;
+      if (thumbFile.size > 0 && thumbFile.size <= 300 * 1024) {
+        const thumbHead = new Uint8Array(await thumbFile.slice(0, 3).arrayBuffer());
+        if (startsWith(thumbHead, [0xff, 0xd8, 0xff])) {
+          try {
+            await bucket.put(`${folder}/${uniqueId}_t.jpg`, thumbFile.stream(), {
+              httpMetadata: { contentType: "image/jpeg" },
+              customMetadata: { uploadedBy: String(user.id), thumbnailOf: key },
+            });
+          } catch (err) {
+            console.error("Miniatura não salva:", err);
+          }
+        }
+      }
+    }
+
     const origin = new URL(request.url).origin;
 
     return jsonResponse({

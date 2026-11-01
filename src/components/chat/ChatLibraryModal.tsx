@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { chatExtrasApi, LibraryItem } from '../../lib/api';
 import { ModalShell } from './ModalShell';
+import { ThumbImg } from '../ThumbImg';
 
 type Section = 'media' | 'links' | 'docs';
 
@@ -93,7 +94,7 @@ export const ChatLibraryModal: React.FC<Props> = ({ onClose, scope }) => {
                     <span className="material-symbols-outlined absolute inset-0 m-auto w-fit h-fit text-white text-[28px] drop-shadow">play_circle</span>
                   </>
                 ) : (
-                  <img src={item.media_url || undefined} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  <ThumbImg src={item.media_url || ""} className="w-full h-full object-cover" />
                 )}
               </a>
               {all && (

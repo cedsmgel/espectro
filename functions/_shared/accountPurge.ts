@@ -30,7 +30,11 @@ async function collectMediaKeys(db: D1Database, userId: number): Promise<string[
       const { results } = await db.prepare(sql).bind(userId).all<{ u: string | null }>();
       for (const row of results || []) {
         const key = mediaKey(row.u);
-        if (key) keys.add(key);
+        if (key) {
+          keys.add(key);
+          // Fotos têm uma miniatura ao lado (apagar chave que não existe é inofensivo)
+          if (key.startsWith("images/")) keys.add(key.replace(/\.[^./]+$/, "_t.jpg"));
+        }
       }
     } catch {
       // Tabela ou coluna ausente neste ambiente: segue com o resto

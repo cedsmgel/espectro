@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chatExtrasApi, StarredItem } from '../../lib/api';
 import { ModalShell } from './ModalShell';
+import { ThumbImg } from '../ThumbImg';
 
 const LABEL: Record<string, string> = { image: 'Foto', video: 'Vídeo', gif: 'GIF', sticker: 'Figurinha', audio: 'Mensagem de voz', file: 'Documento' };
 
@@ -47,7 +48,7 @@ export const StarredModal: React.FC<{ onClose: () => void; onOpenDirect: (friend
                 </button>
               </div>
               {item.message_type === 'image' || item.message_type === 'gif' || item.message_type === 'sticker' ? (
-                item.media_url ? <img src={item.media_url} alt="" className="max-h-40 rounded-xl" /> : <p className="text-xs italic">{LABEL[item.message_type]}</p>
+                item.media_url ? <ThumbImg src={item.media_url} className="max-h-40 rounded-xl" /> : <p className="text-xs italic">{LABEL[item.message_type]}</p>
               ) : (
                 <p className="text-xs text-on-surface whitespace-pre-wrap break-words">{item.content || LABEL[item.message_type] || 'Mensagem'}</p>
               )}

@@ -31,6 +31,7 @@ import { StarredModal } from '../components/chat/StarredModal';
 import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
 import { ShareGroupModal, GroupPermissionsModal } from '../components/chat/GroupModals';
 import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
+import { ThumbImg } from '../components/ThumbImg';
 import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 type Detail = {
@@ -501,7 +502,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
       case 'image':
         return m.media_url ? (
           <a href={m.media_url} target="_blank" rel="noopener noreferrer">
-            <img src={m.media_url} alt="Imagem" className="max-w-[240px] rounded-xl" />
+            <ThumbImg src={m.media_url} alt="Imagem" className="max-w-[240px] rounded-xl" />
           </a>
         ) : null;
       case 'video':
