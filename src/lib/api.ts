@@ -27,6 +27,8 @@ export interface Post {
   community_icon_color?: string | null;
   saved?: number | boolean;
   comments_count: number;
+  // Para Você: por que esta publicação apareceu (ex.: "Você segue"); só vem no feed ranqueado
+  why?: string | null;
 }
 
 export interface Community {

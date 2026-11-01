@@ -44,7 +44,7 @@ export const Feed: React.FC = () => {
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
       // 1. Busca posts reais via fetch('/api/posts')
-      const postsPromise = fetch(`/api/posts${user ? (activeTab === 'following' ? '?feed=following' : '?feed=home') : ''}`, {
+      const postsPromise = fetch(`/api/posts?feed=${user && activeTab === 'following' ? 'following' : 'foryou'}`, {
         headers: authHeaders,
       }).then(async (res) => {
         if (!res.ok) {

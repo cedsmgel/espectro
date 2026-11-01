@@ -208,6 +208,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
         } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
+        {/* Para Você: motivo de a publicação aparecer */}
+        {post.why && !isDetail && (
+          <p className="px-4 sm:px-5 pt-3 text-[11px] font-semibold text-on-surface-variant flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">info</span>
+            {post.why}
+          </p>
+        )}
+
         {/* 1. Cabeçalho: uma linha de identidade (nome, @usuário, horário) e a comunidade logo abaixo */}
         <div className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-2 flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
