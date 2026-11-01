@@ -470,12 +470,11 @@ export const PostCard: React.FC<PostCardProps> = ({
                   e.stopPropagation();
                   handleVoteClick('down');
                 }}
-                aria-label={`Downvote (${downvotes})`}
+                aria-label="Downvote"
                 aria-pressed={userVote === 'down'}
-                className={`h-full pl-2.5 pr-3 flex items-center gap-1 transition-colors cursor-pointer ${userVote === 'down' ? 'text-error' : 'text-on-surface hover:text-error'}`}
+                className={`h-full pl-2.5 pr-3.5 flex items-center transition-colors cursor-pointer ${userVote === 'down' ? 'text-error' : 'text-on-surface hover:text-error'}`}
               >
                 <span className="material-symbols-outlined text-[24px]" style={userVote === 'down' ? { fontVariationSettings: "'FILL' 1, 'wght' 600" } : undefined}>arrow_downward</span>
-                <span className="text-sm font-semibold tabular-nums">{downvotes}</span>
               </button>
             </div>
 
