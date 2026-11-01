@@ -40,6 +40,31 @@ export interface Community {
   created_at: string;
   members_count: number;
   is_member?: boolean;
+  type?: CommunityType;
+  welcome_message?: string | null;
+  require_tag?: boolean;
+  rules?: Array<{ title: string; description: string | null }>;
+  tags?: string[];
+  my_role?: 'owner' | 'moderator' | 'member' | null;
+  my_status?: 'active' | 'pending' | 'banned' | null;
+  i_am_mod?: boolean;
+  can_post_here?: boolean;
+  locked?: boolean;
+  ban_reason?: string | null;
+  banned_until?: string | null;
+}
+
+export type CommunityType = 'public' | 'restricted' | 'private';
+
+export interface CreateCommunityData {
+  name: string;
+  description?: string;
+  icon_color?: string;
+  type?: CommunityType;
+  tags?: string[];
+  rules?: Array<{ title: string; description?: string }>;
+  welcome_message?: string;
+  require_tag?: boolean;
 }
 
 export interface Comment {
@@ -360,22 +385,22 @@ export const api = {
     return apiRequest<Community>(`/api/communities?slug=${encodeURIComponent(slug)}`, { method: 'GET' });
   },
 
-  async createCommunity(params: { name: string; slug?: string; description?: string; icon_color?: string }): Promise<Community> {
+  async createCommunity(params: CreateCommunityData): Promise<Community> {
     return apiRequest<Community>('/api/communities', {
       method: 'POST',
       body: JSON.stringify(params),
     });
   },
 
-  async joinCommunity(params: { community_id?: number; community_slug?: string }): Promise<{ message: string; members_count?: number; is_member?: boolean }> {
-    return apiRequest<{ message: string; members_count?: number; is_member?: boolean }>('/api/community_members', {
+  async joinCommunity(params: { community_id?: number; community_slug?: string }): Promise<{ message: string; members_count?: number; is_member?: boolean; status?: 'active' | 'pending' | null }> {
+    return apiRequest<{ message: string; members_count?: number; is_member?: boolean; status?: 'active' | 'pending' | null }>('/api/community_members', {
       method: 'POST',
       body: JSON.stringify(params),
     });
   },
 
-  async leaveCommunity(communityId: number): Promise<{ message: string; members_count?: number; is_member?: boolean }> {
-    return apiRequest<{ message: string; members_count?: number; is_member?: boolean }>(`/api/community_members?community_id=${communityId}`, {
+  async leaveCommunity(communityId: number): Promise<{ message: string; members_count?: number; is_member?: boolean; status?: 'active' | 'pending' | null }> {
+    return apiRequest<{ message: string; members_count?: number; is_member?: boolean; status?: 'active' | 'pending' | null }>(`/api/community_members?community_id=${communityId}`, {
       method: 'DELETE',
     });
   },
@@ -413,8 +438,7 @@ export const postsApi = {
 export const communitiesApi = {
   list: () => api.getCommunities(),
   getBySlug: (slug: string) => api.getCommunityBySlug(slug),
-  create: (data: { name: string; slug?: string; description?: string; icon_color?: string }) =>
-    api.createCommunity(data),
+  create: (data: CreateCommunityData) => api.createCommunity(data),
   join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
   leave: (communityId: number) => api.leaveCommunity(communityId),
 };

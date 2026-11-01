@@ -1,4 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl, serverError, rateLimit } from "../../_shared/auth";
+import { canPost, getMembership, VISIBLE_IN_PRIVATE_SQL } from "../../_shared/communities";
+import { extractHashtags } from "../../_shared/hashtags";
 import { normalizeTag, syncPostHashtags } from "../../_shared/hashtags";
 import { notify } from "../../_shared/notifications";
 import type { PushEnv } from "../../_shared/push";
@@ -64,6 +66,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     )`;
     params.push(viewerId, viewerId, viewerId);
 
+    // Conteúdo de comunidade privada só para membros ativos
+    query += ` AND ${VISIBLE_IN_PRIVATE_SQL}`;
+    params.push(viewerId);
+
     // Quem eu bloqueei (ou me bloqueou) some do feed
     query += ` AND p.author_id NOT IN (
       SELECT blocked_id FROM blocks WHERE blocker_id = ?
@@ -114,7 +120,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       params.push(communitySlug, communitySlug);
     } else if (feed === "home" && authUser) {
       // Feed Principal: exibe posts gerais (sem comunidade) E posts das comunidades em que o usuário participa
-      query += ` AND (p.community_id IS NULL OR p.community_id IN (SELECT community_id FROM community_members WHERE user_id = ?))`;
+      query += ` AND (p.community_id IS NULL OR p.community_id IN (SELECT community_id FROM community_members WHERE user_id = ? AND status = 'active'))`;
       params.push(authUser.id);
     }
 
@@ -311,11 +317,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     if (commId) {
-      const comm = await env.DB.prepare("SELECT id FROM communities WHERE id = ?")
+      const comm = await env.DB.prepare("SELECT id, type, require_tag FROM communities WHERE id = ?")
         .bind(commId)
-        .first();
+        .first<{ id: number; type: "public" | "restricted" | "private"; require_tag: number }>();
       if (!comm) {
         return errorResponse("Comunidade especificada não encontrada.", 404);
+      }
+      // Banidos não publicam; privada só para membros; restrita só para aprovados e moderação
+      const membership = await getMembership(env.DB, commId, user.id);
+      if (!canPost(comm.type, membership)) {
+        return errorResponse(
+          membership.status === "banned"
+            ? "Você foi banido desta comunidade."
+            : comm.type === "restricted"
+            ? "Nesta comunidade só pessoas aprovadas pela moderação podem publicar."
+            : "Só membros desta comunidade podem publicar nela.",
+          403
+        );
+      }
+      // Comunidades que exigem hashtag (no lugar dos flairs)
+      if (comm.require_tag && extractHashtags(cleanTitle, cleanContent).length === 0) {
+        return errorResponse("Esta comunidade exige pelo menos uma hashtag na publicação (ex.: #dica).", 400);
       }
     }
 

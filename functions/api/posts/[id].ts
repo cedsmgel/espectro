@@ -1,4 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, canViewAuthorContent } from "../../_shared/auth";
+import { canViewCommunityId } from "../../_shared/communities";
+import { extractHashtags } from "../../_shared/hashtags";
 import { syncPostHashtags } from "../../_shared/hashtags";
 
 export interface Env {
@@ -56,7 +58,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       (post as { author_id: number }).author_id,
       viewer ? viewer.id : null
     );
-    if (!allowed) {
+    if (!allowed || !(await canViewCommunityId(env.DB, (post as { community_id: number | null }).community_id, viewer ? viewer.id : null))) {
       return errorResponse("Publicação não encontrada.", 404);
     }
 

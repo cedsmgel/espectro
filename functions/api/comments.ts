@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
+import { canViewCommunityId, getMembership } from "../_shared/communities";
 import { notify } from "../_shared/notifications";
 import type { PushEnv } from "../_shared/push";
 
@@ -15,6 +16,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     if (!postId) {
       return errorResponse("O parâmetro 'post_id' é obrigatório.", 400);
+    }
+
+    const postRow = await env.DB.prepare("SELECT community_id FROM posts WHERE id = ?").bind(Number(postId)).first<{ community_id: number | null }>();
+    if (!postRow) return jsonResponse([]);
+    const viewer = await getAuthUser(request, getJwtSecret(env));
+    if (!(await canViewCommunityId(env.DB, postRow.community_id, viewer ? viewer.id : null))) {
+      return errorResponse("Publicação não encontrada.", 404);
     }
 
     const query = `
@@ -86,12 +94,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const parentId = parent_id ? Number(parent_id) : null;
 
     // Valida se o post existe
-    const post = await env.DB.prepare("SELECT id, author_id FROM posts WHERE id = ?")
+    const post = await env.DB.prepare("SELECT id, author_id, community_id FROM posts WHERE id = ?")
       .bind(Number(post_id))
-      .first<{ id: number; author_id: number }>();
+      .first<{ id: number; author_id: number; community_id: number | null }>();
 
     if (!post) {
       return errorResponse("Postagem não encontrada.", 404);
+    }
+
+    // Comunidade privada só para membros; banido não comenta
+    if (post.community_id) {
+      const membership = await getMembership(env.DB, post.community_id, user.id);
+      const type = await env.DB.prepare("SELECT type FROM communities WHERE id = ?").bind(post.community_id).first<{ type: string }>();
+      if (membership.status === "banned") return errorResponse("Você foi banido desta comunidade.", 403);
+      if (type?.type === "private" && membership.status !== "active") return errorResponse("Postagem não encontrada.", 404);
     }
 
     // Se informou parent_id, valida se o comentário pai existe

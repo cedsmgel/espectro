@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { communitiesApi, Community, authStorage } from '../lib/api';
+import { communitiesApi, Community, CommunityType, authStorage } from '../lib/api';
 
 interface CreateCommunityModalProps {
   isOpen: boolean;
@@ -19,15 +19,22 @@ const PRESET_COLORS = [
   { name: 'Ardósia Escura', hex: '#334155' },
 ];
 
-function generateSlugPreview(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'minha-comunidade'
-  );
+const TYPES: Array<{ value: CommunityType; icon: string; title: string; text: string }> = [
+  { value: 'public', icon: 'public', title: 'Pública', text: 'Qualquer pessoa vê, entra e publica.' },
+  { value: 'restricted', icon: 'visibility', title: 'Restrita', text: 'Qualquer pessoa vê, mas só quem você aprovar publica.' },
+  { value: 'private', icon: 'lock', title: 'Privada', text: 'Só membros veem. Quem quiser entrar pede e você aprova.' },
+];
+
+// Nome: 3 a 21 caracteres, só letras, números e _ (como no Reddit); vira o endereço e não muda depois
+const NAME_RE = /^[A-Za-z0-9_]{3,21}$/;
+
+function parseTags(text: string): string[] {
+  const seen = new Set<string>();
+  for (const raw of text.split(/[\s,]+/)) {
+    const tag = raw.replace(/^#+/, '').toLowerCase();
+    if (tag) seen.add(tag);
+  }
+  return [...seen];
 }
 
 export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
@@ -41,12 +48,16 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedColor, setSelectedColor] = useState('#404040');
+  const [type, setType] = useState<CommunityType>('public');
+  const [tagsText, setTagsText] = useState('');
+  const [requireTag, setRequireTag] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const slugPreview = generateSlugPreview(name || 'nova-comunidade');
+  const slugPreview = (name || 'nova_comunidade').toLowerCase();
+  const tags = parseTags(tagsText);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +68,12 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
       return;
     }
 
-    if (!name.trim() || name.trim().length < 2) {
-      setError('O nome da comunidade deve conter pelo menos 2 caracteres.');
+    if (!NAME_RE.test(name.trim())) {
+      setError('O nome deve ter de 3 a 21 caracteres, só letras, números e _ (sem espaços). Ele não pode ser mudado depois.');
+      return;
+    }
+    if (tags.length > 8) {
+      setError('Use no máximo 8 hashtags.');
       return;
     }
 
@@ -68,6 +83,9 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
         name: name.trim(),
         description: description.trim() || undefined,
         icon_color: selectedColor,
+        type,
+        tags,
+        require_tag: requireTag,
       });
 
       if (onCommunityCreated) {
@@ -77,9 +95,12 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
       setName('');
       setDescription('');
       setSelectedColor('#404040');
+      setType('public');
+      setTagsText('');
+      setRequireTag(false);
       onClose();
 
-      // Redireciona para /c/:slug da nova comunidade
+      // Abre a página da nova comunidade (e/nome)
       navigate(`/e/${created.slug || created.id}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao criar comunidade.');
@@ -132,15 +153,17 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ex: Tecnologia, UI Design, Cinema Cult"
-              maxLength={60}
-              className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
+              onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9_]/g, ''))}
+              placeholder="ex: Cinema_Cult"
+              maxLength={21}
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant text-base sm:text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
             <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant px-1">
               <span className="material-symbols-outlined text-[14px] text-primary">link</span>
-              <span>URL da comunidade:</span>
+              <span>3 a 21 caracteres, sem espaços; não muda depois. Endereço:</span>
               <span className="font-mono font-semibold text-primary">
                 /e/{slugPreview}
               </span>
@@ -157,12 +180,57 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Qual o propósito deste grupo, diretrizes ou tópicos debatidos?"
               rows={3}
-              maxLength={300}
-              className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
+              maxLength={500}
+              className="w-full p-3 rounded-xl bg-surface-container-low border border-outline-variant text-base sm:text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:bg-surface-container transition-all resize-none"
             />
             <div className="text-right text-[10px] text-on-surface-variant">
-              {description.length}/300
+              {description.length}/500
             </div>
+          </div>
+
+          {/* Tipo da comunidade */}
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-semibold text-on-surface">Tipo de comunidade</label>
+            <div className="flex flex-col gap-1.5">
+              {TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setType(t.value)}
+                  aria-pressed={type === t.value}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left cursor-pointer transition-colors ${
+                    type === t.value ? 'border-primary bg-surface-container' : 'border-outline-variant hover:bg-surface-container-low'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant">{t.icon}</span>
+                  <span className="flex flex-col">
+                    <span className="text-xs font-semibold text-on-surface">{t.title}</span>
+                    <span className="text-[11px] text-on-surface-variant">{t.text}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hashtags da comunidade (no lugar dos flairs) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-on-surface">Hashtags da comunidade</label>
+            <input
+              type="text"
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              placeholder="#dica #duvida #discussao"
+              autoCapitalize="none"
+              autoCorrect="off"
+              className="w-full px-4 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant text-base sm:text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <span className="text-[11px] text-on-surface-variant px-1">
+              Até 8, separadas por espaço. Organizam as publicações e quem posta pode usá-las.
+            </span>
+            <label className="flex items-center gap-2 px-1 pt-1 text-xs text-on-surface cursor-pointer">
+              <input type="checkbox" checked={requireTag} onChange={(e) => setRequireTag(e.target.checked)} className="w-4 h-4" />
+              <span>Exigir ao menos uma hashtag em cada publicação</span>
+            </label>
           </div>
 
           {/* Seletor de Cor do Ícone */}

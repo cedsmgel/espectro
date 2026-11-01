@@ -69,10 +69,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 3. Busca comunidades das quais o usuário participa
     const { results: communities } = await env.DB.prepare(`
       SELECT c.id, c.name, c.slug, c.description, c.icon_color,
-             (SELECT COUNT(*) FROM community_members cm2 WHERE cm2.community_id = c.id) AS members_count
+             (SELECT COUNT(*) FROM community_members cm2 WHERE cm2.community_id = c.id AND cm2.status = 'active') AS members_count
       FROM community_members cm
       JOIN communities c ON cm.community_id = c.id
-      WHERE cm.user_id = ?
+      WHERE cm.user_id = ? AND cm.status = 'active' AND c.type != 'private'
       ORDER BY cm.joined_at DESC
       LIMIT 12
     `)

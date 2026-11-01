@@ -1,4 +1,5 @@
 import { jsonResponse, errorResponse, serverError, escapeLike, rateLimit, getAuthUser, getJwtSecret } from "../_shared/auth";
+import { NOT_IN_PRIVATE_SQL } from "../_shared/communities";
 
 export interface Env {
   DB: D1Database;
@@ -53,9 +54,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // 2. communities: por name ou slug
     const communitiesPromise = env.DB.prepare(`
       SELECT id, name, slug, description, icon_color,
-             (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = communities.id) AS members_count
+             (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = communities.id AND cm.status = 'active') AS members_count
       FROM communities
-      WHERE LOWER(name) LIKE ? ESCAPE '\\' OR (slug IS NOT NULL AND LOWER(slug) LIKE ? ESCAPE '\\')
+      WHERE type != 'private' AND (LOWER(name) LIKE ? ESCAPE '\\' OR (slug IS NOT NULL AND LOWER(slug) LIKE ? ESCAPE '\\'))
       ORDER BY 
         CASE 
           WHEN LOWER(name) = LOWER(?) THEN 0
@@ -90,6 +91,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           SELECT blocked_id FROM blocks WHERE blocker_id = ?
           UNION SELECT blocker_id FROM blocks WHERE blocked_id = ?
         )
+        AND ${NOT_IN_PRIVATE_SQL}
       ORDER BY p.id DESC
       LIMIT 8
     `)
