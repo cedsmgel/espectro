@@ -17,7 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       `SELECT g.id, g.name, g.description, m.role, g.only_admins_send,
          (SELECT COUNT(*) FROM chat_group_members x WHERE x.group_id = g.id) AS members_count,
          (SELECT COUNT(*) FROM chat_group_messages x WHERE x.group_id = g.id AND x.id > m.last_read_id) AS unread_count,
-         lm.id AS last_message_id, lm.content AS last_content, lu.username AS last_sender,
+         lm.id AS last_message_id, CASE WHEN lm.deleted_at IS NULL THEN lm.content ELSE NULL END AS last_content, lu.username AS last_sender,
          strftime('%Y-%m-%dT%H:%M:%SZ', lm.created_at) AS last_created_at
        FROM chat_group_members m
        JOIN chat_groups g ON g.id = m.group_id

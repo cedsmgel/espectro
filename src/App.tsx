@@ -8,6 +8,7 @@ import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
 import { usePresenceHeartbeat } from './hooks/usePresence';
 import { lazyNamed } from './lib/lazy';
+import { PushPrompt } from './components/PushPrompt';
 
 // Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
 const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities');
@@ -19,7 +20,6 @@ const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage'
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
 const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
-const GroupChat = lazyNamed(() => import('./pages/GroupChat'), 'GroupChat');
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-dvh flex items-center justify-center" role="status" aria-label="Carregando">
@@ -68,7 +68,7 @@ export const App: React.FC = () => {
           <Route path="/notificacoes" element={<Notifications />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/mensagens" element={<DirectMessages />} />
-          <Route path="/grupos/:id" element={<GroupChat />} />
+          <Route path="/grupos/:id" element={<DirectMessages />} />
           <Route path="/videos" element={<Videos />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -76,6 +76,7 @@ export const App: React.FC = () => {
           </Suspense>
         <GlobalCreatePostModal />
         <PresenceHeartbeat />
+        <PushPrompt />
         <BottomNav />
         </SidebarProvider>
       </ThemeProvider>

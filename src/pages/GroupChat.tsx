@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   authStorage,
   friendsApi,
@@ -15,8 +15,7 @@ import { ChatMenu } from '../components/chat/ChatMenu';
 import { ModalShell } from '../components/chat/ModalShell';
 import { MediaPicker } from '../components/chat/MediaPicker';
 import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
-import { SidebarNav } from '../components/SidebarNav';
-import { useSidebar } from '../context/SidebarContext';
+import { AudioMessage } from '../components/chat/AudioMessage';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 
@@ -30,6 +29,7 @@ type SendPayload = {
   content?: string;
   message_type?: 'gif' | 'sticker' | 'image' | 'video' | 'audio' | 'file';
   media_url?: string;
+  reply_to_id?: number | null;
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -43,13 +43,11 @@ function mediaTypeOf(file: File): 'image' | 'video' | 'audio' | 'file' {
   return 'file';
 }
 
-export const GroupChat: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const groupId = Number(id);
+// Painel do grupo: fica ao lado da lista de conversas, como o chat privado
+export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const navigate = useNavigate();
   const user = authStorage.getUser();
   const { isDark: isDarkTheme } = useTheme();
-  const { setHideBottomNav } = useSidebar();
   const voice = useVoiceRecorder();
 
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -58,6 +56,7 @@ export const GroupChat: React.FC = () => {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<GroupMessage | null>(null);
   const [showManage, setShowManage] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
@@ -66,13 +65,7 @@ export const GroupChat: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { cancel: cancelVoice } = voice;
 
-  // Chat ocupa a tela toda: a barra inferior some, como no chat privado
-  useEffect(() => {
-    setHideBottomNav(true);
-    return () => setHideBottomNav(false);
-  }, [setHideBottomNav]);
-
-  // Sair da tela com gravação em andamento libera o microfone
+  // Sair da conversa com gravação em andamento libera o microfone
   useEffect(() => () => cancelVoice(), [cancelVoice]);
 
   const loadDetail = useCallback(async () => {
@@ -97,6 +90,9 @@ export const GroupChat: React.FC = () => {
   }, [groupId]);
 
   useEffect(() => {
+    setDetail(null);
+    setMessages([]);
+    setReplyingTo(null);
     void loadDetail();
     void loadLatest();
     const timer = window.setInterval(() => void loadLatest(), 4000);
@@ -121,10 +117,20 @@ export const GroupChat: React.FC = () => {
     } catch {}
   };
 
-  const sendPayload = async (payload: SendPayload) => {
+  // Pega a resposta pendente e a limpa da barra de resposta
+  const takeReply = () => {
+    const replied = replyingTo;
+    setReplyingTo(null);
+    return replied;
+  };
+
+  const sendPayload = async (payload: SendPayload, replied: GroupMessage | null = null) => {
     try {
       const res = await groupsApi.send(groupId, payload);
-      setMessages((prev) => (prev.some((m) => m.id === res.message.id) ? prev : [...prev, res.message]));
+      const message: GroupMessage = replied
+        ? { ...res.message, reply_content: replied.content, reply_sender: replied.sender_username, reply_deleted: false }
+        : res.message;
+      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
     } catch (err: any) {
       setError(err?.message || 'Não foi possível enviar.');
     }
@@ -133,9 +139,10 @@ export const GroupChat: React.FC = () => {
   const sendText = async () => {
     const content = text.trim();
     if (!content) return;
+    const replied = takeReply();
     setText('');
     setShowEmoji(false);
-    await sendPayload({ content });
+    await sendPayload({ content, reply_to_id: replied?.id ?? null }, replied);
     inputRef.current?.focus();
   };
 
@@ -145,11 +152,15 @@ export const GroupChat: React.FC = () => {
       setError('O arquivo passa de 10 MB.');
       return;
     }
+    const replied = takeReply();
     setUploading(true);
     try {
       const type = mediaTypeOf(file);
       const res = await uploadApi.upload(file, type === 'audio' ? { context: 'audio' } : undefined);
-      await sendPayload({ message_type: type, media_url: res.url, content: type === 'file' ? file.name : undefined });
+      await sendPayload(
+        { message_type: type, media_url: res.url, content: type === 'file' ? file.name : undefined, reply_to_id: replied?.id ?? null },
+        replied
+      );
     } catch (err: any) {
       setError(err?.message || 'Não foi possível enviar o arquivo.');
     } finally {
@@ -169,17 +180,35 @@ export const GroupChat: React.FC = () => {
       setError('Não foi possível capturar o áudio gravado.');
       return;
     }
+    const replied = takeReply();
     setUploading(true);
     try {
       const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
       const file = new File([blob], `voz-${Date.now()}.${ext}`, { type: blob.type || 'audio/webm' });
       const res = await uploadApi.upload(file, { context: 'audio' });
-      await sendPayload({ message_type: 'audio', media_url: res.url, content: 'Mensagem de voz' });
+      await sendPayload(
+        { message_type: 'audio', media_url: res.url, content: 'Mensagem de voz', reply_to_id: replied?.id ?? null },
+        replied
+      );
     } catch (err: any) {
       setError(err?.message || 'Não foi possível enviar o áudio. Tente de novo.');
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleDelete = async (m: GroupMessage) => {
+    if (!window.confirm('Apagar esta mensagem para todo o grupo?')) return;
+    try {
+      await groupsApi.remove(groupId, m.id);
+      setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, deleted: true, content: '', media_url: null } : x)));
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível apagar a mensagem.');
+    }
+  };
+
+  const handleCopy = (m: GroupMessage) => {
+    navigator.clipboard?.writeText(m.content).catch(() => setError('Não foi possível copiar.'));
   };
 
   const leave = async () => {
@@ -194,7 +223,7 @@ export const GroupChat: React.FC = () => {
 
   if (error && !detail) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-center text-sm text-on-surface-variant">
+      <div className="flex-1 flex items-center justify-center p-6 text-center text-sm text-on-surface-variant">
         <div>
           <p className="font-semibold text-on-surface">{error}</p>
           <Link to="/mensagens" className="text-primary text-xs hover:underline">Voltar às mensagens</Link>
@@ -203,7 +232,7 @@ export const GroupChat: React.FC = () => {
     );
   }
   if (!detail) {
-    return <div className="min-h-screen flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
+    return <div className="flex-1 flex items-center justify-center text-xs text-on-surface-variant">Carregando...</div>;
   }
 
   const isAdmin = detail.my_role === 'admin';
@@ -211,6 +240,7 @@ export const GroupChat: React.FC = () => {
   const roleOf = new Map(detail.members.map((m) => [m.id, m]));
 
   const renderBody = (m: GroupMessage) => {
+    if (m.deleted) return <span className="italic opacity-70">Mensagem apagada</span>;
     switch (m.message_type) {
       case 'gif':
         return m.media_url ? <img src={m.media_url} alt="GIF" className="max-w-[240px] rounded-xl" /> : null;
@@ -227,7 +257,7 @@ export const GroupChat: React.FC = () => {
           <video src={m.media_url} controls playsInline preload="metadata" className="max-w-[240px] w-full rounded-xl bg-black" />
         ) : null;
       case 'audio':
-        return m.media_url ? <audio controls preload="metadata" src={m.media_url} className="max-w-[240px] h-10" /> : null;
+        return m.media_url ? <AudioMessage src={m.media_url} /> : null;
       case 'file':
         return m.media_url ? (
           <a href={m.media_url} target="_blank" rel="noopener noreferrer" download className="flex items-center gap-2 min-w-[160px] underline-offset-2 hover:underline">
@@ -236,239 +266,271 @@ export const GroupChat: React.FC = () => {
           </a>
         ) : null;
       default:
-        return m.content;
+        return <span className="whitespace-pre-wrap break-words">{m.content}</span>;
     }
   };
 
   return (
-    <div className="w-full h-dvh md:h-screen overflow-hidden bg-surface text-on-surface flex flex-col md:flex-row fixed inset-x-0 top-0 md:static">
-      <SidebarNav />
-
-      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {/* Cabeçalho: mesmo padrão do chat privado */}
-        <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Link to="/mensagens" className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container" aria-label="Voltar">
-              <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-            </Link>
-            <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
-              {detail.group.name.charAt(0)}
-            </div>
-            <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
-              <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
-              <span className="block text-[11px] text-on-surface-variant truncate">
-                {detail.members.map((m) => `@${m.username}`).join(', ')}
-              </span>
-            </button>
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-surface text-on-surface">
+      {/* Cabeçalho: mesmo padrão do chat privado */}
+      <div className="min-h-14 sm:min-h-16 pt-[env(safe-area-inset-top)] px-3 sm:px-6 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center justify-between shadow-xs z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to="/mensagens" className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container md:hidden" aria-label="Voltar">
+            <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+          </Link>
+          <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
+            {detail.group.name.charAt(0)}
           </div>
-          <ChatMenu
-            title="Opções do grupo"
-            items={[
-              { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
-              { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
-            ]}
-          />
+          <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
+            <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
+            <span className="block text-[11px] text-on-surface-variant truncate">
+              {detail.members.map((m) => `@${m.username}`).join(', ')}
+            </span>
+          </button>
         </div>
+        <ChatMenu
+          title="Opções do grupo"
+          items={[
+            { key: 'manage', label: 'Dados do grupo', icon: 'info', onSelect: () => setShowManage(true) },
+            { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: leave },
+          ]}
+        />
+      </div>
 
-        {/* Histórico */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
-          {hasMore && (
-            <div className="flex justify-center mb-2">
-              <button type="button" onClick={loadOlder} className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low">
-                Carregar mensagens anteriores
-              </button>
-            </div>
-          )}
-
-          {messages.length === 0 && (
-            <div className="text-center text-xs text-on-surface-variant py-10">
-              <p className="font-semibold text-on-surface">Nenhuma mensagem ainda</p>
-              <p>Diga um oi para o grupo.</p>
-            </div>
-          )}
-
-          {messages.map((m, idx) => {
-            if (m.message_type === 'system') {
-              return (
-                <div key={m.id} className="flex justify-center my-2">
-                  <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">{m.content}</span>
-                </div>
-              );
-            }
-
-            const mine = m.sender_id === user?.id;
-            const prev = messages[idx - 1];
-            const sameAsPrev = prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
-            const sender = m.sender_id ? roleOf.get(m.sender_id) : undefined;
-            const bare = BARE_TYPES.has(m.message_type);
-
-            return (
-              <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${sameAsPrev ? 'mt-0.5' : 'mt-3'}`}>
-                <div className={`flex flex-col max-w-[85%] sm:max-w-md ${mine ? 'items-end' : 'items-start'}`}>
-                  {!mine && !sameAsPrev && (
-                    <span className="flex items-center gap-1.5 text-[11px] font-bold mb-0.5 ml-1" style={{ color: nameColor(m.sender_id) }}>
-                      @{m.sender_username}
-                      {sender?.role === 'admin' && (
-                        <span className="text-[9px] px-1.5 rounded-full bg-primary/15 text-primary font-semibold">admin</span>
-                      )}
-                    </span>
-                  )}
-                  <div
-                    className={
-                      bare
-                        ? ''
-                        : `px-3 py-2 text-xs leading-relaxed rounded-2xl ${
-                            mine
-                              ? 'bg-primary-container text-on-primary rounded-br-md'
-                              : 'bg-surface-container-low text-on-surface border border-outline-variant/30 rounded-bl-md'
-                          }`
-                    }
-                  >
-                    {renderBody(m)}
-                  </div>
-                  <span className="text-[10px] text-on-surface-variant mt-0.5 mx-1">
-                    {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={bottomRef} />
-        </div>
-
-        {error && (
-          <div className="px-4 py-2 text-xs text-error bg-error-container/60 cursor-pointer" onClick={() => setError(null)}>
-            {error}
+      {/* Histórico */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-1 min-h-0 overscroll-contain">
+        {hasMore && (
+          <div className="flex justify-center mb-2">
+            <button type="button" onClick={loadOlder} className="text-[11px] font-semibold text-primary px-4 py-1.5 rounded-full bg-surface-container-low">
+              Carregar mensagens anteriores
+            </button>
           </div>
         )}
 
-        {/* Entrada: emojis, GIFs e figurinhas, anexo, áudio, texto e enviar */}
-        <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 relative">
-          {showEmoji && (
-            <div className="absolute bottom-20 left-3 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl">
-              <Picker
-                data={data}
-                onEmojiSelect={(e: any) => setText((t) => t + e.native)}
-                theme={isDarkTheme ? 'dark' : 'light'}
-                locale="pt"
-                previewPosition="none"
-                skinTonePosition="none"
-                navPosition="top"
-                maxFrequentRows={2}
-                perLine={8}
-              />
-            </div>
-          )}
-          {showMedia && (
-            <div className="absolute bottom-20 left-3 sm:left-12 z-30">
-              <MediaPicker
-                onClose={() => setShowMedia(false)}
-                onSelect={(c) => {
-                  setShowMedia(false);
-                  void sendPayload({ message_type: c.type, media_url: c.url });
-                }}
-              />
-            </div>
-          )}
+        {messages.length === 0 && (
+          <div className="text-center text-xs text-on-surface-variant py-10">
+            <p className="font-semibold text-on-surface">Nenhuma mensagem ainda</p>
+            <p>Diga um oi para o grupo.</p>
+          </div>
+        )}
 
-          {uploading && <p className="text-[11px] text-on-surface-variant px-3 pb-1.5">Enviando...</p>}
+        {messages.map((m, idx) => {
+          if (m.message_type === 'system') {
+            return (
+              <div key={m.id} className="flex justify-center my-2">
+                <span className="text-[11px] text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full">{m.content}</span>
+              </div>
+            );
+          }
 
-          {!canSend ? (
-            <p className="text-center text-xs text-on-surface-variant py-2">Só os administradores podem enviar mensagens neste grupo.</p>
-          ) : voice.recording ? (
-            <VoiceRecordingBar seconds={voice.seconds} onCancel={voice.cancel} onSend={() => void handleSendVoice()} />
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void sendText();
+          const mine = m.sender_id === user?.id;
+          const prev = messages[idx - 1];
+          const sameAsPrev = prev && prev.sender_id === m.sender_id && prev.message_type !== 'system';
+          const sender = m.sender_id ? roleOf.get(m.sender_id) : undefined;
+          const bare = !m.deleted && BARE_TYPES.has(m.message_type);
+          const menuItems = [
+            { key: 'reply', label: 'Responder', icon: 'reply', onSelect: () => { setReplyingTo(m); inputRef.current?.focus(); }, hidden: m.deleted },
+            { key: 'copy', label: 'Copiar', icon: 'content_copy', onSelect: () => handleCopy(m), hidden: m.deleted || m.message_type !== 'text' },
+            { key: 'delete', label: 'Apagar', icon: 'delete', danger: true, onSelect: () => void handleDelete(m), hidden: m.deleted || !(mine || isAdmin) },
+          ];
+
+          return (
+            <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'} ${sameAsPrev ? 'mt-0.5' : 'mt-3'}`}>
+              <div className={`flex flex-col max-w-[85%] sm:max-w-md ${mine ? 'items-end' : 'items-start'}`}>
+                {!mine && !sameAsPrev && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold mb-0.5 ml-1" style={{ color: nameColor(m.sender_id) }}>
+                    @{m.sender_username}
+                    {sender?.role === 'admin' && (
+                      <span className="text-[9px] px-1.5 rounded-full bg-primary/15 text-primary font-semibold">admin</span>
+                    )}
+                  </span>
+                )}
+                <div
+                  className={
+                    bare
+                      ? ''
+                      : `px-3 py-2 text-xs leading-relaxed rounded-2xl ${
+                          mine
+                            ? 'bg-primary-container text-on-primary rounded-br-md'
+                            : 'bg-surface-container-low text-on-surface border border-outline-variant/30 rounded-bl-md'
+                        }`
+                  }
+                >
+                  {m.reply_to_id && !m.deleted && (
+                    <div
+                      className={`mb-1.5 px-2 py-1 rounded-lg border-l-2 text-[11px] max-w-[260px] ${
+                        mine ? 'bg-black/10 border-on-primary' : 'bg-surface-container border-primary'
+                      }`}
+                    >
+                      <span className="block font-semibold truncate">@{m.reply_sender || 'usuário'}</span>
+                      <span className="block truncate opacity-80">{m.reply_content ?? 'Mensagem apagada'}</span>
+                    </div>
+                  )}
+                  {renderBody(m)}
+                </div>
+                <div className="flex items-center gap-1 mt-0.5 mx-1">
+                  <span className="text-[10px] text-on-surface-variant">
+                    {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {menuItems.some((item) => !item.hidden) && <ChatMenu title="Mensagem" items={menuItems} />}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+
+      {error && (
+        <div className="px-4 py-2 text-xs text-error bg-error-container/60 cursor-pointer" onClick={() => setError(null)}>
+          {error}
+        </div>
+      )}
+
+      {/* Entrada: emojis, GIFs e figurinhas, anexo, áudio, texto e enviar */}
+      <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 relative">
+        {showEmoji && (
+          <div className="absolute bottom-20 left-3 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl">
+            <Picker
+              data={data}
+              onEmojiSelect={(e: any) => setText((t) => t + e.native)}
+              theme={isDarkTheme ? 'dark' : 'light'}
+              locale="pt"
+              previewPosition="none"
+              skinTonePosition="none"
+              navPosition="top"
+              maxFrequentRows={2}
+              perLine={8}
+            />
+          </div>
+        )}
+        {showMedia && (
+          <div className="absolute bottom-20 left-3 sm:left-12 z-30">
+            <MediaPicker
+              onClose={() => setShowMedia(false)}
+              onSelect={(c) => {
+                setShowMedia(false);
+                const replied = takeReply();
+                void sendPayload({ message_type: c.type, media_url: c.url, reply_to_id: replied?.id ?? null }, replied);
               }}
-              className="flex items-center gap-1 sm:gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant/30"
+            />
+          </div>
+        )}
+
+        {replyingTo && canSend && !voice.recording && (
+          <div className="mb-2 px-3 py-2 rounded-xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between gap-2 text-xs">
+            <div className="min-w-0">
+              <span className="block font-semibold text-primary truncate text-[11px]">Respondendo a @{replyingTo.sender_username}</span>
+              <span className="block truncate text-[11px] text-on-surface-variant">{replyingTo.content || 'Mensagem'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancelar resposta"
+              className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container shrink-0 cursor-pointer"
             >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+            </button>
+          </div>
+        )}
+
+        {uploading && <p className="text-[11px] text-on-surface-variant px-3 pb-1.5">Enviando...</p>}
+
+        {!canSend ? (
+          <p className="text-center text-xs text-on-surface-variant py-2">Só os administradores podem enviar mensagens neste grupo.</p>
+        ) : voice.recording ? (
+          <VoiceRecordingBar seconds={voice.seconds} onCancel={voice.cancel} onSend={() => void handleSendVoice()} />
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void sendText();
+            }}
+            className="flex items-center gap-1 sm:gap-2 bg-surface-container-low rounded-full px-2 py-1.5 border border-outline-variant/30"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmoji((v) => !v);
+                setShowMedia(false);
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
+                showEmoji ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+              }`}
+              title="Emojis"
+            >
+              <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMedia((v) => !v);
+                setShowEmoji(false);
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[11px] font-bold shrink-0 ${
+                showMedia ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
+              }`}
+              title="GIFs e figurinhas"
+            >
+              GIF
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowEmoji(false);
+                setShowMedia(false);
+                fileInputRef.current?.click();
+              }}
+              disabled={uploading}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer disabled:opacity-40 shrink-0"
+              title="Anexar foto, vídeo ou arquivo"
+              aria-label="Anexar"
+            >
+              <span className="material-symbols-outlined text-[20px]">attach_file</span>
+            </button>
+            <input
+              ref={inputRef}
+              type="text"
+              value={text}
+              maxLength={2000}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`Mensagem para ${detail.group.name}...`}
+              className="flex-1 min-w-0 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
+            />
+            {!text.trim() && (
               <button
                 type="button"
-                onClick={() => {
-                  setShowEmoji((v) => !v);
-                  setShowMedia(false);
-                }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer shrink-0 ${
-                  showEmoji ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
-                }`}
-                title="Emojis"
-              >
-                <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowMedia((v) => !v);
-                  setShowEmoji(false);
-                }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-[11px] font-bold shrink-0 ${
-                  showMedia ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:bg-surface-container'
-                }`}
-                title="GIFs e figurinhas"
-              >
-                GIF
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEmoji(false);
-                  setShowMedia(false);
-                  fileInputRef.current?.click();
-                }}
+                onClick={() => void handleStartVoice()}
                 disabled={uploading}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer disabled:opacity-40 shrink-0"
-                title="Anexar foto, vídeo ou arquivo"
-                aria-label="Anexar"
+                title="Gravar mensagem de voz"
+                aria-label="Gravar mensagem de voz"
               >
-                <span className="material-symbols-outlined text-[20px]">attach_file</span>
+                <span className="material-symbols-outlined text-[20px]">mic</span>
               </button>
-              <input
-                ref={inputRef}
-                type="text"
-                value={text}
-                maxLength={2000}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={`Mensagem para ${detail.group.name}...`}
-                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
-              />
-              {!text.trim() && (
-                <button
-                  type="button"
-                  onClick={() => void handleStartVoice()}
-                  disabled={uploading}
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer disabled:opacity-40 shrink-0"
-                  title="Gravar mensagem de voz"
-                  aria-label="Gravar mensagem de voz"
-                >
-                  <span className="material-symbols-outlined text-[20px]">mic</span>
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={!text.trim() || uploading}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-primary disabled:opacity-40 hover:bg-surface-container cursor-pointer shrink-0"
-                title="Enviar"
-              >
-                <span className="material-symbols-outlined text-[20px]">send</span>
-              </button>
-            </form>
-          )}
+            )}
+            <button
+              type="submit"
+              disabled={!text.trim() || uploading}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-primary disabled:opacity-40 hover:bg-surface-container cursor-pointer shrink-0"
+              title="Enviar"
+            >
+              <span className="material-symbols-outlined text-[20px]">send</span>
+            </button>
+          </form>
+        )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (file) void handleFile(file);
-            }}
-          />
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) void handleFile(file);
+          }}
+        />
       </div>
 
       {showManage && (
