@@ -15,6 +15,7 @@ import { ChatMenu } from '../components/chat/ChatMenu';
 import { ModalShell } from '../components/chat/ModalShell';
 import { MediaPicker } from '../components/chat/MediaPicker';
 import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
+import { TypingBubble, ChatActivity } from '../components/chat/TypingBubble';
 import { AudioMessage } from '../components/chat/AudioMessage';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
@@ -67,6 +68,31 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const [showMedia, setShowMedia] = useState(false);
   // Menu da mensagem: mesmo padrão do chat privado (⋮ no hover ou toque longo)
   const [kebabId, setKebabId] = useState<number | null>(null);
+  // Quem está escrevendo ou gravando áudio agora
+  const [typers, setTypers] = useState<Record<number, { username: string; kind: ChatActivity }>>({});
+  const typerTimers = useRef<Record<number, number>>({});
+  const typingIdleRef = useRef<number | null>(null);
+  const lastTypingSentRef = useRef(0);
+  const typerList = Object.values(typers);
+  const typerLabel =
+    typerList.length === 0
+      ? ''
+      : typerList.length === 1
+      ? `@${typerList[0].username} ${typerList[0].kind === 'recording' ? 'gravando áudio...' : 'escrevendo...'}`
+      : `${typerList.length} pessoas escrevendo...`;
+  const handleTextChange = (value: string) => {
+    setText(value);
+    const now = Date.now();
+    if (now - lastTypingSentRef.current > 2000) {
+      lastTypingSentRef.current = now;
+      sendTyping(true);
+    }
+    if (typingIdleRef.current) window.clearTimeout(typingIdleRef.current);
+    typingIdleRef.current = window.setTimeout(() => {
+      lastTypingSentRef.current = 0;
+      sendTyping(false);
+    }, 2500);
+  };
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startLongPress = (id: number) => {
     longPressRef.current = setTimeout(() => setKebabId(id), 450);
@@ -96,6 +122,21 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
 
   // Sair da conversa com gravação em andamento libera o microfone
   useEffect(() => () => cancelVoice(), [cancelVoice]);
+  useEffect(() => {
+    const timers = typerTimers.current;
+    return () => Object.values(timers).forEach((t) => window.clearTimeout(t));
+  }, []);
+  // Enquanto grava um áudio, avisa o grupo a cada 2 segundos
+  useEffect(() => {
+    if (!voice.recording) return;
+    sendTyping(true, 'audio');
+    const timer = window.setInterval(() => sendTyping(true, 'audio'), 2000);
+    return () => {
+      window.clearInterval(timer);
+      sendTyping(false, 'audio');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.recording]);
 
   const loadDetail = useCallback(async () => {
     try {
@@ -119,7 +160,26 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   }, [groupId]);
 
   // Tempo real pelo WebSocket; enquanto a conexão estiver fora, volta a consultar o servidor a cada 4 segundos
-  const { connected } = useGroupSocket(groupId, {
+  const { connected, sendTyping } = useGroupSocket(groupId, {
+    onTyping: ({ user_id, username, kind, active }) => {
+      if (user_id === user?.id) return;
+      window.clearTimeout(typerTimers.current[user_id]);
+      if (!active) {
+        setTypers((prev) => {
+          const { [user_id]: _gone, ...rest } = prev;
+          return rest;
+        });
+        return;
+      }
+      setTypers((prev) => ({ ...prev, [user_id]: { username, kind } }));
+      // Sem novo sinal em 3 segundos, considera que parou
+      typerTimers.current[user_id] = window.setTimeout(() => {
+        setTypers((prev) => {
+          const { [user_id]: _gone, ...rest } = prev;
+          return rest;
+        });
+      }, 3000);
+    },
     onMessage: (message) => {
       setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message].sort((a, b) => a.id - b.id)));
       // Marca como lida e confirma a ordem com o servidor
@@ -361,7 +421,11 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
           <button type="button" onClick={() => setShowManage(true)} className="min-w-0 text-left cursor-pointer">
             <span className="block font-semibold text-sm truncate">{detail.group.name}</span>
             <span className="block text-[11px] text-on-surface-variant truncate">
-              {detail.members.map((m) => `@${m.username}`).join(', ')}
+              {typerLabel ? (
+                <span className="text-primary font-semibold">{typerLabel}</span>
+              ) : (
+                detail.members.map((m) => `@${m.username}`).join(', ')
+              )}
             </span>
           </button>
         </div>
@@ -513,6 +577,9 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
             </div>
           );
         })}
+        {typerList.map((t) => (
+          <TypingBubble key={t.username} kind={t.kind} name={`@${t.username}`} className="mt-2" />
+        ))}
         <div ref={bottomRef} />
       </div>
 
@@ -648,7 +715,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
               type="text"
               value={text}
               maxLength={2000}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => handleTextChange(e.target.value)}
               aria-label={`Mensagem para ${detail.group.name}`}
               className="flex-1 min-w-0 bg-transparent border-0 outline-none text-xs text-on-surface placeholder:text-on-surface-variant px-2"
             />

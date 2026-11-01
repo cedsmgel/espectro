@@ -36,6 +36,7 @@ import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
+import { TypingBubble, activityLabel } from '../components/chat/TypingBubble';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { CreateGroupModal } from '../components/chat/CreateGroupModal';
 import { MediaPicker } from '../components/chat/MediaPicker';
@@ -266,6 +267,7 @@ export const DirectMessages: React.FC = () => {
     editMessage,
     sendTyping,
     isOtherUserTyping,
+    otherUserActivity,
     connectionStatus,
     loadingHistory,
     reconnect,
@@ -310,6 +312,17 @@ export const DirectMessages: React.FC = () => {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [groups, setGroups] = useState<GroupSummary[]>([]);
   const voice = useVoiceRecorder();
+  // Enquanto grava um áudio, avisa a outra pessoa a cada 2 segundos
+  useEffect(() => {
+    if (!voice.recording) return;
+    sendTyping(true, 'audio');
+    const timer = window.setInterval(() => sendTyping(true, 'audio'), 2000);
+    return () => {
+      window.clearInterval(timer);
+      sendTyping(false, 'audio');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.recording]);
 
   // Fechar popover de emoji ao clicar fora
   useEffect(() => {
@@ -1517,7 +1530,9 @@ export const DirectMessages: React.FC = () => {
                             </Link>
                           </div>
                           <div className="flex items-center gap-2 text-[11px]">
-                            {presence?.visible ? (
+                            {isOtherUserTyping ? (
+                              <span className="text-primary font-semibold">{activityLabel(otherUserActivity)}</span>
+                            ) : presence?.visible ? (
                               presence.online ? (
                                 <span className="text-on-surface-variant font-medium">Online</span>
                               ) : presence.last_seen_at ? (
@@ -2047,14 +2062,7 @@ export const DirectMessages: React.FC = () => {
 
                       {/* Estado: Usuário Digitando... */}
                       {isOtherUserTyping && (
-                        <div className="flex items-center gap-2 text-xs text-on-surface-variant italic pl-2 py-1 animate-pulse">
-                          <div className="flex gap-1 items-center">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
-                          </div>
-                          <span>@{activeFriend.username} está digitando...</span>
-                        </div>
+                        <TypingBubble kind={otherUserActivity} className="mt-2 ml-9" />
                       )}
 
                       <div ref={messagesEndRef} />

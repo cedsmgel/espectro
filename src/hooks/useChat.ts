@@ -93,6 +93,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const [otherUserActivity, setOtherUserActivity] = useState<'typing' | 'recording'>('typing');
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -281,6 +282,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
           } else if (data.type === 'typing') {
             if (data.sender_id === activeFriendId) {
               setIsOtherUserTyping(!!data.is_typing);
+              setOtherUserActivity(data.kind === 'audio' ? 'recording' : 'typing');
 
               if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
               if (data.is_typing) {
@@ -411,12 +413,12 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
   }, [syncLatest]);
 
   const sendTyping = useCallback(
-    (isTyping: boolean) => {
+    (isTyping: boolean, kind: 'text' | 'audio' = 'text') => {
       if (!userId || !socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
         return;
       }
       try {
-        socketRef.current.send(JSON.stringify({ type: 'typing', is_typing: isTyping }));
+        socketRef.current.send(JSON.stringify({ type: 'typing', is_typing: isTyping, kind }));
       } catch {}
     },
     [userId]
@@ -632,6 +634,7 @@ export function useChat({ activeFriendId, onActivity }: UseChatOptions) {
     sendTyping,
     markAsRead,
     isOtherUserTyping,
+    otherUserActivity,
     connectionStatus,
     loadingHistory,
     error,

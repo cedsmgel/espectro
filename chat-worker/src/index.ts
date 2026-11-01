@@ -124,7 +124,13 @@ export class ChatRoom implements DurableObject {
 
       if (data.type === 'typing') {
         this.broadcast(
-          JSON.stringify({ type: 'typing', sender_id: identity.id, is_typing: !!data.is_typing }),
+          JSON.stringify({
+            type: 'typing',
+            sender_id: identity.id,
+            sender_username: identity.username,
+            is_typing: !!data.is_typing,
+            kind: data.kind === 'audio' ? 'audio' : 'text',
+          }),
           ws
         );
       } else if (data.type === 'ping') {
