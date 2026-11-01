@@ -14,12 +14,19 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 const Avatar: React.FC<{ username: string; url?: string | null }> = ({ username, url }) => (
-  <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold text-on-surface">
+  <div className="w-12 h-12 rounded-full bg-primary-container text-on-primary flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold">
     {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : username.charAt(0).toUpperCase()}
   </div>
 );
 
-const Empty: React.FC<{ text: string }> = ({ text }) => <p className="text-sm text-on-surface-variant text-center py-16">{text}</p>;
+const Empty: React.FC<{ text: string; icon?: string }> = ({ text, icon = 'group' }) => (
+  <div className="flex flex-col items-center gap-2 py-14 text-center">
+    <span className="material-symbols-outlined text-[36px] text-on-surface-variant/60" aria-hidden="true">
+      {icon}
+    </span>
+    <p className="text-sm text-on-surface-variant max-w-xs">{text}</p>
+  </div>
+);
 
 const rowButton =
   'h-9 px-4 rounded-full text-xs font-semibold cursor-pointer transition-colors disabled:opacity-50 shrink-0';
@@ -85,7 +92,7 @@ export const Friends: React.FC = () => {
       <div className="min-h-screen bg-surface text-on-surface flex flex-col">
         <Header />
         <SidebarNav />
-        <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64 flex-1 flex items-center justify-center p-6">
+        <div className="pt-16 md:pt-0 md:pl-20 flex-1 flex items-center justify-center p-6">
           <EmptyState icon="group" title="Seus amigos" description="Entre na sua conta para ver e gerenciar seus amigos." actionLabel="Entrar" actionLink="/login" className="max-w-md w-full" />
         </div>
       </div>
@@ -99,7 +106,7 @@ export const Friends: React.FC = () => {
   };
 
   const personRow = (key: React.Key, username: string, avatar: string | null | undefined, subtitle: string | null, action: React.ReactNode) => (
-    <li key={key} className="border-b border-outline-variant flex items-center gap-3 py-3">
+    <li key={key} className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant last:border-b-0 hover:bg-surface-container/50 transition-colors">
       <Link to={`/perfil/${encodeURIComponent(username)}`} className="flex items-center gap-3 min-w-0 flex-1">
         <Avatar username={username} url={avatar} />
         <div className="min-w-0">
@@ -114,9 +121,9 @@ export const Friends: React.FC = () => {
   const body = () => {
     if (query.trim().length >= 2) {
       if (found === null) return <Empty text="Buscando..." />;
-      if (found.length === 0) return <Empty text="Ninguém encontrado." />;
+      if (found.length === 0) return <Empty icon="search_off" text="Ninguém encontrado." />;
       return (
-        <ul>
+        <ul className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
           {found.map((p) =>
             personRow(
               p.id,
@@ -140,7 +147,7 @@ export const Friends: React.FC = () => {
       if (friends === null) return <Empty text="Carregando..." />;
       if (friends.length === 0) return <Empty text="Você ainda não tem amigos. Veja as sugestões ou busque pelo nome." />;
       return (
-        <ul>
+        <ul className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
           {friends.map((f) =>
             personRow(
               f.friend_id,
@@ -158,9 +165,9 @@ export const Friends: React.FC = () => {
 
     if (tab === 'pedidos') {
       if (requests === null) return <Empty text="Carregando..." />;
-      if (requests.length === 0) return <Empty text="Nenhum pedido de amizade no momento." />;
+      if (requests.length === 0) return <Empty icon="person_add" text="Nenhum pedido de amizade no momento." />;
       return (
-        <ul>
+        <ul className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
           {requests.map((r) =>
             personRow(
               r.friendship_id,
@@ -182,9 +189,9 @@ export const Friends: React.FC = () => {
     }
 
     if (suggestions === null) return <Empty text="Carregando..." />;
-    if (suggestions.length === 0) return <Empty text="Sem sugestões por enquanto." />;
+    if (suggestions.length === 0) return <Empty icon="auto_awesome" text="Sem sugestões por enquanto." />;
     return (
-      <ul>
+      <ul className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-xs overflow-hidden">
         {suggestions.map((p) =>
           personRow(
             p.id,
@@ -221,40 +228,66 @@ export const Friends: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
-      <div className="pt-16 md:pt-0 md:pl-20 lg:pl-64">
-        <main className="w-full max-w-2xl mx-auto px-4 pt-4 pb-24 md:pb-8">
-          <h1 className="text-xl font-bold text-on-surface pb-3">Amigos</h1>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Buscar pessoas"
-            className="w-full py-3 bg-transparent border-0 border-b border-outline-variant outline-none text-sm text-on-surface"
-          />
-
-          <nav role="tablist" aria-label="Amizades" className="flex border-b border-outline-variant mb-2">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.id && query.trim().length < 2}
-                onClick={() => {
-                  setQuery('');
-                  setParams(t.id === 'amigos' ? {} : { aba: t.id }, { replace: true });
-                }}
-                className={`flex-1 h-12 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider border-b-2 -mb-px cursor-pointer transition-colors ${
-                  tab === t.id ? 'border-on-surface text-on-surface' : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                }`}
+      <div className="pt-16 md:pt-0 md:pl-20">
+        <main className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-4 pb-24 md:pb-8">
+          <section className="flex flex-col gap-6 min-w-0">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
+                  <span>Amigos</span>
+                  {counts.amigos !== null && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-medium tabular-nums">
+                      {counts.amigos}
+                    </span>
+                  )}
+                </h1>
+                <p className="text-xs text-on-surface-variant mt-1">Suas conexões, pedidos de amizade e pessoas que você talvez conheça.</p>
+              </div>
+              <Link
+                to="/melhores-amigos"
+                className="px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs transition-all flex items-center gap-2 cursor-pointer"
               >
-                <span className="hidden sm:inline material-symbols-outlined text-[18px]">{t.icon}</span>
-                <span>{t.label}</span>
-                {counts[t.id] !== null && counts[t.id]! > 0 && <span className="tabular-nums text-on-surface-variant">{counts[t.id]}</span>}
-              </button>
-            ))}
-          </nav>
+                <span className="material-symbols-outlined text-[18px]">favorite</span>
+                <span>Melhores amigos</span>
+              </Link>
+            </div>
 
-          {body()}
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Buscar pessoas"
+                placeholder="Buscar pessoas pelo nome de usuário..."
+                className="w-full pl-11 pr-4 py-3 rounded-2xl bg-surface-container-lowest border border-outline-variant text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+              />
+            </div>
+
+            <nav role="tablist" aria-label="Amizades" className="flex border-b border-outline-variant -mb-2">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.id && query.trim().length < 2}
+                  onClick={() => {
+                    setQuery('');
+                    setParams(t.id === 'amigos' ? {} : { aba: t.id }, { replace: true });
+                  }}
+                  className={`flex-1 h-12 flex items-center justify-center gap-1.5 text-xs font-semibold uppercase tracking-wider border-b-2 -mb-px cursor-pointer transition-colors ${
+                    tab === t.id ? 'border-on-surface text-on-surface' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <span className="hidden sm:inline material-symbols-outlined text-[18px]">{t.icon}</span>
+                  <span>{t.label}</span>
+                  {counts[t.id] !== null && counts[t.id]! > 0 && <span className="tabular-nums text-on-surface-variant">{counts[t.id]}</span>}
+                </button>
+              ))}
+            </nav>
+
+            {body()}
+          </section>
         </main>
       </div>
     </div>

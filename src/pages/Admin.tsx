@@ -413,7 +413,7 @@ export const Admin: React.FC = () => {
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
       <SidebarNav />
-      <div className="pt-16 md:pt-0 min-h-screen flex flex-col pl-0 md:pl-20 lg:pl-64 pb-24 md:pb-0">{content}</div>
+      <div className="pt-16 md:pt-0 min-h-screen flex flex-col pl-0 md:pl-20 pb-24 md:pb-0">{content}</div>
     </div>
   );
 
