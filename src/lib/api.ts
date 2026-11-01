@@ -978,6 +978,17 @@ export const DELETION_REASON_OPTIONS: { id: string; label: string }[] = [
   { id: 'outro', label: 'Outro motivo' },
 ];
 
+export interface ThisDevice {
+  browser: string;
+  os: string;
+  device: 'mobile' | 'tablet' | 'desktop';
+  ip: string | null;
+  country: string | null;
+  region: string | null;
+  city: string | null;
+  timezone: string | null;
+}
+
 export interface AccountSession {
   id: string;
   ip: string | null;
@@ -993,7 +1004,12 @@ export interface AccountSession {
 }
 
 export const accountSecurityApi = {
-  listSessions: async () => (await apiRequest<{ sessions: AccountSession[] }>('/api/account/sessions', { method: 'GET' })).sessions,
+  listSessions: async () => {
+    const res = await apiRequest<{ sessions: AccountSession[]; this_device: ThisDevice; token?: string }>('/api/account/sessions', { method: 'GET' });
+    // Login antigo: o servidor registra este aparelho e devolve um token com a sessão
+    if (res.token) authStorage.setToken(res.token);
+    return { sessions: res.sessions, thisDevice: res.this_device };
+  },
   revokeSession: (id: string) => apiRequest<{ revoked: boolean }>(`/api/account/sessions?id=${encodeURIComponent(id)}`, { method: 'DELETE' }),
   changePassword: async (current: string, next: string) => {
     const res = await apiRequest<{ changed: boolean; token: string }>('/api/account/password', {
@@ -1004,8 +1020,9 @@ export const accountSecurityApi = {
     return res;
   },
   signOutEverywhere: async () => {
-    const res = await apiRequest<{ signed_out_everywhere: boolean; token: string }>('/api/account/sessions', { method: 'DELETE' });
-    authStorage.setToken(res.token);
+    // Encerra todas as sessões, inclusive esta: a pessoa precisa entrar de novo
+    const res = await apiRequest<{ signed_out_everywhere: boolean }>('/api/account/sessions', { method: 'DELETE' });
+    authStorage.clear();
     return res;
   },
   requestDeletion: (data: { password: string; reasons: string[]; details?: string; would_return?: string }) =>

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { AccountSession, accountSecurityApi, authStorage } from '../lib/api';
+import { AccountSession, accountSecurityApi, authStorage, ThisDevice } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 
 const fieldClass = 'block w-full min-w-0 appearance-none px-0 py-2.5 bg-transparent border-0 border-b border-outline-variant outline-none text-sm text-on-surface focus:border-on-surface';
-const buttonClass = 'h-10 px-5 rounded-full bg-primary-container text-on-primary text-xs font-semibold cursor-pointer disabled:opacity-50';
-const outlineClass = 'h-10 px-5 rounded-full border border-outline-variant text-on-surface text-xs font-semibold cursor-pointer hover:bg-surface-container disabled:opacity-50';
+const buttonClass = 'h-11 px-6 rounded-full bg-primary-container text-on-primary text-sm font-semibold cursor-pointer disabled:opacity-50';
+const outlineClass = 'h-11 px-6 rounded-full border border-outline-variant text-on-surface text-sm font-semibold cursor-pointer hover:bg-surface-container disabled:opacity-50';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -19,7 +19,10 @@ const countryName = (code: string | null) => {
   }
 };
 
-const sessionPlace = (s: AccountSession) => [s.city, s.region, countryName(s.country)].filter(Boolean).join(', ') || 'Local desconhecido';
+const sessionPlace = (s: Pick<AccountSession, 'city' | 'region' | 'country'>) =>
+  [s.city, s.region, countryName(s.country)].filter(Boolean).join(', ') || 'Local desconhecido';
+
+const deviceIcon = (d: string | null) => (d === 'mobile' ? 'smartphone' : d === 'tablet' ? 'tablet' : 'computer');
 
 const timeAgo = (iso: string) => {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
@@ -39,8 +42,8 @@ const NoticeLine: React.FC<{ notice: Notice }> = ({ notice }) =>
 const Block: React.FC<{ title: string; description?: string; children: React.ReactNode }> = ({ title, description, children }) => (
   <section className="flex flex-col gap-4 py-6 border-b border-outline-variant">
     <div>
-      <h2 className="text-sm font-bold text-on-surface">{title}</h2>
-      {description && <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{description}</p>}
+      <h2 className="text-base font-bold text-on-surface">{title}</h2>
+      {description && <p className="text-sm text-on-surface-variant mt-1 leading-relaxed">{description}</p>}
     </div>
     {children}
   </section>
@@ -58,11 +61,18 @@ export const AccountData: React.FC = () => {
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<Notice>(null);
   const [sessions, setSessions] = useState<AccountSession[] | null>(null);
+  const [thisDevice, setThisDevice] = useState<ThisDevice | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<Notice>(null);
 
   const loadSessions = () => {
-    accountSecurityApi.listSessions().then(setSessions).catch(() => setSessions([]));
+    accountSecurityApi
+      .listSessions()
+      .then((res) => {
+        setSessions(res.sessions);
+        setThisDevice(res.thisDevice);
+      })
+      .catch(() => setSessions([]));
   };
   useEffect(() => {
     if (user) loadSessions();
@@ -94,9 +104,10 @@ export const AccountData: React.FC = () => {
     setSessionNotice(null);
     try {
       await accountSecurityApi.signOutEverywhere();
-      setConfirmingSignOut(false);
-      setSessionNotice({ kind: 'ok', text: 'Pronto. Todos os outros dispositivos foram desconectados.' });
-      loadSessions();
+      try {
+        sessionStorage.setItem('espectro_login_notice', 'Você saiu de todos os dispositivos. Entre novamente para continuar.');
+      } catch {}
+      window.location.href = '/login';
     } catch (err: any) {
       setSessionNotice({ kind: 'error', text: err?.message || 'Não foi possível encerrar as sessões.' });
     }
@@ -125,16 +136,16 @@ export const AccountData: React.FC = () => {
             <Link to="/settings/account" aria-label="Voltar" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>
             </Link>
-            <h1 className="text-xl font-bold">Senha, dados e exclusão</h1>
+            <h1 className="text-2xl font-bold">Senha, dados e exclusão</h1>
           </div>
 
           <Block title="Alterar senha" description="Ao trocar a senha, os outros dispositivos conectados são desconectados.">
             <form onSubmit={changePassword} className="flex flex-col gap-1">
-              <label className="text-xs text-on-surface-variant" htmlFor="pw-current">Senha atual</label>
+              <label className="text-sm text-on-surface-variant" htmlFor="pw-current">Senha atual</label>
               <input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={fieldClass} required />
-              <label className="text-xs text-on-surface-variant mt-3" htmlFor="pw-next">Nova senha (mínimo de 8 caracteres)</label>
+              <label className="text-sm text-on-surface-variant mt-3" htmlFor="pw-next">Nova senha (mínimo de 8 caracteres)</label>
               <input id="pw-next" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={fieldClass} required minLength={8} maxLength={128} />
-              <label className="text-xs text-on-surface-variant mt-3" htmlFor="pw-confirm">Repita a nova senha</label>
+              <label className="text-sm text-on-surface-variant mt-3" htmlFor="pw-confirm">Repita a nova senha</label>
               <input id="pw-confirm" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={fieldClass} required />
               <div className="flex items-center gap-3 justify-between mt-4">
                 <NoticeLine notice={passwordNotice} />
@@ -145,43 +156,66 @@ export const AccountData: React.FC = () => {
             </form>
           </Block>
 
-          <Block title="Sessões" description="Aparelhos conectados à sua conta, com a localização aproximada do acesso. Se algum não for seu, encerre e troque a senha. O IP aparece parcialmente oculto.">
-            {sessions && sessions.length > 0 && (
-              <ul>
-                {sessions.map((s) => (
-                  <li key={s.id} className="flex items-center gap-3 py-3 border-b border-outline-variant">
-                    <span className="material-symbols-outlined text-[24px] text-on-surface-variant shrink-0">
-                      {s.device === 'mobile' ? 'smartphone' : s.device === 'tablet' ? 'tablet' : 'computer'}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-on-surface truncate">
-                        {s.browser} em {s.os}
-                        {s.current && <span className="ml-2 text-[11px] font-medium text-on-surface-variant">Este aparelho</span>}
-                      </p>
-                      <p className="text-xs text-on-surface-variant truncate">
-                        {sessionPlace(s)}
-                        {s.ip ? ` · ${s.ip}` : ''} · {s.current ? 'ativo agora' : timeAgo(s.last_seen_at)}
-                      </p>
-                    </div>
-                    {!s.current && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void accountSecurityApi.revokeSession(s.id).then(loadSessions).catch(() => {});
-                        }}
-                        className="h-9 px-4 rounded-full border border-outline-variant text-xs font-semibold cursor-pointer hover:bg-surface-container shrink-0"
-                      >
-                        Encerrar
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+          <Block title="Sessões" description="Aparelhos conectados à sua conta e a área aproximada de onde foram usados. Se algum não for seu, encerre e troque a senha. O IP aparece parcialmente oculto.">
+            {thisDevice && (
+              <div className="flex items-start gap-3 py-3 border-y border-outline-variant">
+                <span className="material-symbols-outlined text-[26px] text-on-surface shrink-0">{deviceIcon(thisDevice.device)}</span>
+                <div className="min-w-0 flex-1 text-sm break-words">
+                  <p className="font-semibold text-on-surface">
+                    Este aparelho
+                    <span className="ml-2 text-[11px] font-medium text-on-surface-variant">ativo agora</span>
+                  </p>
+                  <p className="text-on-surface-variant text-xs mt-0.5">
+                    {thisDevice.browser} em {thisDevice.os}
+                  </p>
+                  <p className="text-on-surface-variant text-xs">
+                    Área: {sessionPlace(thisDevice)}
+                    {thisDevice.timezone ? ` (${thisDevice.timezone})` : ''}
+                  </p>
+                  {thisDevice.ip && <p className="text-on-surface-variant text-xs">IP: {thisDevice.ip}</p>}
+                </div>
+              </div>
             )}
+
+            {sessions && sessions.some((s) => !s.current) && (
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant pb-1">Outros aparelhos</h3>
+                <ul>
+                  {sessions
+                    .filter((s) => !s.current)
+                    .map((s) => (
+                      <li key={s.id} className="flex items-start gap-3 py-3 border-b border-outline-variant">
+                        <span className="material-symbols-outlined text-[24px] text-on-surface-variant shrink-0">{deviceIcon(s.device)}</span>
+                        <div className="min-w-0 flex-1 text-xs text-on-surface-variant break-words">
+                          <p className="text-sm font-semibold text-on-surface">
+                            {s.browser} em {s.os}
+                          </p>
+                          <p>Área: {sessionPlace(s)}</p>
+                          <p>
+                            {s.ip ? `IP: ${s.ip} · ` : ''}
+                            último uso {timeAgo(s.last_seen_at)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void accountSecurityApi.revokeSession(s.id).then(loadSessions).catch(() => {});
+                          }}
+                          className="h-9 px-3 rounded-full border border-outline-variant text-xs font-semibold cursor-pointer hover:bg-surface-container shrink-0"
+                        >
+                          Encerrar
+                        </button>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 flex-wrap">
               {confirmingSignOut ? (
                 <>
-                  <button type="button" onClick={() => void signOutEverywhere()} className={buttonClass}>Confirmar</button>
+                  <p className="w-full text-xs text-on-surface-variant">Isso encerra todos os aparelhos, inclusive este. Você precisará entrar de novo.</p>
+                  <button type="button" onClick={() => void signOutEverywhere()} className={buttonClass}>Sair de tudo</button>
                   <button type="button" onClick={() => setConfirmingSignOut(false)} className={outlineClass}>Cancelar</button>
                 </>
               ) : (

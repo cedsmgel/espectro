@@ -75,7 +75,7 @@ export const DeleteAccount: React.FC = () => {
             <Link to="/configuracoes/dados" aria-label="Voltar" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>
             </Link>
-            <h1 className="text-xl font-bold">Excluir conta</h1>
+            <h1 className="text-2xl font-bold">Excluir conta</h1>
           </div>
 
           {step === 'motivo' && (

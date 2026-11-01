@@ -1,5 +1,5 @@
 import { getAuthUser, getJwtSecret, jsonResponse, errorResponse, rateLimit, serverError, signJWT } from "../../_shared/auth";
-import { forgetSession, maskIp } from "../../_shared/session";
+import { clientInfo, createSession, forgetSession, maskIp } from "../../_shared/session";
 import { forgetSuspension } from "../../_shared/suspension";
 
 export interface Env {
@@ -11,8 +11,19 @@ export interface Env {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
-    const auth = await getAuthUser(request, getJwtSecret(env));
+    const secret = getJwtSecret(env);
+    const auth = await getAuthUser(request, secret);
     if (!auth) return errorResponse("Não autorizado.", 401);
+
+    // Login anterior ao registro de sessões: registra este aparelho agora e devolve um token com a sessão
+    let sid = auth.sid;
+    let token: string | undefined;
+    if (!sid) {
+      sid = (await createSession(env.DB, request, auth.id)).sid;
+      token = await signJWT({ id: auth.id, username: auth.username, sid }, secret);
+    }
+
+    const info = clientInfo(request);
 
     const { results } = await env.DB.prepare(
       `SELECT id, ip, country, region, city, browser, os, device,
@@ -25,14 +36,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       .bind(auth.id)
       .all<{ id: string; ip: string | null } & Record<string, unknown>>();
 
-    const sessions = (results || []).map(({ id, ip, ...rest }) => ({ id, ip: maskIp(ip), current: id === auth.sid, ...rest }));
-    return jsonResponse({ sessions });
+    const sessions = (results || []).map(({ id, ip, ...rest }) => ({ id, ip: maskIp(ip), current: id === sid, ...rest }));
+    // Este aparelho, com os dados lidos desta própria requisição (sempre disponível)
+    const thisDevice = {
+      browser: info.browser,
+      os: info.os,
+      device: info.device,
+      ip: maskIp(info.ip),
+      country: info.country,
+      region: info.region,
+      city: info.city,
+      timezone: info.timezone,
+    };
+    return jsonResponse({ sessions, this_device: thisDevice, token });
   } catch (err: unknown) {
     return serverError(err, "account:sessions:list");
   }
 };
 
-// DELETE /api/account/sessions?id=X: encerra um aparelho. Sem id: sai de todos (este continua com um token novo).
+// DELETE /api/account/sessions?id=X: encerra um aparelho. Sem id: sai de todos, inclusive deste.
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
@@ -57,13 +79,12 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([
       env.DB.prepare("UPDATE users SET sessions_valid_after = ? WHERE id = ?").bind(now, auth.id),
-      env.DB.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL AND id != ?").bind(auth.id, auth.sid ?? ""),
+      env.DB.prepare("UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL").bind(auth.id),
     ]);
     forgetSuspension(auth.id);
     forgetSession();
 
-    const token = await signJWT({ id: auth.id, username: auth.username, sid: auth.sid }, secret);
-    return jsonResponse({ signed_out_everywhere: true, token });
+    return jsonResponse({ signed_out_everywhere: true });
   } catch (err: unknown) {
     return serverError(err, "account:sessions");
   }
