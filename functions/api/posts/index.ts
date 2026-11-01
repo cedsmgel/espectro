@@ -121,7 +121,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       params.push(postType);
     }
 
-    query += ` ORDER BY p.id DESC LIMIT 50`;
+    // media=video: só vídeos (feed Shorts); media=any: só posts com foto ou vídeo (grade do perfil)
+    const mediaFilter = url.searchParams.get("media");
+    if (mediaFilter === "video") {
+      query += ` AND p.media_type = 'video' AND p.media_url IS NOT NULL AND p.media_url != ''`;
+    } else if (mediaFilter === "any") {
+      query += ` AND p.media_url IS NOT NULL AND p.media_url != ''`;
+    }
+
+    // Paginação: before_id traz os posts mais antigos que o último recebido
+    const beforeId = Number(url.searchParams.get("before_id"));
+    if (Number.isInteger(beforeId) && beforeId > 0) {
+      query += ` AND p.id < ?`;
+      params.push(beforeId);
+    }
+
+    const limitParam = Number(url.searchParams.get("limit"));
+    const limit = Number.isInteger(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 50;
+    query += ` ORDER BY p.id DESC LIMIT ${limit}`;
 
     const stmt = env.DB.prepare(query);
     const { results } = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();

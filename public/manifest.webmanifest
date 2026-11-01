@@ -33,10 +33,10 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
-      "name": "Vídeos",
-      "short_name": "Vídeos",
-      "description": "Ver vídeos da comunidade",
-      "url": "/videos",
+      "name": "Shorts",
+      "short_name": "Shorts",
+      "description": "Ver vídeos curtos",
+      "url": "/shorts",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

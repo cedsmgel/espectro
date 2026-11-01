@@ -259,8 +259,19 @@ export const api = {
     authStorage.clear();
   },
 
-  async getPosts(filters?: { community_id?: number; community_slug?: string; post_type?: string; feed?: string }): Promise<Post[]> {
+  async getPosts(filters?: {
+    community_id?: number;
+    community_slug?: string;
+    post_type?: string;
+    feed?: string;
+    media?: 'video' | 'any';
+    before_id?: number;
+    limit?: number;
+  }): Promise<Post[]> {
     const params = new URLSearchParams();
+    if (filters?.media) params.set('media', filters.media);
+    if (filters?.before_id) params.set('before_id', String(filters.before_id));
+    if (filters?.limit) params.set('limit', String(filters.limit));
     if (filters?.community_id) params.set('community_id', String(filters.community_id));
     if (filters?.community_slug) params.set('community_slug', filters.community_slug);
     if (filters?.post_type) params.set('post_type', filters.post_type);
