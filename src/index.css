@@ -268,3 +268,12 @@ html.dark ::-webkit-scrollbar-thumb:hover {
     height: 60%;
   }
 }
+
+/* iPhone: campos com fonte menor que 16px fazem o Safari dar zoom ao focar e a página sai do tamanho */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
