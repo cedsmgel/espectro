@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { requestAuth } from '../lib/authEvents';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
@@ -27,7 +28,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
   const handleLogout = () => {
     authStorage.clear();
     setShowUserMenu(false);
-    navigate('/login');
+    navigate('/', { replace: true });
   };
 
   const isActive = (path: string) => {
@@ -368,6 +369,10 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
           ) : (
             <Link
               to="/login"
+              onClick={(e) => {
+                e.preventDefault();
+                requestAuth({ mode: 'login' });
+              }}
               aria-label="Acessar conta"
               className={`flex items-center rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors group relative cursor-pointer ${
                 isExpanded

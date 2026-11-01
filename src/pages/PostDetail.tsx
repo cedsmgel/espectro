@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { requestAuth } from '../lib/authEvents';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { PostCard } from '../components/PostCard';
@@ -90,7 +91,7 @@ export const PostDetail: React.FC = () => {
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert('Você precisa estar conectado para comentar.');
+      requestAuth({ mode: 'login', reason: 'Para comentar, entre ou crie uma conta.' });
       return;
     }
 
@@ -189,7 +190,11 @@ export const PostDetail: React.FC = () => {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder={user ? "O que você achou dessa publicação? Escreva seu comentário..." : "Faça login para comentar nesta discussão..."}
-                    disabled={!user || submittingComment}
+                    readOnly={!user}
+                    onFocus={() => {
+                      if (!user) requestAuth({ mode: 'login', reason: 'Para comentar, entre ou crie uma conta.' });
+                    }}
+                    disabled={submittingComment}
                     rows={3}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-surface-container-low border border-outline-variant/40 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container/20 transition-all resize-none disabled:opacity-60"
                   />
@@ -199,7 +204,7 @@ export const PostDetail: React.FC = () => {
                     </span>
                     <button
                       type="submit"
-                      disabled={!user || !newComment.trim() || submittingComment}
+                      disabled={submittingComment || (Boolean(user) && !newComment.trim())}
                       className="px-4 py-1.5 rounded-full bg-primary-container text-on-primary font-bold text-xs hover:bg-primary transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs flex items-center gap-1.5"
                     >
                       {submittingComment ? (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, postsApi, authStorage, adminApi, savedApi } from '../lib/api';
+import { requestAuth } from '../lib/authEvents';
 import { ReportModal } from './chat/ReportModal';
 import { ShareButton } from './ShareButton';
 import { useIsAdmin } from '../hooks/useIsAdmin';
@@ -45,6 +46,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
   const [isSaved, setIsSaved] = useState(Boolean(post.saved));
   const toggleSaved = () => {
+    if (!authStorage.isAuthenticated()) {
+      requestAuth({ mode: 'login', reason: 'Para salvar publicações, entre ou crie uma conta.' });
+      return;
+    }
     const next = !isSaved;
     setIsSaved(next);
     (next ? savedApi.add(post.id) : savedApi.remove(post.id)).catch(() => setIsSaved(!next));
@@ -80,7 +85,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const handleVoteClick = (type: 'up' | 'down') => {
     if (!user) {
-      alert('Faça login para votar nas publicações.');
+      requestAuth({ mode: 'login', reason: 'Para votar, entre ou crie uma conta.' });
       return;
     }
 

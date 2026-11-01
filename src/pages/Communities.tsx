@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { communitiesApi, Community, authStorage } from '../lib/api';
+import { requestAuth } from '../lib/authEvents';
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
@@ -86,7 +87,7 @@ export const Communities: React.FC = () => {
                 type="button"
                 onClick={() => {
                   if (!user) {
-                    navigate('/login');
+                    requestAuth({ mode: 'login', reason: 'Para criar uma comunidade, entre ou crie uma conta.' });
                   } else {
                     setShowModal(true);
                   }
@@ -183,7 +184,7 @@ export const Communities: React.FC = () => {
                 actionLabel="Criar Comunidade"
                 onAction={() => {
                   if (!user) {
-                    navigate('/login');
+                    requestAuth({ mode: 'login', reason: 'Para criar uma comunidade, entre ou crie uma conta.' });
                   } else {
                     setShowModal(true);
                   }

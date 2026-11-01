@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { requestAuth } from '../lib/authEvents';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, searchApi, SearchResults } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
@@ -379,7 +380,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => navigate('/login')}
+                  onClick={() => requestAuth({ mode: 'login' })}
                   className="px-3 sm:px-4 py-1.5 rounded-full text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors cursor-pointer"
                 >
                   Entrar

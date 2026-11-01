@@ -129,6 +129,8 @@ export interface CreatePostData {
   media_type?: 'image' | 'video' | 'gif' | null;
 }
 
+import { currentPath, notifyAuthChanged, requestAuth } from './authEvents';
+
 const TOKEN_KEY = 'espectro_token';
 const USER_KEY = 'espectro_user';
 
@@ -163,6 +165,7 @@ export const authStorage = {
     if (decoded) {
       this.setUser(decoded);
     }
+    notifyAuthChanged();
   },
   getUser(): User | null {
     const raw = localStorage.getItem(USER_KEY);
@@ -189,6 +192,7 @@ export const authStorage = {
   clear() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    notifyAuthChanged();
   },
   isAuthenticated(): boolean {
     return !!this.getToken();
@@ -224,6 +228,17 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
   }
 
   if (!response.ok) {
+    const isAuthEndpoint = url.startsWith('/api/login') || url.startsWith('/api/register');
+    if (response.status === 401 && !isAuthEndpoint) {
+      if (token) {
+        // Sessão expirada ou encerrada em outro aparelho: limpa e pede o login de novo, voltando para esta página
+        authStorage.clear();
+        requestAuth({ mode: 'login', reason: 'Sua sessão expirou. Entre novamente para continuar.', redirectTo: currentPath() });
+      } else if ((options.method || 'GET').toUpperCase() !== 'GET') {
+        // Visitante tentou uma ação que exige conta
+        requestAuth({ mode: 'login', reason: 'Entre ou crie uma conta para continuar.' });
+      }
+    }
     // Conta suspensa: encerra a sessão e leva ao login com o aviso
     if (response.status === 403 && data?.suspended && token) {
       try {
