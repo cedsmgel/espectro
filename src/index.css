@@ -41,12 +41,12 @@
 
   html.dark {
     /* MODO ESCURO (All Black / Vercel Style) - Preto Puro (#000000), cards cinza escuro (#121212/#18181b), bordas (#27272a), zero tom azulado */
-    --color-surface: 9 9 11; /* #09090b - Fundo da página (levemente mais claro) */
+    --color-surface: 14 14 16; /* #0e0e10 - Fundo da página: mesmo tom dos cards */
     --color-surface-dim: 5 5 5; /* #050505 */
     --color-surface-bright: 24 24 27; /* #18181b (zinc-900) */
     --color-surface-tint: 255 255 255;
 
-    --color-surface-container-lowest: 0 0 0; /* #000000 - Cards, laterais e modais em preto puro */
+    --color-surface-container-lowest: 14 14 16; /* #0e0e10 - Cards, laterais e modais: mesmo tom da página */
     --color-surface-container-low: 24 24 27; /* #18181b - Inputs, barras e containers secundários */
     --color-surface-container: 39 39 42; /* #27272a - Hover, divisores e seleções */
     --color-surface-container-high: 57 57 63; /* #39393f - Badges e destaques neutros */
