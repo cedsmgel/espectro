@@ -216,14 +216,6 @@ export const PostCard: React.FC<PostCardProps> = ({
           !isDetail ? 'cursor-pointer sm:hover:border-outline-variant/60' : ''
         } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
-        {/* Para Você: motivo de a publicação aparecer */}
-        {post.why && !isDetail && (
-          <p className="px-3 sm:px-5 pt-2 text-[11px] font-semibold text-on-surface-variant flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">info</span>
-            {post.why}
-          </p>
-        )}
-
         {/* 1. Cabeçalho: avatar e só o nome de usuário (o horário vai para baixo da publicação) */}
         <div className="px-3 sm:px-5 pt-2.5 sm:pt-4 pb-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -240,12 +232,20 @@ export const PostCard: React.FC<PostCardProps> = ({
             </Link>
 
             <div className="flex flex-col min-w-0 leading-tight">
-              <Link
-                to={`/perfil/${encodeURIComponent(post.author_name)}`}
-                className="text-sm font-semibold text-on-surface hover:underline truncate cursor-pointer"
-              >
-                {post.author_name}
-              </Link>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Link
+                  to={`/perfil/${encodeURIComponent(post.author_name)}`}
+                  className="text-sm font-semibold text-on-surface hover:underline truncate cursor-pointer"
+                >
+                  {post.author_name}
+                </Link>
+                {/* Para Você: motivo de a publicação aparecer, ao lado do nome */}
+                {post.why && !isDetail && (
+                  <span className="text-[11px] font-semibold text-on-surface-variant whitespace-nowrap shrink-0">
+                    · {post.why}
+                  </span>
+                )}
+              </div>
               {post.community_name && (
                 <Link
                   to={`/e/${post.community_slug || post.community_id}`}
