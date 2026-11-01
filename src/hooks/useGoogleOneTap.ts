@@ -92,11 +92,7 @@ async function handleCredential(credential: string): Promise<void> {
     }
     if ('link_required' in res) {
       // Já existe uma conta com o e-mail deste Google: nada é ligado sem a pessoa provar que é dona dela
-      requestAuth({
-        mode: 'login',
-        googleLinkToken: res.link_token,
-        reason: 'Já existe uma conta do Espectro com o e-mail deste Google. Entre com a senha para ligá-lo.',
-      });
+      requestAuth({ mode: 'login', googleLinkToken: res.link_token, googleEmail: res.email });
       return;
     }
     authStorage.setToken(res.token);

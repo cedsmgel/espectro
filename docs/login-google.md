@@ -37,3 +37,6 @@ No cliente OAuth (APIs e serviços > Credenciais), em **Origens JavaScript autor
 - `https://espectro.pages.dev`
 
 Sem isso o widget não abre (o console do navegador mostra `The given origin is not allowed for the given client ID`). O URI de redirecionamento do botão (`https://espectro.pages.dev/api/auth/google/callback`) continua como está. Ao usar domínio próprio, adicione também a origem dele.
+
+### Quando o e-mail do Google já tem conta no Espectro
+Nos dois caminhos (botão e One Tap) o resultado é o mesmo: depois que o Google identifica a pessoa, abre a tela **"Confirme sua senha"**, com o e-mail do Google à vista. Ao digitar a senha da conta (e o código do 2FA, se houver), a conta é autenticada e o Google é ligado a ela; nas próximas vezes o login pelo Google entra direto. Nada é ligado sem essa confirmação, e o pedido pendente vale 10 minutos e uma única vez. Se a pessoa não lembrar a senha, a tela oferece "Esqueci minha senha" (quando o envio de e-mails estiver ativo).

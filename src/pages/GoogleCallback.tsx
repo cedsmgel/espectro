@@ -15,6 +15,8 @@ export const GoogleCallback: React.FC = () => {
     started.current = true;
 
     const code = params.get('code');
+    const linkToken = params.get('link');
+    const linkEmail = params.get('email');
     let next = '/';
     try {
       next = sessionStorage.getItem('espectro_google_next') || '/';
@@ -22,6 +24,13 @@ export const GoogleCallback: React.FC = () => {
     } catch {}
     // Só caminhos internos
     if (!next.startsWith('/') || next.startsWith('//') || next.startsWith('/entrar/google')) next = '/';
+
+    // O Google identificou a pessoa, mas o e-mail já tem conta: abre a tela que pede a senha dessa conta para ligar
+    if (linkToken) {
+      navigate(next, { replace: true });
+      requestAuth({ mode: 'login', googleLinkToken: linkToken, googleEmail: linkEmail || undefined, redirectTo: next });
+      return;
+    }
 
     if (!code) {
       navigate('/?auth_error=google_failed', { replace: true });

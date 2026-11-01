@@ -1,6 +1,6 @@
 import { appUrl } from "../../../_shared/email";
 import { exchangeCode, GoogleEnv, googleEnabled, randomUrlToken, sha256Hex } from "../../../_shared/google";
-import { resolveGoogleAccount } from "../../../_shared/googleAccount";
+import { createPendingLink, resolveGoogleAccount } from "../../../_shared/googleAccount";
 
 export interface Env extends GoogleEnv {
   DB: D1Database;
@@ -48,7 +48,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     }
 
     const account = await resolveGoogleAccount(env.DB, profile);
-    if (account.kind === "email_in_use") return go("/?auth_error=email_in_use");
+    // E-mail de uma conta que já existe: em vez de um erro sem saída, leva a uma tela pedindo a senha dessa conta
+    if (account.kind === "email_in_use") {
+      const linkToken = await createPendingLink(env.DB, profile);
+      return go(`/entrar/google?link=${encodeURIComponent(linkToken)}&email=${encodeURIComponent(profile.email)}`);
+    }
     const userId = account.userId;
 
     const user = await env.DB.prepare("SELECT suspended_at FROM users WHERE id = ?").bind(userId).first<{ suspended_at: string | null }>();

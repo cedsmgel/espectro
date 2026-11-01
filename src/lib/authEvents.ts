@@ -11,6 +11,8 @@ export interface AuthRequest {
   mfaToken?: string;
   // Pedido pendente do One Tap: depois de entrar na conta existente, liga o Google a ela
   googleLinkToken?: string;
+  // E-mail do Google que será ligado (mostrado na tela de confirmar a senha)
+  googleEmail?: string;
 }
 
 export const AUTH_REQUIRED_EVENT = 'espectro:auth-required';
