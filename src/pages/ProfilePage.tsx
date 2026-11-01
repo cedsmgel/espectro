@@ -20,6 +20,7 @@ import { ErrorState } from '../components/ErrorState';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
+import { MediaGrid } from '../components/MediaGrid';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,6 +31,11 @@ export const ProfilePage: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  // Aba do mural: fotos e vídeos ficam na grade; o resto (texto e recados) em Publicações
+  const [profileTab, setProfileTab] = useState<'midia' | 'posts' | null>(null);
+  const mediaPosts = posts.filter((p) => Boolean(p.media_url && p.media_url.trim()));
+  const textPosts = posts.filter((p) => !(p.media_url && p.media_url.trim()));
+  const activeTab = profileTab ?? (mediaPosts.length > 0 ? 'midia' : 'posts');
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -628,14 +634,30 @@ export const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary text-[22px]">auto_stories</span>
-                    <h2 className="font-bold text-base text-on-surface">Mural de Publicações</h2>
-                  </div>
-                  <span className="text-xs text-on-surface-variant">
-                    {posts.length} {posts.length === 1 ? 'post' : 'posts'}
-                  </span>
+                <div role="tablist" aria-label="Conteúdo do perfil" className="flex border-b border-outline-variant">
+                  {(
+                    [
+                      { id: 'midia', label: 'Mídia', icon: 'grid_on', count: mediaPosts.length },
+                      { id: 'posts', label: 'Publicações', icon: 'article', count: textPosts.length },
+                    ] as const
+                  ).map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      onClick={() => setProfileTab(tab.id)}
+                      className={`flex-1 h-12 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider border-b-2 -mb-px cursor-pointer transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-on-surface text-on-surface'
+                          : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
+                      <span>{tab.label}</span>
+                      <span className="text-on-surface-variant font-medium tabular-nums">{tab.count}</span>
+                    </button>
+                  ))}
                 </div>
 
                 {loadingPosts ? (
@@ -653,17 +675,31 @@ export const ProfilePage: React.FC = () => {
                     className="bg-surface-container-lowest border border-outline-variant rounded-3xl p-8"
                   />
                 ) : (
-                  <div className="flex flex-col gap-5">
-                    {posts.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onVote={handleVote}
-                        onDelete={handleDeletePost}
-                        onUpdate={handleUpdatePost}
-                      />
-                    ))}
-                  </div>
+                  activeTab === 'midia' ? (
+                    mediaPosts.length === 0 ? (
+                      <p className="text-sm text-on-surface-variant text-center py-12">
+                        {isSelf ? 'Você ainda não publicou fotos nem vídeos.' : 'Sem fotos nem vídeos por enquanto.'}
+                      </p>
+                    ) : (
+                      <MediaGrid posts={mediaPosts} />
+                    )
+                  ) : textPosts.length === 0 ? (
+                    <p className="text-sm text-on-surface-variant text-center py-12">
+                      {isSelf ? 'Você ainda não publicou textos.' : 'Sem publicações de texto por enquanto.'}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-5">
+                      {textPosts.map((post) => (
+                        <PostCard
+                          key={post.id}
+                          post={post}
+                          onVote={handleVote}
+                          onDelete={handleDeletePost}
+                          onUpdate={handleUpdatePost}
+                        />
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             )}

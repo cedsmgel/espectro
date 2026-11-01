@@ -16,7 +16,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities');
 const CommunityDetail = lazyNamed(() => import('./pages/CommunityDetail'), 'CommunityDetail');
 const DirectMessages = lazyNamed(() => import('./pages/DirectMessages'), 'DirectMessages');
-const Videos = lazyNamed(() => import('./pages/Videos'), 'Videos');
+const Shorts = lazyNamed(() => import('./pages/Shorts'), 'Shorts');
 const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
@@ -72,7 +72,8 @@ export const App: React.FC = () => {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/mensagens" element={<DirectMessages />} />
           <Route path="/grupos/:id" element={<DirectMessages />} />
-          <Route path="/videos" element={<Videos />} />
+          <Route path="/shorts" element={<Shorts />} />
+          <Route path="/videos" element={<Navigate to="/shorts" replace />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
