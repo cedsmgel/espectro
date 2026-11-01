@@ -4,7 +4,7 @@ import type { VideoPlayerProps } from './VideoPlayer';
 
 const VideoPlayer = lazyNamed(() => import('./VideoPlayer'), 'VideoPlayer');
 
-const PLACEHOLDER_CLASS = 'w-full aspect-video max-h-[min(72vh,560px)] mx-auto rounded-xl bg-black';
+const PLACEHOLDER_CLASS = 'w-full aspect-video max-h-[min(72vh,560px)] mx-auto rounded-none bg-black';
 
 // O código e os metadados do vídeo só são pedidos quando ele se aproxima da tela
 export const LazyVideoPlayer: React.FC<VideoPlayerProps> = (props) => {

@@ -286,7 +286,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseEnter={() => setShowControls(true)}
       onPointerDown={handlePointerDown}
       style={{ aspectRatio: aspect }}
-      className={`relative w-full max-h-[min(72vh,560px)] mx-auto overflow-hidden rounded-xl bg-black group select-none shadow-sm border border-outline-variant flex items-center justify-center ${className}`}
+      className={`relative w-full max-h-[min(72vh,560px)] mx-auto overflow-hidden rounded-none bg-black group select-none shadow-sm border border-outline-variant flex items-center justify-center ${className}`}
     >
       {/* Elemento de Vídeo */}
       <video
