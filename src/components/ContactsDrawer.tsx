@@ -4,6 +4,8 @@ import { authStorage, friendsApi, Friend } from '../lib/api';
 import { EmptyState } from './EmptyState';
 import { useChat } from '../hooks/useChat';
 import { TypingBubble } from './chat/TypingBubble';
+import { useTypingHeartbeat } from '../hooks/useTypingHeartbeat';
+import { scrollToEnd } from '../lib/scrollToEnd';
 
 interface ContactsDrawerProps {
   isOpen: boolean;
@@ -72,7 +74,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
   // Auto-scroll para última mensagem
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToEnd(messagesEndRef.current);
   }, [messages, isOtherUserTyping]);
 
   // Pesquisa de novos usuários para adicionar
@@ -118,15 +120,8 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
-    sendTyping(true);
-
-    if (typingTimerRef.current) {
-      window.clearTimeout(typingTimerRef.current);
-    }
-    typingTimerRef.current = window.setTimeout(() => {
-      sendTyping(false);
-    }, 2000);
   };
+  useTypingHeartbeat(!!newMessage.trim(), (typing) => sendTyping(typing));
 
   // Adicionar amigo
   const handleAddFriend = async (friendId: number, username: string) => {

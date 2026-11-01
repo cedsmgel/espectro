@@ -15,6 +15,8 @@ import { ChatMenu } from '../components/chat/ChatMenu';
 import { ModalShell } from '../components/chat/ModalShell';
 import { MediaPicker } from '../components/chat/MediaPicker';
 import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
+import { useTypingHeartbeat } from '../hooks/useTypingHeartbeat';
+import { scrollToEnd } from '../lib/scrollToEnd';
 import { TypingBubble, ChatActivity } from '../components/chat/TypingBubble';
 import { AudioMessage } from '../components/chat/AudioMessage';
 import { useTheme } from '../context/ThemeContext';
@@ -71,8 +73,6 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   // Quem está escrevendo ou gravando áudio agora
   const [typers, setTypers] = useState<Record<number, { username: string; kind: ChatActivity }>>({});
   const typerTimers = useRef<Record<number, number>>({});
-  const typingIdleRef = useRef<number | null>(null);
-  const lastTypingSentRef = useRef(0);
   const typerList = Object.values(typers);
   const typerLabel =
     typerList.length === 0
@@ -82,16 +82,6 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
       : `${typerList.length} pessoas escrevendo...`;
   const handleTextChange = (value: string) => {
     setText(value);
-    const now = Date.now();
-    if (now - lastTypingSentRef.current > 2000) {
-      lastTypingSentRef.current = now;
-      sendTyping(true);
-    }
-    if (typingIdleRef.current) window.clearTimeout(typingIdleRef.current);
-    typingIdleRef.current = window.setTimeout(() => {
-      lastTypingSentRef.current = 0;
-      sendTyping(false);
-    }, 2500);
   };
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startLongPress = (id: number) => {
@@ -195,6 +185,9 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     },
   });
 
+  // O indicador fica ligado enquanto houver texto na caixa, mesmo sem digitar
+  useTypingHeartbeat(!!text.trim() && !editingMessage, (typing) => sendTyping(typing));
+
   useEffect(() => {
     setDetail(null);
     setMessages([]);
@@ -212,8 +205,8 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   }, [loadLatest, connected]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    scrollToEnd(bottomRef.current);
+  }, [messages.length, typerList.length]);
 
   const loadOlder = async () => {
     const oldest = messages[0];

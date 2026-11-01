@@ -36,6 +36,8 @@ import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
+import { useTypingHeartbeat } from '../hooks/useTypingHeartbeat';
+import { scrollToEnd } from '../lib/scrollToEnd';
 import { TypingBubble, activityLabel } from '../components/chat/TypingBubble';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { CreateGroupModal } from '../components/chat/CreateGroupModal';
@@ -388,7 +390,7 @@ export const DirectMessages: React.FC = () => {
     : messages;
   const myBubbleColor = themeColor(activeSettings?.theme);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToEnd(messagesEndRef.current);
   }, [lastMessageKey, isOtherUserTyping]);
 
   // Controle de visibilidade da BottomNav no chat mobile (tela cheia)
@@ -447,15 +449,9 @@ export const DirectMessages: React.FC = () => {
   // Digitação do usuário com debounce para avisar que parou de digitar
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-    sendTyping(true);
-
-    if (typingTimerRef.current) {
-      window.clearTimeout(typingTimerRef.current);
-    }
-    typingTimerRef.current = window.setTimeout(() => {
-      sendTyping(false);
-    }, 2000);
   };
+  // O indicador fica ligado enquanto houver texto na caixa, mesmo sem digitar
+  useTypingHeartbeat(!!inputText.trim() && !editingMessage, (typing) => sendTyping(typing));
 
   // Envio de mensagem de texto normal pelo WebSocket (com suporte a resposta - Tarefa 4)
   const handleSendMessage = (e: React.FormEvent) => {
