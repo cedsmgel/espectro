@@ -1,7 +1,8 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, isBlockedBetween, serverError } from "../../../_shared/auth";
 import { MAX_GROUP_MEMBERS, membership, memberCount } from "../../../_shared/groups";
+import { kickFromGroup, notifyGroup, type ChatEnv } from "../../../_shared/chat";
 
-export interface Env {
+export interface Env extends ChatEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -39,10 +40,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const notAdmin = () => errorResponse("Só administradores podem fazer isso.", 403);
     const targetId = Number(body.user_id);
 
-    const systemMessage = (text: string) =>
-      env.DB.prepare("INSERT INTO chat_group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'system')")
+    // Grava o aviso e manda os membros conectados recarregarem o grupo
+    const systemMessage = async (text: string) => {
+      await env.DB.prepare(
+        "INSERT INTO chat_group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'system')"
+      )
         .bind(groupId, user.id, text)
         .run();
+      await notifyGroup(env, groupId, { type: "refresh" });
+    };
 
     switch (body.action) {
       case "leave": {
@@ -70,6 +76,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           }
         }
         await systemMessage(`@${user.username} saiu do grupo`);
+        await kickFromGroup(env, groupId, user.id);
         return jsonResponse({ left: true, deleted: false });
       }
 
@@ -94,6 +101,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           .bind(name ?? null, description ?? null, onlyAdmins ?? null, groupId)
           .run();
         if (name !== undefined) await systemMessage(`@${user.username} alterou o nome do grupo para "${name}"`);
+        else await notifyGroup(env, groupId, { type: "refresh" });
         return jsonResponse({ updated: true });
       }
 
@@ -148,6 +156,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         const name = await env.DB.prepare("SELECT username FROM users WHERE id = ?").bind(targetId).first<{ username: string }>();
         await env.DB.prepare("DELETE FROM chat_group_members WHERE group_id = ? AND user_id = ?").bind(groupId, targetId).run();
         await systemMessage(`@${user.username} removeu @${name?.username || "um membro"}`);
+        await kickFromGroup(env, groupId, targetId);
         return jsonResponse({ removed: true });
       }
 

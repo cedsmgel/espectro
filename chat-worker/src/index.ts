@@ -9,6 +9,7 @@ interface SocketIdentity {
 interface BroadcastBody {
   event?: Record<string, unknown>;
   deliveredTo?: number | null;
+  kick?: number | null;
 }
 
 export default {
@@ -35,6 +36,17 @@ export class ChatRoom implements DurableObject {
     }
   }
 
+  // Fecha as conexões de um usuário (ex.: saiu ou foi removido do grupo)
+  private disconnectUser(userId: number) {
+    for (const socket of this.ctx.getWebSockets()) {
+      const identity = socket.deserializeAttachment() as SocketIdentity | null;
+      if (identity?.id !== userId) continue;
+      try {
+        socket.close(1008, 'Removido do grupo');
+      } catch {}
+    }
+  }
+
   private hasUserConnected(userId: number): boolean {
     return this.ctx.getWebSockets().some((socket) => {
       const identity = socket.deserializeAttachment() as SocketIdentity | null;
@@ -46,7 +58,14 @@ export class ChatRoom implements DurableObject {
     // Eventos vindos do servidor (Pages Functions) após gravar no D1
     if (request.method === 'POST' && request.headers.get('X-Internal-Broadcast') === '1') {
       const body = (await request.json().catch(() => null)) as BroadcastBody | null;
-      if (!body?.event || typeof body.event !== 'object') {
+      if (!body || typeof body !== 'object') {
+        return new Response('Bad request', { status: 400 });
+      }
+      if (typeof body.kick === 'number') {
+        this.disconnectUser(body.kick);
+        if (!body.event) return Response.json({ delivered: false });
+      }
+      if (!body.event || typeof body.event !== 'object') {
         return new Response('Bad request', { status: 400 });
       }
 

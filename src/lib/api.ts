@@ -75,6 +75,7 @@ export interface DirectMessage {
   reactions?: Array<{ user_id: number; emoji: string }>;
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
+  edited_at?: string | null;
 }
 
 export interface Conversation {
@@ -410,6 +411,11 @@ export const directMessagesApi = {
     }),
   remove: (messageId: number) =>
     apiRequest<{ success: boolean }>(`/api/direct_messages?id=${messageId}`, { method: 'DELETE' }),
+  edit: (messageId: number, content: string) =>
+    apiRequest<{ message: DirectMessage }>('/api/direct_messages', {
+      method: 'PATCH',
+      body: JSON.stringify({ id: messageId, content }),
+    }),
   react: (messageId: number, emoji: string | null) =>
     apiRequest<{ message_id: number; user_id: number; emoji: string | null }>('/api/direct_messages/reaction', {
       method: 'PUT',
@@ -584,6 +590,15 @@ export const adminApi = {
     ),
 };
 
+export interface MessageSearchResponse {
+  messages: Array<{ id: number; content: string; sender_id: number; created_at: string; friend_id: number; friend_username: string }>;
+  groups: Array<{ id: number; content: string; group_id: number; group_name: string; sender_username: string | null; created_at: string }>;
+}
+
+export const messageSearchApi = {
+  messages: (q: string) => apiRequest<MessageSearchResponse>(`/api/message_search?q=${encodeURIComponent(q)}`),
+};
+
 export interface GroupSummary {
   id: number;
   name: string;
@@ -606,6 +621,7 @@ export interface GroupMember {
 }
 
 export interface GroupMessage {
+  edited_at?: string | null;
   reply_to_id?: number | null;
   reply_content?: string | null;
   reply_sender?: string | null;
@@ -638,6 +654,11 @@ export const groupsApi = {
     apiRequest<{ message: GroupMessage }>(`/api/groups/${id}/messages`, { method: 'POST', body: JSON.stringify(payload) }),
   remove: (id: number, messageId: number) =>
     apiRequest<{ ok: boolean }>(`/api/groups/${id}/messages/${messageId}`, { method: "DELETE" }),
+  edit: (id: number, messageId: number, content: string) =>
+    apiRequest<{ edited: boolean; content: string; edited_at?: string | null }>(`/api/groups/${id}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content }),
+    }),
   manage: (id: number, body: Record<string, unknown>) =>
     apiRequest<Record<string, unknown>>(`/api/groups/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),
 };

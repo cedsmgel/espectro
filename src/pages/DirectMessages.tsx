@@ -22,6 +22,8 @@ import {
 import { ChatPrefsModal } from '../components/chat/ChatPrefsModal';
 import { ConversationCustomizer } from '../components/chat/ConversationCustomizer';
 import { PeopleSearchResults } from '../components/chat/PeopleSearchResults';
+import { MessageSearchResults } from '../components/chat/MessageSearchResults';
+import { canEditMessage } from '../lib/chatEdit';
 import { ReportModal } from '../components/chat/ReportModal';
 import { useChatPrefs } from '../hooks/useChatPrefs';
 import { usePush } from '../hooks/usePush';
@@ -140,6 +142,7 @@ export const DirectMessages: React.FC = () => {
 
   // Estados de ações de mensagem (Responder, Encaminhar, Dados, Toast) - Tarefa 3
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [forwardModalMessage, setForwardModalMessage] = useState<ChatMessage | null>(null);
   const { height: viewportHeight, isMobile, isKeyboardOpen } = useVisualViewport();
   const isPhone = useIsPhone();
@@ -260,6 +263,7 @@ export const DirectMessages: React.FC = () => {
     sendMessage,
     sendMediaMessage,
     deleteMessage,
+    editMessage,
     sendTyping,
     isOtherUserTyping,
     connectionStatus,
@@ -446,6 +450,15 @@ export const DirectMessages: React.FC = () => {
     if (!inputText.trim() || !activeFriend || !user) return;
 
     const content = inputText.trim();
+
+    if (editingMessage?.id) {
+      const editedId = editingMessage.id;
+      setEditingMessage(null);
+      setInputText('');
+      void editMessage(editedId, content);
+      return;
+    }
+
     const replyToId = replyingTo?.id || null;
     setInputText('');
     setReplyingTo(null);
@@ -593,6 +606,15 @@ export const DirectMessages: React.FC = () => {
   };
 
   // Ações de Mensagens (Hover Menu - Tarefa 3)
+  // Editar: o texto volta para o campo de envio e o próximo envio troca a mensagem
+  const handleStartEdit = (m: ChatMessage) => {
+    if (!m.id || m.id < 0) return;
+    setReplyingTo(null);
+    setEditingMessage(m);
+    setInputText(m.content);
+    inputRef.current?.focus();
+  };
+
   const handleStartReply = (m: ChatMessage) => {
     if (!m.id || m.id < 0) return;
     setReplyingTo(m);
@@ -1395,6 +1417,16 @@ export const DirectMessages: React.FC = () => {
                       </div>
                     ))
                   )}
+                  <MessageSearchResults
+                    query={searchConv}
+                    onOpenDirect={(friendId) => {
+                      const found = friends.find((f) => f.friend_id === friendId);
+                      if (!found) return;
+                      setActiveFriend(found);
+                      if (activeGroupId) navigate('/mensagens');
+                    }}
+                    onOpenGroup={(groupId) => navigate(`/grupos/${groupId}`)}
+                  />
                   <PeopleSearchResults
                     query={searchConv}
                     myId={user.id}
@@ -1802,6 +1834,20 @@ export const DirectMessages: React.FC = () => {
                                         <span className="font-medium">Copiar</span>
                                       </button>
 
+                                      {isMe && m.id && m.id > 0 && (m.message_type || 'text') === 'text' && canEditMessage(m.created_at) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            handleStartEdit(m);
+                                            setActiveKebabMessage(null);
+                                          }}
+                                          className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-on-surface hover:bg-surface-container dark:hover:bg-zinc-800 transition-colors text-left cursor-pointer"
+                                        >
+                                          <span className="material-symbols-outlined text-[18px] text-on-surface-variant">edit</span>
+                                          <span className="font-medium">Editar</span>
+                                        </button>
+                                      )}
+
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1928,6 +1974,7 @@ export const DirectMessages: React.FC = () => {
                                         minute: '2-digit',
                                       })}
                                     </span>
+                                    {m.edited_at && <span>· editada</span>}
                                     {isMe && (
                                       m.status === 'failed' ? (
                                         <button
@@ -2137,6 +2184,26 @@ export const DirectMessages: React.FC = () => {
 
                     {/* Input do Chat com Botões de Anexo, Emojis, GIFs e Enviar */}
                     <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant/30 flex-shrink-0 z-20">
+                      {editingMessage && (
+                        <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs">
+                          <div className="min-w-0">
+                            <span className="font-semibold text-primary block text-[11px]">Editando mensagem</span>
+                            <span className="text-on-surface-variant text-[11px] block truncate">{editingMessage.content}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingMessage(null);
+                              setInputText('');
+                            }}
+                            aria-label="Cancelar edição"
+                            className="p-1 rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer shrink-0 ml-2"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">close</span>
+                          </button>
+                        </div>
+                      )}
+
                       {/* Barra de Citação ao Responder (Tarefa 3) */}
                       {replyingTo && (
                         <div className="mb-2.5 p-2.5 px-3.5 rounded-2xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-1 shadow-2xs">

@@ -18,6 +18,8 @@ import { VoiceRecordingBar } from '../components/chat/VoiceRecordingBar';
 import { AudioMessage } from '../components/chat/AudioMessage';
 import { useTheme } from '../context/ThemeContext';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
+import { useGroupSocket } from '../hooks/useGroupSocket';
+import { canEditMessage } from '../lib/chatEdit';
 
 type Detail = {
   group: { id: number; name: string; description: string | null; only_admins_send: boolean };
@@ -57,6 +59,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<GroupMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<GroupMessage | null>(null);
   const [showManage, setShowManage] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
@@ -89,19 +92,38 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     } catch {}
   }, [groupId]);
 
+  // Tempo real pelo WebSocket; enquanto a conexão estiver fora, volta a consultar o servidor a cada 4 segundos
+  const { connected } = useGroupSocket(groupId, {
+    onMessage: (message) => {
+      setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message].sort((a, b) => a.id - b.id)));
+      // Marca como lida e confirma a ordem com o servidor
+      if (message.sender_id !== user?.id) void loadLatest();
+    },
+    onEdit: ({ message_id, content, edited_at }) =>
+      setMessages((prev) => prev.map((m) => (m.id === message_id ? { ...m, content, edited_at } : m))),
+    onDelete: (messageId) =>
+      setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, deleted: true, content: '', media_url: null } : m))),
+    onRefresh: () => {
+      void loadDetail();
+      void loadLatest();
+    },
+  });
+
   useEffect(() => {
     setDetail(null);
     setMessages([]);
     setReplyingTo(null);
+    setEditingMessage(null);
     void loadDetail();
     void loadLatest();
-    const timer = window.setInterval(() => void loadLatest(), 4000);
     const detailTimer = window.setInterval(() => void loadDetail(), 30000);
-    return () => {
-      window.clearInterval(timer);
-      window.clearInterval(detailTimer);
-    };
+    return () => window.clearInterval(detailTimer);
   }, [loadDetail, loadLatest]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => void loadLatest(), connected ? 30000 : 4000);
+    return () => window.clearInterval(timer);
+  }, [loadLatest, connected]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -139,6 +161,26 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const sendText = async () => {
     const content = text.trim();
     if (!content) return;
+
+    // Edição: troca o texto da mensagem em vez de enviar outra
+    if (editingMessage) {
+      const target = editingMessage;
+      setEditingMessage(null);
+      setText('');
+      setShowEmoji(false);
+      try {
+        const res = await groupsApi.edit(groupId, target.id, content);
+        if (res.edited) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === target.id ? { ...m, content: res.content, edited_at: res.edited_at ?? new Date().toISOString() } : m))
+          );
+        }
+      } catch (err: any) {
+        setError(err?.message || 'Não foi possível editar a mensagem.');
+      }
+      return;
+    }
+
     const replied = takeReply();
     setText('');
     setShowEmoji(false);
@@ -205,6 +247,14 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     } catch (err: any) {
       setError(err?.message || 'Não foi possível apagar a mensagem.');
     }
+  };
+
+  // Editar: o texto volta para o campo de envio e o próximo envio troca a mensagem
+  const handleStartEdit = (m: GroupMessage) => {
+    setReplyingTo(null);
+    setEditingMessage(m);
+    setText(m.content);
+    inputRef.current?.focus();
   };
 
   const handleCopy = (m: GroupMessage) => {
@@ -330,6 +380,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
           const bare = !m.deleted && BARE_TYPES.has(m.message_type);
           const menuItems = [
             { key: 'reply', label: 'Responder', icon: 'reply', onSelect: () => { setReplyingTo(m); inputRef.current?.focus(); }, hidden: m.deleted },
+            { key: 'edit', label: 'Editar', icon: 'edit', onSelect: () => handleStartEdit(m), hidden: m.deleted || !mine || m.message_type !== 'text' || !canEditMessage(m.created_at) },
             { key: 'copy', label: 'Copiar', icon: 'content_copy', onSelect: () => handleCopy(m), hidden: m.deleted || m.message_type !== 'text' },
             { key: 'delete', label: 'Apagar', icon: 'delete', danger: true, onSelect: () => void handleDelete(m), hidden: m.deleted || !(mine || isAdmin) },
           ];
@@ -372,6 +423,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                   <span className="text-[10px] text-on-surface-variant">
                     {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
+                  {m.edited_at && !m.deleted && <span className="text-[10px] text-on-surface-variant">· editada</span>}
                   {menuItems.some((item) => !item.hidden) && <ChatMenu title="Mensagem" items={menuItems} />}
                 </div>
               </div>
@@ -414,6 +466,26 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                 void sendPayload({ message_type: c.type, media_url: c.url, reply_to_id: replied?.id ?? null }, replied);
               }}
             />
+          </div>
+        )}
+
+        {editingMessage && canSend && !voice.recording && (
+          <div className="mb-2 px-3 py-2 rounded-xl bg-surface-container-low border-l-4 border-primary flex items-center justify-between gap-2 text-xs">
+            <div className="min-w-0">
+              <span className="block font-semibold text-primary truncate text-[11px]">Editando mensagem</span>
+              <span className="block truncate text-[11px] text-on-surface-variant">{editingMessage.content}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMessage(null);
+                setText('');
+              }}
+              aria-label="Cancelar edição"
+              className="p-1 rounded-full text-on-surface-variant hover:bg-surface-container shrink-0 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">close</span>
+            </button>
           </div>
         )}
 
