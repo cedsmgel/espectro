@@ -698,7 +698,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({ item, onOpen, onTog
   const username = item.actor_username || 'alguém';
   const isSecurity = item.type === 'security_login';
   const target = isSecurity
-    ? '/configuracoes/dados'
+    ? '/settings/account'
     : item.type === 'friend_accepted'
     ? `/perfil/${encodeURIComponent(username)}`
     : item.post_id

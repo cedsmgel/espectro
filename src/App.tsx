@@ -21,7 +21,6 @@ const Shorts = lazyNamed(() => import('./pages/Shorts'), 'Shorts');
 const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
-const AccountData = lazyNamed(() => import('./pages/AccountData'), 'AccountData');
 const DeleteAccount = lazyNamed(() => import('./pages/DeleteAccount'), 'DeleteAccount');
 const Home = lazyNamed(() => import('./pages/Home'), 'Home');
 const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
@@ -71,7 +70,8 @@ export const App: React.FC = () => {
           <Route path="/settings/profile" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/configuracoes/perfil" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/settings/account" element={<RequireAuth><AccountSettings /></RequireAuth>} />
-          <Route path="/configuracoes/dados" element={<RequireAuth><AccountData /></RequireAuth>} />
+          <Route path="/configuracoes/dados" element={<Navigate to="/settings/account" replace />} />
+          <Route path="/configuracoes/seguranca" element={<Navigate to="/settings/account" replace />} />
           <Route path="/configuracoes/excluir-conta" element={<RequireAuth><DeleteAccount /></RequireAuth>} />
           <Route path="/configuracoes/conta" element={<AccountSettings />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
