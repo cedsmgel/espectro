@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
+import { TwoFactorSettings } from './TwoFactorSettings';
+import { useStepUp } from './StepUpDialog';
 import { AccountSession, accountSecurityApi, authFlowApi, authStorage, profileApi, ThisDevice } from '../lib/api';
 
 const fieldClass = 'block w-full min-w-0 appearance-none px-0 py-2.5 bg-transparent border-0 border-b border-outline-variant outline-none text-sm text-on-surface focus:border-on-surface';
@@ -50,6 +52,7 @@ const Block: React.FC<{ title: string; description?: string; children: React.Rea
 // Central de segurança: senha, sessões, cópia dos meus dados (LGPD art. 18) e exclusão da conta
 export const SecurityCenter: React.FC = () => {
   const user = authStorage.getUser();
+  const { run: stepUp, dialog: stepUpDialog } = useStepUp();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -95,7 +98,7 @@ export const SecurityCenter: React.FC = () => {
     if (next !== confirm) return setPasswordNotice({ kind: 'error', text: 'A confirmação não confere com a nova senha.' });
     setSavingPassword(true);
     try {
-      await accountSecurityApi.changePassword(current, next);
+      await stepUp(() => accountSecurityApi.changePassword(current, next));
       setCurrent('');
       setNext('');
       setConfirm('');
@@ -110,7 +113,7 @@ export const SecurityCenter: React.FC = () => {
   const signOutEverywhere = async () => {
     setSessionNotice(null);
     try {
-      await accountSecurityApi.signOutEverywhere();
+      await stepUp(() => accountSecurityApi.signOutEverywhere());
       try {
         sessionStorage.setItem('espectro_login_notice', 'Você saiu de todos os dispositivos. Entre novamente para continuar.');
       } catch {}
@@ -124,7 +127,7 @@ export const SecurityCenter: React.FC = () => {
     setExportNotice(null);
     setExporting(true);
     try {
-      await accountSecurityApi.downloadMyData();
+      await stepUp(() => accountSecurityApi.downloadMyData());
       setExportNotice({ kind: 'ok', text: 'Download iniciado. O arquivo contém suas mensagens e e-mail: guarde em local seguro.' });
     } catch (err: any) {
       setExportNotice({ kind: 'error', text: err?.message || 'Não foi possível gerar o arquivo.' });
@@ -166,6 +169,8 @@ export const SecurityCenter: React.FC = () => {
           )}
         </Block>
       )}
+
+  <TwoFactorSettings />
 
   <Block title="Alterar senha" description="Ao trocar a senha, os outros dispositivos conectados são desconectados.">
     <form onSubmit={changePassword} className="flex flex-col gap-1">
@@ -275,6 +280,7 @@ export const SecurityCenter: React.FC = () => {
       </Link>
     </div>
   </Block>
+      {stepUpDialog}
     </div>
   );
 };

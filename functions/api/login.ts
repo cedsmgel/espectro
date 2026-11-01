@@ -1,7 +1,8 @@
-import { createSession, describeLocation } from "../_shared/session";
+import { completeLogin } from "../_shared/loginFlow";
+import { MfaEnv, mfaAvailable } from "../_shared/mfa";
 import { verifyPassword, signJWT, jsonResponse, errorResponse, getJwtSecret, serverError, rateLimit } from "../_shared/auth";
 
-export interface Env {
+export interface Env extends MfaEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -64,51 +65,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
-    // Entrar durante o prazo de arrependimento cancela a exclusão
-    const deletionCanceled = Boolean(user.deletion_requested_at);
-    if (deletionCanceled) {
-      await env.DB.prepare("UPDATE users SET deletion_requested_at = NULL, deletion_scheduled_for = NULL WHERE id = ?").bind(user.id).run();
+    // Com verificação em duas etapas, a senha sozinha não entra: devolve um token curto que só serve ao passo seguinte
+    if (mfaAvailable(env)) {
+      const mfa = await env.DB.prepare("SELECT 1 AS has_mfa FROM user_mfa WHERE user_id = ? AND enabled_at IS NOT NULL").bind(user.id).first();
+      if (mfa) {
+        const mfaToken = await signJWT(
+          { id: user.id, username: user.username, purpose: "mfa", exp: Math.floor(Date.now() / 1000) + 300 },
+          getJwtSecret(env)
+        );
+        return jsonResponse({ mfa_required: true, mfa_token: mfaToken });
+      }
     }
 
-    const secret = getJwtSecret(env);
-
-    // Registra a sessão deste aparelho (localização aproximada e dispositivo) e avisa se for um acesso novo
-    const session = await createSession(env.DB, request, user.id);
-    if (session.unfamiliar) {
-      let country = session.info.country || undefined;
-      try {
-        if (country) country = new Intl.DisplayNames(["pt-BR"], { type: "region" }).of(country) || country;
-      } catch {}
-      const where = describeLocation(session.info, country);
-      await env.DB.prepare(
-        "INSERT OR IGNORE INTO notifications (user_id, actor_id, type, content, dedupe_key) VALUES (?, NULL, 'security_login', ?, ?)"
-      )
-        .bind(
-          user.id,
-          `${session.info.browser} em ${session.info.os} · ${where}. Se não foi você, troque a senha e saia de todos os dispositivos.`,
-          `login:${session.sid}`
-        )
-        .run();
-    }
-
-    // Gera o token JWT
-    const token = await signJWT(
-      {
-        id: user.id,
-        username: user.username,
-        sid: session.sid,
-      },
-      secret
-    );
-
-    return jsonResponse({
-      token,
-      deletion_canceled: deletionCanceled,
-      user: {
-        id: user.id,
-        username: user.username,
-      },
-    });
+    return completeLogin(env, request, user, { mfa: false });
   } catch (err: unknown) {
     return serverError(err, "login");
   }

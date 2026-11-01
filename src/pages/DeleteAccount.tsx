@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { accountSecurityApi, authStorage, DELETION_REASON_OPTIONS } from '../lib/api';
+import { useStepUp } from '../components/StepUpDialog';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 
@@ -15,6 +16,7 @@ const alternatives: Record<string, { text: string; to: string; cta: string }> = 
 // Exclusão de conta em dois passos: questionário de saída (anônimo) e confirmação com senha
 export const DeleteAccount: React.FC = () => {
   const user = authStorage.getUser();
+  const { run: stepUp, dialog: stepUpDialog } = useStepUp();
   const [step, setStep] = useState<Step>('motivo');
   const [reasons, setReasons] = useState<string[]>([]);
   const [details, setDetails] = useState('');
@@ -34,7 +36,7 @@ export const DeleteAccount: React.FC = () => {
     setError(null);
     setBusy(true);
     try {
-      await accountSecurityApi.requestDeletion({ password, reasons, details: details.trim() || undefined, would_return: wouldReturn || undefined });
+      await stepUp(() => accountSecurityApi.requestDeletion({ password, reasons, details: details.trim() || undefined, would_return: wouldReturn || undefined }));
       authStorage.clear();
       setStep('pronto');
     } catch (err: any) {
@@ -180,6 +182,7 @@ export const DeleteAccount: React.FC = () => {
           )}
         </main>
       </div>
+      {stepUpDialog}
     </div>
   );
 };
