@@ -37,6 +37,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
     return location.pathname.startsWith(path);
   };
 
+  const lbl = isExpanded ? 'md:hidden lg:inline' : 'hidden lg:inline';
+  const lblFlex = isExpanded ? 'md:hidden lg:flex' : 'hidden lg:flex';
+
   const navItems = [
     {
       to: '/?filter=trending',
@@ -89,19 +92,19 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
       )}
 
       {/* Espaçador: reserva 80px no fluxo apenas em layouts flex-row (Feed/PostDetail); em flex-col não ocupa altura */}
-      <div aria-hidden="true" className="hidden md:block w-20 h-0 shrink-0" />
+      <div aria-hidden="true" className="hidden md:block w-20 lg:w-64 h-0 shrink-0" />
 
       {/* Sidebar Principal (Compacta estilo Instagram: w-20 fixa no Desktop com Tooltips Flutuantes no Hover) */}
       <aside
         className={`fixed left-0 top-0 h-screen z-50 md:z-30 flex flex-col justify-between py-4 border-r border-outline-variant bg-surface-container-lowest transition-all duration-300 ease-in-out shrink-0 ${
           isExpanded
-            ? 'translate-x-0 w-64 px-3.5 md:w-20 md:px-2'
-            : '-translate-x-full md:translate-x-0 w-20 px-2'
+            ? 'translate-x-0 w-64 px-3.5 md:w-20 md:px-2 lg:w-64 lg:px-3.5'
+            : '-translate-x-full md:translate-x-0 w-20 px-2 lg:w-64 lg:px-3.5'
         }`}
       >
-        <div className="flex flex-col items-center gap-3 w-full">
+        <div className="flex flex-col items-center lg:items-stretch gap-3 w-full">
           {/* Logo Espectro (Ícone no Desktop + Texto apenas no Drawer Mobile) */}
-          <div className="flex items-center justify-center w-full mb-1">
+          <div className="flex items-center justify-center lg:justify-start lg:px-1.5 w-full mb-1">
             <Link
               to="/"
               className="relative group flex items-center gap-2.5 cursor-pointer"
@@ -110,15 +113,13 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               <div className="w-10 h-10 rounded-xl bg-olive flex items-center justify-center text-on-primary font-bold text-base shadow-xs group-hover:scale-105 transition-transform shrink-0">
                 E
               </div>
-              {isExpanded && (
-                <span className="text-xl font-bold text-on-surface tracking-tight animate-in fade-in duration-200 md:hidden">
+              <span className={`text-xl font-bold text-on-surface tracking-tight animate-in fade-in duration-200 ${lbl}`}>
                   Espectro
                 </span>
-              )}
               {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
               <span
                 role="tooltip"
-                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
               >
                 Início
               </span>
@@ -138,29 +139,27 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             aria-label="Criar Publicação"
             className={`flex items-center rounded-2xl border-2 border-on-surface text-on-surface bg-transparent hover:bg-surface-container active:bg-on-surface active:text-surface transition-all duration-200 group relative cursor-pointer my-1 ${
               isExpanded
-                ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center'
-                : 'w-11 h-11 justify-center'
+                ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
+                : 'w-11 h-11 justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
             }`}
           >
             <span className="material-symbols-outlined text-[22px] shrink-0">
               edit_square
             </span>
-            {isExpanded && (
-              <span className="text-sm font-semibold truncate animate-in fade-in duration-200 md:hidden">
+            <span className={`text-sm font-semibold truncate animate-in fade-in duration-200 ${lbl}`}>
                 Criar Publicação
               </span>
-            )}
             {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
             <span
               role="tooltip"
-              className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+              className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
             >
               Criar Publicação
             </span>
           </button>
 
           {/* Itens de Navegação */}
-          <nav className="flex flex-col items-center gap-1.5 w-full">
+          <nav className="flex flex-col items-center lg:items-stretch gap-1.5 w-full">
             {/* Botão de Pesquisa Integrado */}
             <button
               type="button"
@@ -168,8 +167,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               aria-label="Pesquisar"
               className={`flex items-center rounded-xl transition-all duration-200 group relative cursor-pointer ${
                 isExpanded
-                  ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center'
-                  : 'w-11 h-11 justify-center'
+                  ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
+                  : 'w-11 h-11 justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
               } ${
                 location.pathname === '/explorar'
                   ? 'bg-surface-container text-on-surface font-semibold'
@@ -179,14 +178,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               <div className="relative flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[22px]">search</span>
               </div>
-              {isExpanded && (
-                <span className="text-sm font-medium truncate animate-in fade-in duration-200 md:hidden">
+              <span className={`text-sm font-medium truncate animate-in fade-in duration-200 ${lbl}`}>
                   Pesquisar
                 </span>
-              )}
               <span
                 role="tooltip"
-                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
               >
                 Pesquisa
               </span>
@@ -202,8 +199,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                 aria-label={item.title}
                 className={`flex items-center rounded-xl transition-all duration-200 group relative cursor-pointer ${
                   isExpanded
-                    ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center'
-                    : 'w-11 h-11 justify-center'
+                    ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
+                    : 'w-11 h-11 justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
                 } ${
                   item.active
                     ? 'bg-surface-container text-on-surface font-semibold'
@@ -221,16 +218,14 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                   )}
                 </div>
 
-                {isExpanded && (
-                  <span className="text-sm font-medium truncate animate-in fade-in duration-200 md:hidden">
+                <span className={`text-sm font-medium truncate animate-in fade-in duration-200 ${lbl}`}>
                     {item.title}
                   </span>
-                )}
 
                 {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
                 <span
                   role="tooltip"
-                  className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                  className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
                 >
                   {item.title}
                 </span>
@@ -240,7 +235,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
         </div>
 
         {/* Rodapé: Perfil / Menu do Usuário */}
-        <div className="relative flex flex-col items-center gap-2 pt-3 border-t border-outline-variant w-full">
+        <div className="relative flex flex-col items-center lg:items-stretch gap-2 pt-3 border-t border-outline-variant w-full">
           {user ? (
             <>
               <button
@@ -249,16 +244,15 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                 aria-label={`Menu de @${user.username}`}
                 className={`flex items-center rounded-xl p-1.5 transition-all duration-200 group relative cursor-pointer ${
                   isExpanded
-                    ? 'w-full px-3 py-2 justify-between hover:bg-surface-container md:w-11 md:h-11 md:p-0 md:justify-center md:hover:ring-2 md:hover:ring-primary'
-                    : 'w-11 h-11 justify-center hover:ring-2 hover:ring-primary'
+                    ? 'w-full px-3 py-2 justify-between hover:bg-surface-container md:w-11 md:h-11 md:p-0 md:justify-center md:hover:ring-2 md:hover:ring-primary lg:w-full lg:h-auto lg:px-3 lg:py-2 lg:justify-between lg:rounded-xl lg:hover:ring-0 lg:hover:bg-surface-container'
+                    : 'w-11 h-11 justify-center hover:ring-2 hover:ring-primary lg:w-full lg:h-auto lg:px-3 lg:py-2 lg:justify-between lg:hover:ring-0 lg:hover:bg-surface-container'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs uppercase shadow-xs shrink-0">
                     {user.username.charAt(0)}
                   </div>
-                  {isExpanded && (
-                    <div className="flex flex-col min-w-0 text-left animate-in fade-in duration-200 md:hidden">
+                  <div className={`flex-col min-w-0 text-left animate-in fade-in duration-200 ${lblFlex}`}>
                       <span className="text-xs font-bold text-on-surface truncate">
                         @{user.username}
                       </span>
@@ -266,19 +260,16 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
                         Minha Conta
                       </span>
                     </div>
-                  )}
                 </div>
 
-                {isExpanded && (
-                  <span className="material-symbols-outlined text-[18px] text-on-surface-variant md:hidden">
+                <span className={`material-symbols-outlined text-[18px] text-on-surface-variant ${isExpanded ? 'md:hidden lg:inline-block' : 'hidden lg:inline-block'}`}>
                     {showUserMenu ? 'expand_more' : 'unfold_more'}
                   </span>
-                )}
 
                 {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
                 <span
                   role="tooltip"
-                  className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                  className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
                 >
                   @{user.username}
                 </span>
@@ -376,22 +367,20 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
               aria-label="Acessar conta"
               className={`flex items-center rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors group relative cursor-pointer ${
                 isExpanded
-                  ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center'
-                  : 'w-11 h-11 justify-center'
+                  ? 'w-full h-11 px-3.5 justify-start gap-3 md:w-11 md:h-11 md:px-0 md:justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
+                  : 'w-11 h-11 justify-center lg:w-full lg:px-3.5 lg:justify-start lg:gap-3.5'
               }`}
             >
               <span className="material-symbols-outlined text-[22px] shrink-0">
                 account_circle
               </span>
-              {isExpanded && (
-                <span className="text-sm font-semibold truncate animate-in fade-in duration-200 md:hidden">
+              <span className={`text-sm font-semibold truncate animate-in fade-in duration-200 ${lbl}`}>
                   Entrar no Espectro
                 </span>
-              )}
               {/* Etiqueta Flutuante / Tooltip estilo Instagram */}
               <span
                 role="tooltip"
-                className="hidden md:block absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
+                className="hidden md:block lg:hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-transparent text-on-surface text-xl font-bold tracking-tight pointer-events-none whitespace-nowrap z-50 opacity-0 -translate-x-1.5 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 ease-out"
               >
                 Entrar
               </span>
@@ -407,7 +396,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs"
             onClick={() => setShowSearch(false)}
           />
-          <aside className="fixed left-0 md:left-20 top-0 h-screen w-full sm:w-80 bg-surface-container-lowest border-r border-outline-variant shadow-2xl z-50 p-4 flex flex-col gap-4 overflow-y-auto animate-in fade-in slide-in-from-left-4 duration-200">
+          <aside className="fixed left-0 md:left-20 lg:left-64 top-0 h-screen w-full sm:w-80 bg-surface-container-lowest border-r border-outline-variant shadow-2xl z-50 p-4 flex flex-col gap-4 overflow-y-auto animate-in fade-in slide-in-from-left-4 duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
               <h2 className="text-base font-bold text-on-surface">Pesquisa no Espectro</h2>
               <button

@@ -257,7 +257,7 @@ export const Notifications: React.FC = () => {
 
       <div
         className={`pt-16 md:pt-0 min-h-screen flex flex-col justify-between transition-all duration-300 ease-in-out ${
-          isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
+          isExpanded ? 'pl-0 md:pl-20 lg:pl-64' : 'pl-0 md:pl-20 lg:pl-64'
         }`}
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8 flex-1">
