@@ -15,6 +15,7 @@ const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities'
 const CommunityDetail = lazyNamed(() => import('./pages/CommunityDetail'), 'CommunityDetail');
 const DirectMessages = lazyNamed(() => import('./pages/DirectMessages'), 'DirectMessages');
 const Videos = lazyNamed(() => import('./pages/Videos'), 'Videos');
+const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
           <Route path="/mensagens" element={<DirectMessages />} />
           <Route path="/grupos/:id" element={<DirectMessages />} />
           <Route path="/videos" element={<Videos />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

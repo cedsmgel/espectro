@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import { authStorage, accountApi } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 
 export const AccountSettings: React.FC = () => {
   const navigate = useNavigate();
   const { isExpanded } = useSidebar();
+  const isAdmin = useIsAdmin();
   const loggedUser = authStorage.getUser();
 
   const [loading, setLoading] = useState(true);
@@ -117,6 +119,15 @@ export const AccountSettings: React.FC = () => {
                 <p className="text-xs text-on-surface-variant mt-1">
                   Gerencie sua privacidade, visibilidade de posts e regras para envio de scraps.
                 </p>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-error hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">gavel</span>
+                    Abrir moderação
+                  </Link>
+                )}
               </div>
 
               {/* Links de navegação entre configurações */}

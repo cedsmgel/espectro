@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Post, postsApi, authStorage } from '../lib/api';
+import { Post, postsApi, authStorage, adminApi } from '../lib/api';
+import { ReportModal } from './chat/ReportModal';
+import { useIsAdmin } from '../hooks/useIsAdmin';
 import { renderMarkdown } from '../lib/markdown';
 import { LazyVideoPlayer } from './LazyVideoPlayer';
 import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
@@ -30,6 +32,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   // Estados de edição e exclusão
   const [showMenu, setShowMenu] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const isAdmin = useIsAdmin();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(post.title || '');
@@ -109,6 +113,19 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
     } catch (err: any) {
       alert(err.message || 'Erro ao excluir publicação.');
+      setIsDeleting(false);
+    }
+  };
+
+  // Remoção de qualquer publicação por um administrador
+  const handleAdminRemove = async () => {
+    if (!window.confirm('Remover esta publicação como administrador? Isso apaga também os comentários e a mídia.')) return;
+    setIsDeleting(true);
+    try {
+      await adminApi.removeContent('post', post.id);
+      onDelete?.(post.id);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao remover publicação.');
       setIsDeleting(false);
     }
   };
@@ -219,7 +236,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
 
           {/* Menu Kebab (Três Pontinhos) - Só aparece se o usuário logado for o autor do post e não estiver em detalhe */}
-          {isAuthor && !isDetail && (
+          {((isAuthor && !isDetail) || (!isAuthor && Boolean(user))) && (
             <div className="relative">
               <button
                 type="button"
@@ -240,6 +257,8 @@ export const PostCard: React.FC<PostCardProps> = ({
                     onClick={() => setShowMenu(false)}
                   />
                   <div className="absolute right-0 top-8 z-40 w-48 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-1.5 flex flex-col animate-in fade-in duration-150">
+                    {isAuthor ? (
+                    <>
                     <button
                       type="button"
                       onClick={() => {
@@ -271,8 +290,49 @@ export const PostCard: React.FC<PostCardProps> = ({
                       </span>
                       <span>Excluir publicação</span>
                     </button>
+                    </>
+                    ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          setShowReport(true);
+                        }}
+                        className="px-3.5 py-2 text-xs text-on-surface hover:bg-surface-container flex items-center gap-2.5 cursor-pointer transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-[17px] text-error">flag</span>
+                        <span>Denunciar publicação</span>
+                      </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowMenu(false);
+                            void handleAdminRemove();
+                          }}
+                          className="px-3.5 py-2 text-xs text-error hover:bg-error-container/20 flex items-center gap-2.5 cursor-pointer transition-colors text-left border-t border-outline-variant/30"
+                        >
+                          <span className="material-symbols-outlined text-[17px]">gavel</span>
+                          <span>Remover (administrador)</span>
+                        </button>
+                      )}
+                    </>
+                    )}
                   </div>
                 </>
+              )}
+              {showReport && (
+                <ReportModal
+                  userId={post.author_id}
+                  username={post.author_name}
+                  postId={post.id}
+                  onDone={() => {
+                    setShowReport(false);
+                    alert('Denúncia enviada. Obrigado por ajudar a manter o Espectro seguro.');
+                  }}
+                  onClose={() => setShowReport(false)}
+                />
               )}
             </div>
           )}

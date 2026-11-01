@@ -222,6 +222,14 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
   }
 
   if (!response.ok) {
+    // Conta suspensa: encerra a sessão e leva ao login com o aviso
+    if (response.status === 403 && data?.suspended && token) {
+      try {
+        sessionStorage.setItem('espectro_login_notice', data.error || 'Sua conta foi suspensa.');
+      } catch {}
+      authStorage.clear();
+      window.location.href = '/login';
+    }
     throw new Error(data?.error || `Erro ${response.status}: falha na operação`);
   }
 
@@ -514,8 +522,66 @@ export const blocksApi = {
 };
 
 export const reportsApi = {
-  send: (params: { user_id: number; reason: string; details?: string; message_id?: number | null }) =>
+  send: (params: { user_id: number; reason: string; details?: string; message_id?: number | null; post_id?: number | null; comment_id?: number | null }) =>
     apiRequest<{ reported: boolean }>('/api/reports', { method: 'POST', body: JSON.stringify(params) }),
+};
+
+export interface AdminReport {
+  id: number;
+  reason: string;
+  details: string | null;
+  status: string;
+  resolution: string | null;
+  resolution_note: string | null;
+  message_id: number | null;
+  post_id: number | null;
+  comment_id: number | null;
+  created_at: string;
+  resolved_at: string | null;
+  reporter_id: number;
+  reporter_username: string;
+  reported_id: number;
+  reported_username: string;
+  reported_suspended: boolean;
+  reported_is_admin: boolean;
+  message_content: string | null;
+  post_title: string | null;
+  post_content: string | null;
+  comment_content: string | null;
+  reported_total: number;
+}
+
+export interface AdminUser {
+  id: number;
+  username: string;
+  name: string | null;
+  is_admin: boolean;
+  created_at: string;
+  suspended_at: string | null;
+  suspended_reason: string | null;
+  reports_total: number;
+  reports_open: number;
+}
+
+export const adminApi = {
+  me: () => apiRequest<{ is_admin: boolean }>('/api/admin/me'),
+  reports: (status: 'open' | 'closed', beforeId?: number) =>
+    apiRequest<{ reports: AdminReport[]; has_more: boolean; open_count: number }>(
+      `/api/admin/reports?status=${status}${beforeId ? `&before_id=${beforeId}` : ''}`
+    ),
+  resolveReport: (body: { id: number; resolution: 'dismissed' | 'actioned'; note?: string; suspend?: boolean; remove_content?: boolean }) =>
+    apiRequest<{ resolved: boolean; done: string[] }>('/api/admin/reports', { method: 'POST', body: JSON.stringify(body) }),
+  users: (q: string) => apiRequest<{ users: AdminUser[] }>(`/api/admin/users?q=${encodeURIComponent(q)}`),
+  setSuspended: (userId: number, suspend: boolean, reason?: string) =>
+    apiRequest<{ suspended: boolean }>('/api/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, action: suspend ? 'suspend' : 'unsuspend', reason }),
+    }),
+  removeContent: (type: 'post' | 'comment', id: number, note?: string) =>
+    apiRequest<{ removed: boolean }>(
+      `/api/admin/content?type=${type}&id=${id}${note ? `&note=${encodeURIComponent(note)}` : ''}`,
+      { method: 'DELETE' }
+    ),
 };
 
 export interface GroupSummary {
