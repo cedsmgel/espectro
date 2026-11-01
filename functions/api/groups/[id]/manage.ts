@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, isBlockedBetween, serverError } from "../../../_shared/auth";
+import { DISAPPEAR_OPTIONS } from "../../../_shared/chat";
 import { MAX_GROUP_MEMBERS, membership, memberCount } from "../../../_shared/groups";
 import { kickFromGroup, notifyGroup, type ChatEnv } from "../../../_shared/chat";
 
@@ -22,6 +23,10 @@ type Body = {
   name?: string;
   description?: string;
   only_admins_send?: boolean;
+  members_can_edit_info?: boolean;
+  members_can_add?: boolean;
+  members_can_invite?: boolean;
+  disappear_seconds?: number;
 };
 
 // POST /api/groups/:id/manage { action, ... }
@@ -81,7 +86,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       }
 
       case "update": {
-        if (!isAdmin) return notAdmin();
+        const rules = await env.DB.prepare("SELECT members_can_edit_info FROM chat_groups WHERE id = ?")
+          .bind(groupId)
+          .first<{ members_can_edit_info: number }>();
+        const touchesRules =
+          typeof body.only_admins_send === "boolean" ||
+          typeof body.members_can_edit_info === "boolean" ||
+          typeof body.members_can_add === "boolean" ||
+          typeof body.members_can_invite === "boolean" ||
+          body.disappear_seconds !== undefined;
+        // Nome e descrição: admins, ou qualquer membro se o grupo permitir. Regras e prazo: só admins
+        if (!isAdmin && (touchesRules || !rules?.members_can_edit_info)) return notAdmin();
         const name = typeof body.name === "string" ? body.name.trim() : undefined;
         if (name !== undefined && (name.length < 2 || name.length > 50)) {
           return errorResponse("O nome do grupo deve ter de 2 a 50 caracteres.", 400);
@@ -91,22 +106,69 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           return errorResponse("A descrição deve ter no máximo 300 caracteres.", 400);
         }
         const onlyAdmins = typeof body.only_admins_send === "boolean" ? (body.only_admins_send ? 1 : 0) : undefined;
+        const flag = (v: unknown) => (typeof v === "boolean" ? (v ? 1 : 0) : null);
+        const disappear = body.disappear_seconds === undefined ? null : Number(body.disappear_seconds);
+        if (disappear !== null && !DISAPPEAR_OPTIONS.includes(disappear)) return errorResponse("Prazo inválido.", 400);
         await env.DB.prepare(
           `UPDATE chat_groups SET
              name = COALESCE(?, name),
              description = COALESCE(?, description),
-             only_admins_send = COALESCE(?, only_admins_send)
+             only_admins_send = COALESCE(?, only_admins_send),
+             members_can_edit_info = COALESCE(?, members_can_edit_info),
+             members_can_add = COALESCE(?, members_can_add),
+             members_can_invite = COALESCE(?, members_can_invite),
+             disappear_seconds = COALESCE(?, disappear_seconds)
            WHERE id = ?`
         )
-          .bind(name ?? null, description ?? null, onlyAdmins ?? null, groupId)
+          .bind(
+            name ?? null,
+            description ?? null,
+            onlyAdmins ?? null,
+            flag(body.members_can_edit_info),
+            flag(body.members_can_add),
+            flag(body.members_can_invite),
+            disappear,
+            groupId
+          )
           .run();
+        if (disappear !== null) {
+          await systemMessage(
+            disappear === 0
+              ? `@${user.username} desativou as mensagens temporárias`
+              : `@${user.username} ativou as mensagens temporárias (${disappear / 86400} ${disappear === 86400 ? "dia" : "dias"})`
+          );
+          return jsonResponse({ updated: true });
+        }
         if (name !== undefined) await systemMessage(`@${user.username} alterou o nome do grupo para "${name}"`);
         else await notifyGroup(env, groupId, { type: "refresh" });
         return jsonResponse({ updated: true });
       }
 
-      case "add": {
+      case "invite": {
+        const rules = await env.DB.prepare("SELECT invite_code, members_can_invite FROM chat_groups WHERE id = ?")
+          .bind(groupId)
+          .first<{ invite_code: string | null; members_can_invite: number }>();
+        if (!isAdmin && !rules?.members_can_invite) return errorResponse("Só administradores podem compartilhar o convite.", 403);
+        let code = rules?.invite_code || null;
+        if (!code) {
+          code = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+          await env.DB.prepare("UPDATE chat_groups SET invite_code = ? WHERE id = ?").bind(code, groupId).run();
+        }
+        return jsonResponse({ code });
+      }
+
+      case "reset_invite": {
         if (!isAdmin) return notAdmin();
+        const code = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+        await env.DB.prepare("UPDATE chat_groups SET invite_code = ? WHERE id = ?").bind(code, groupId).run();
+        return jsonResponse({ code });
+      }
+
+      case "add": {
+        const rules = await env.DB.prepare("SELECT members_can_add FROM chat_groups WHERE id = ?")
+          .bind(groupId)
+          .first<{ members_can_add: number }>();
+        if (!isAdmin && !rules?.members_can_add) return notAdmin();
         const ids = Array.isArray(body.user_ids)
           ? [...new Set(body.user_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0 && n !== user.id))]
           : [];

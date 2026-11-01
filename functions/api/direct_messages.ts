@@ -9,7 +9,7 @@ import {
   rateLimit,
   isBlockedBetween,
 } from "../_shared/auth";
-import { EDIT_WINDOW_SECONDS, MESSAGE_COLUMNS, attachReactions, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
+import { EDIT_WINDOW_SECONDS, MESSAGE_COLUMNS, attachReactions, attachViewed, notExpired, userPair, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 import { pushNewMessage, type PushEnv } from "../_shared/push";
 
 export interface Env extends ChatEnv, PushEnv {
@@ -65,6 +65,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        JOIN users u ON u.id = dm.sender_id
        WHERE ((dm.sender_id = ? AND dm.receiver_id = ?) OR (dm.sender_id = ? AND dm.receiver_id = ?))
          AND (? IS NULL OR dm.id < ?)
+         AND ${notExpired("dm")}
          AND dm.id > COALESCE(
            (SELECT cleared_before_id FROM conversation_settings WHERE user_id = ? AND friend_id = ?), 0)
        ORDER BY dm.id DESC
@@ -75,7 +76,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const rows = results || [];
     const hasMore = rows.length > limit;
-    const messages = await attachReactions(env.DB, rows.slice(0, limit).reverse());
+    const messages = await attachViewed(env.DB, "dm", user.id, await attachReactions(env.DB, rows.slice(0, limit).reverse()));
 
     return jsonResponse({ messages, has_more: hasMore });
   } catch (err: unknown) {
@@ -104,6 +105,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       media_url?: string;
       reply_to_id?: number | null;
       client_id?: string;
+      view_once?: boolean;
     };
 
     try {
@@ -189,15 +191,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (target) replyToId = replyId;
     }
 
+    // Mensagens temporárias: o prazo da conversa vale para tudo que for enviado depois de ligado
+    const [lo, hi] = userPair(user.id, targetId);
+    const timer = await env.DB.prepare("SELECT seconds FROM dm_disappearing WHERE user_lo = ? AND user_hi = ?")
+      .bind(lo, hi)
+      .first<{ seconds: number }>();
+    const seconds = Number(timer?.seconds || 0);
+    const viewOnce = body.view_once === true && (messageType === "image" || messageType === "video") ? 1 : 0;
+
     const insertResult = await env.DB.prepare(
-      `INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url, reply_to_id, client_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO direct_messages (sender_id, receiver_id, content, message_type, media_url, reply_to_id, client_id, view_once, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ?9 > 0 THEN datetime('now', '+' || ?9 || ' seconds') ELSE NULL END)`
     )
-      .bind(user.id, targetId, content, messageType, mediaUrl, replyToId, clientId)
+      .bind(user.id, targetId, content, messageType, mediaUrl, replyToId, clientId, viewOnce, seconds)
       .run();
 
     const newId = Number(insertResult.meta.last_row_id);
-    let message = { ...((await fetchMessage(env.DB, newId)) as DirectMessageRow), reactions: [] };
+    let message = { ...((await fetchMessage(env.DB, newId)) as DirectMessageRow), reactions: [], view_once: viewOnce === 1, viewed: false };
 
     // Entrega em tempo real; se o destinatário está conectado, marca como entregue
     const { delivered } = await notifyRoom(env, user.id, targetId, { type: "message", message }, targetId);
