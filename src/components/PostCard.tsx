@@ -8,6 +8,21 @@ import { renderMarkdown } from '../lib/markdown';
 import { LazyVideoPlayer } from './LazyVideoPlayer';
 import { encodeScrap, parseScrap, scrapPaperStyle, DEFAULT_SCRAP_STYLE } from '../lib/scrapStyle';
 
+// Recorte do texto no feed: acima disso o card mostra "Ler mais" e leva ao post
+const FEED_CLAMP_CHARS = 320;
+
+// Horário relativo, como no X e no Instagram ("agora", "12 min", "3 h", "2 d", depois a data)
+function timeAgo(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(minutes) || minutes < 1) return 'agora';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} d`;
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
 interface PostCardProps {
   post: Post;
   onVote?: (postId: number, voteType: 'up' | 'down') => void;
@@ -166,6 +181,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const score = upvotes - downvotes;
+  const handle = post.author_name.toLowerCase().replace(/\s+/g, '_');
+  const clampFeed = !isDetail && Boolean(content && content.trim().length > FEED_CLAMP_CHARS) && post.post_type !== 'scrap';
 
   return (
     <>
@@ -175,64 +192,47 @@ export const PostCard: React.FC<PostCardProps> = ({
           !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
         } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
-        {/* 1. Cabeçalho do Post */}
-        <div className="p-4 sm:p-5 pb-2 sm:pb-3 flex items-start justify-between">
-          <div className="flex items-center gap-3">
+        {/* 1. Cabeçalho: uma linha de identidade (nome, @usuário, horário) e a comunidade logo abaixo */}
+        <div className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-2 flex items-start justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
             <Link
               to={`/perfil/${encodeURIComponent(post.author_name)}`}
-              className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shadow-xs shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+              className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer overflow-hidden"
               title={`Ver perfil de @${post.author_name}`}
             >
               {post.author_avatar ? (
-                <img
-                  src={post.author_avatar}
-                  alt={post.author_name}
-                  className="w-full h-full rounded-full object-cover"
-                />
+                <img src={post.author_avatar} alt={post.author_name} className="w-full h-full object-cover" />
               ) : (
                 post.author_name.charAt(0)
               )}
             </Link>
 
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-1.5 min-w-0 text-sm">
                 <Link
                   to={`/perfil/${encodeURIComponent(post.author_name)}`}
-                  className="font-semibold text-sm text-on-surface hover:text-primary hover:underline transition-colors cursor-pointer"
+                  className="font-semibold text-on-surface hover:underline truncate max-w-[60%] cursor-pointer"
                 >
                   {post.author_name}
                 </Link>
-
-                {post.community_name ? (
-                  <Link
-                    to={`/c/${post.community_slug || post.community_id}`}
-                    className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border border-purple-300/60 text-xs font-semibold flex items-center gap-1.5 hover:bg-purple-200 dark:hover:bg-purple-900 transition-colors shadow-xs"
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: post.community_icon_color || '#712ae2' }}
-                    />
-                    <span>c/{post.community_name}</span>
-                  </Link>
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant text-[11px] font-medium">
-                    c/geral
-                  </span>
-                )}
-                <span className="text-on-surface-variant text-xs">
-                  ·{' '}
-                  {new Date(post.created_at).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
+                <span className="text-on-surface-variant truncate text-xs">@{handle}</span>
+                <span className="text-on-surface-variant text-xs shrink-0" aria-hidden="true">·</span>
+                <time
+                  dateTime={post.created_at}
+                  title={new Date(post.created_at).toLocaleString('pt-BR')}
+                  className="text-on-surface-variant text-xs shrink-0 tabular-nums"
+                >
+                  {timeAgo(post.created_at)}
+                </time>
               </div>
-              <Link
-                to={`/perfil/${encodeURIComponent(post.author_name)}`}
-                className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-              >
-                @{post.author_name.toLowerCase().replace(/\s+/g, '_')}
-              </Link>
+              {post.community_name && (
+                <Link
+                  to={`/c/${post.community_slug || post.community_id}`}
+                  className="text-xs font-semibold text-primary hover:underline truncate"
+                >
+                  c/{post.community_name}
+                </Link>
+              )}
             </div>
           </div>
 
@@ -244,7 +244,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 onClick={() => setShowMenu((prev) => !prev)}
                 aria-label="Ações da publicação"
                 disabled={isDeleting}
-                className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer disabled:opacity-50"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[20px]">
                   {isDeleting ? 'sync' : 'more_vert'}
@@ -339,11 +339,11 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* 2. Conteúdo do Post (Título e Legenda com padding) */}
+        {/* 2. Conteúdo: título e texto; no feed o texto longo é recortado com "Ler mais" */}
         {(Boolean(title && title.trim()) || Boolean(content && content.trim())) && (
-          <div className="px-4 sm:px-5 pb-3 flex flex-col gap-2">
+          <div className="px-4 sm:px-5 pb-3 flex flex-col gap-2 min-w-0">
             {Boolean(title && title.trim()) && (
-              <h3 className="text-base sm:text-lg font-bold text-on-surface leading-snug">
+              <h3 className="text-[15px] sm:text-lg font-bold text-on-surface leading-snug break-words">
                 {title.trim()}
               </h3>
             )}
@@ -363,15 +363,33 @@ export const PostCard: React.FC<PostCardProps> = ({
                   );
                 })()
               ) : (
-                <div className="text-sm text-on-surface leading-relaxed whitespace-pre-wrap break-words">
-                  {renderMarkdown(content)}
+                <div className="min-w-0">
+                  <div
+                    className={`text-sm text-on-surface leading-relaxed whitespace-pre-wrap break-words ${
+                      clampFeed ? 'line-clamp-6' : ''
+                    }`}
+                  >
+                    {renderMarkdown(content)}
+                  </div>
+                  {clampFeed && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/post/${post.id}`);
+                      }}
+                      className="mt-1 text-xs font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      Ler mais
+                    </button>
+                  )}
                 </div>
               )
             )}
           </div>
         )}
 
-        {/* 3. Mídia Principal: Colada nas bordas laterais do card (sem padding lateral) */}
+        {/* 3. Mídia: vai até as bordas do card; a altura é limitada para o feed não ficar gigante */}
         {post.media_url && (
           post.media_type === 'video' ||
           /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
@@ -380,14 +398,20 @@ export const PostCard: React.FC<PostCardProps> = ({
               <LazyVideoPlayer src={post.media_url} title={title || undefined} />
             </div>
           ) : (
-            <div className="w-full bg-black/10 dark:bg-black/40 flex justify-center overflow-hidden">
+            <div className="w-full bg-surface-container-high dark:bg-black flex justify-center overflow-hidden">
               <img
                 src={post.media_url}
-                alt={title || "Mídia da postagem"}
-                className="w-full h-auto max-h-[500px] object-cover block cursor-pointer transition-transform duration-300 hover:scale-[1.005]"
+                alt={title || 'Mídia da publicação'}
+                className="w-full h-auto max-h-[min(72vh,560px)] object-cover block cursor-pointer"
                 loading="lazy"
-                onClick={() => {
-                  if (post.media_url) window.open(post.media_url, '_blank');
+                decoding="async"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isDetail) {
+                    if (post.media_url) window.open(post.media_url, '_blank');
+                  } else {
+                    navigate(`/post/${post.id}`);
+                  }
                 }}
                 onError={(e) => {
                   (e.currentTarget as HTMLElement).style.display = 'none';
@@ -397,11 +421,10 @@ export const PostCard: React.FC<PostCardProps> = ({
           )
         )}
 
-        {/* 4. Barra de Ações: Votos, Comentários, Salvar e Compartilhar */}
-        <div className="p-4 sm:p-5 pt-3 border-t border-outline-variant/20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Controle de Voto */}
-            <div className="flex items-center bg-surface-container-low rounded-full px-1.5 py-0.5 border border-outline-variant/30">
+        {/* 4. Ações: votos e comentários à esquerda; salvar e compartilhar à direita, todos com 40px de toque */}
+        <div className="px-3 sm:px-4 py-1.5 border-t border-outline-variant/20 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center h-9 rounded-full bg-surface-container-low border border-outline-variant/30">
               <button
                 type="button"
                 onClick={(e) => {
@@ -409,16 +432,17 @@ export const PostCard: React.FC<PostCardProps> = ({
                   handleVoteClick('up');
                 }}
                 aria-label="Upvote"
-                className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
+                aria-pressed={userVote === 'up'}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                   userVote === 'up'
-                    ? 'text-olive bg-olive/15 shadow-xs'
+                    ? 'text-olive bg-olive/15'
                     : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-[19px]">keyboard_arrow_up</span>
+                <span className="material-symbols-outlined text-[20px]">keyboard_arrow_up</span>
               </button>
               <span
-                className={`px-2 text-xs font-bold ${
+                className={`min-w-[2.5ch] px-0.5 text-center text-xs font-bold tabular-nums ${
                   score > 0 ? (userVote === 'up' ? 'text-olive' : 'text-primary') : score < 0 ? 'text-error' : 'text-on-surface'
                 }`}
               >
@@ -431,49 +455,46 @@ export const PostCard: React.FC<PostCardProps> = ({
                   handleVoteClick('down');
                 }}
                 aria-label="Downvote"
-                className={`p-1 rounded-full transition-colors flex items-center justify-center cursor-pointer ${
+                aria-pressed={userVote === 'down'}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                   userVote === 'down'
-                    ? 'text-error bg-error-container shadow-xs'
+                    ? 'text-error bg-error-container'
                     : 'text-on-surface-variant hover:text-error hover:bg-surface-container'
                 }`}
               >
-                <span className="material-symbols-outlined text-[19px]">keyboard_arrow_down</span>
+                <span className="material-symbols-outlined text-[20px]">keyboard_arrow_down</span>
               </button>
             </div>
 
-            {/* Balão de Comentário -> Navega para /post/:id */}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isDetail) {
-                  navigate(`/post/${post.id}`);
-                }
+                if (!isDetail) navigate(`/post/${post.id}`);
               }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors text-xs font-medium cursor-pointer"
+              className="h-9 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
               title="Ver discussão e comentários"
             >
-              <span className="material-symbols-outlined text-[19px]">chat_bubble_outline</span>
-              <span>{commentsCount}</span>
+              <span className="material-symbols-outlined text-[20px]">chat_bubble_outline</span>
+              <span className="tabular-nums">{commentsCount}</span>
             </button>
           </div>
 
-          {/* Lado Direito: Salvar e Compartilhar */}
-          <div className="flex items-center gap-1 text-on-surface-variant">
+          <div className="flex items-center gap-0.5 text-on-surface-variant">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsSaved((v) => !v);
               }}
-              className={`p-1.5 rounded-full hover:bg-surface-container transition-colors cursor-pointer ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container transition-colors cursor-pointer ${
                 isSaved ? 'text-primary' : 'hover:text-on-surface'
               }`}
               title={isSaved ? 'Salvo' : 'Salvar publicação'}
+              aria-label={isSaved ? 'Remover dos salvos' : 'Salvar publicação'}
+              aria-pressed={isSaved}
             >
-              <span className="material-symbols-outlined text-[19px]">
-                {isSaved ? 'bookmark' : 'bookmark_border'}
-              </span>
+              <span className="material-symbols-outlined text-[20px]">{isSaved ? 'bookmark' : 'bookmark_border'}</span>
             </button>
 
             <ShareButton
