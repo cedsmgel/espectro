@@ -1,8 +1,9 @@
 import { errorResponse, jsonResponse, rateLimit, serverError } from "../../_shared/auth";
 import { createEmailToken } from "../../_shared/emailTokens";
 import { emailEnabled, EmailEnv, resetPasswordMessage, sendEmail } from "../../_shared/email";
+import { TurnstileEnv, turnstileFailedResponse, verifyTurnstile } from "../../_shared/turnstile";
 
-export interface Env extends EmailEnv {
+export interface Env extends EmailEnv, TurnstileEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -17,6 +18,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (limitedIp) return limitedIp;
 
     const body: any = await request.json().catch(() => null);
+    if (!(await verifyTurnstile(request, env, body?.turnstile_token, "forgot_password"))) return turnstileFailedResponse();
+
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return errorResponse("Informe um e-mail válido.", 400);

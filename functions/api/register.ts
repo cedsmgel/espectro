@@ -1,8 +1,9 @@
-import { hashPassword, jsonResponse, errorResponse, serverError, rateLimit } from "../_shared/auth";
+import { hashPassword, jsonResponse, errorResponse, serverError, rateLimit, signJWT, getJwtSecret } from "../_shared/auth";
+import { TurnstileEnv, turnstileFailedResponse, verifyTurnstile } from "../_shared/turnstile";
 import { createEmailToken } from "../_shared/emailTokens";
 import { emailEnabled, EmailEnv, sendEmail, verifyEmailMessage } from "../_shared/email";
 
-export interface Env extends EmailEnv {
+export interface Env extends EmailEnv, TurnstileEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -14,12 +15,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const limited = await rateLimit(env.DB, request, "register", 10, 3600);
     if (limited) return limited;
 
-    let body: { username?: string; email?: string; password?: string };
+    let body: { username?: string; email?: string; password?: string; turnstile_token?: string };
     try {
       body = await request.json();
     } catch {
       return errorResponse("Corpo da requisição inválido. Esperado JSON.", 400);
     }
+
+    if (!(await verifyTurnstile(request, env, body.turnstile_token, "signup"))) return turnstileFailedResponse();
 
     const { username, email, password } = body;
 
@@ -82,6 +85,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       {
         id: newId,
         username: cleanUsername,
+        // Vale 2 minutos e só para o login imediato desta conta: evita pedir um segundo desafio logo após o cadastro
+        login_proof: await signJWT({ id: Number(newId), username: cleanUsername, purpose: "post_register", exp: Math.floor(Date.now() / 1000) + 120 }, getJwtSecret(env)),
       },
       201
     );

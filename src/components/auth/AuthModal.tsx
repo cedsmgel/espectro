@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { authApi, authFlowApi, googleApi } from '../../lib/api';
 import { currentPath } from '../../lib/authEvents';
+import { TurnstileWidget } from './TurnstileWidget';
 import { AuthRequest } from '../../lib/authEvents';
 
 interface AuthModalProps {
@@ -33,6 +34,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const [googleReady, setGoogleReady] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [useRecovery, setUseRecovery] = useState(false);
+  // Turnstile: chave do site (null = desligado), token atual (uso único) e contador para reiniciar o desafio
+  const [tsSite, setTsSite] = useState<string | null>(null);
+  const [tsToken, setTsToken] = useState<string | null>(null);
+  const [tsReset, setTsReset] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
@@ -40,6 +45,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   useEffect(() => {
     void authFlowApi.emailEnabled().then(setCanRecover);
     void authFlowApi.googleEnabled().then(setGoogleReady);
+    void authFlowApi.turnstileSiteKey().then(setTsSite);
   }, []);
 
   const continueWithGoogle = async () => {
@@ -112,19 +118,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   }, []);
 
   const switchMode = (next: Mode) => {
+    setTsToken(null);
     setMode(next);
     setError(null);
     setForgotSent(false);
   };
 
+  // Cada envio gasta o token do Turnstile (uso único): depois de qualquer tentativa o desafio recomeça
   const submit = async (e: React.FormEvent) => {
+    try {
+      await submitInner(e);
+    } finally {
+      setTsToken(null);
+      setTsReset((n) => n + 1);
+    }
+  };
+
+  const submitInner = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (mode === 'link') {
       setLoading(true);
       try {
-        const res = await authApi.login({ username: (request.googleEmail || email).trim(), password });
+        const res = await authApi.login({ username: (request.googleEmail || email).trim(), password, turnstile_token: tsToken ?? undefined });
         if ('mfa_required' in res) {
           setMfaToken(res.mfa_token);
           setMfaCode('');
@@ -167,7 +184,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Informe um e-mail válido.');
       setLoading(true);
       try {
-        await authFlowApi.forgotPassword(email.trim());
+        await authFlowApi.forgotPassword(email.trim(), tsToken ?? undefined);
         setForgotSent(true);
       } catch (err: any) {
         setError(err?.message || 'Não foi possível enviar agora. Tente novamente.');
@@ -186,7 +203,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
     setLoading(true);
     try {
       if (mode === 'login') {
-        const res = await authApi.login({ username: identifier.trim(), password });
+        const res = await authApi.login({ username: identifier.trim(), password, turnstile_token: tsToken ?? undefined });
         if ('mfa_required' in res) {
           setMfaToken(res.mfa_token);
           setMfaCode('');
@@ -197,8 +214,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           return;
         }
       } else {
-        await authApi.register({ username: username.trim(), email: email.trim(), password });
-        await authApi.login({ username: username.trim(), password });
+        const created = await authApi.register({ username: username.trim(), email: email.trim(), password, turnstile_token: tsToken ?? undefined });
+        // A prova do cadastro evita um segundo desafio no login imediato
+        await authApi.login({ username: username.trim(), password, login_proof: created.login_proof });
       }
       onSuccess();
     } catch (err: any) {
@@ -206,6 +224,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
       setLoading(false);
     }
   };
+
+  const tsNeeded = Boolean(tsSite) && (mode === 'login' || mode === 'register' || mode === 'forgot' || mode === 'link');
+  const tsAction = mode === 'register' ? 'signup' : mode === 'forgot' ? 'forgot_password' : 'login';
+  const tsBlock = tsNeeded && tsSite ? <TurnstileWidget key={mode} siteKey={tsSite} action={tsAction} onToken={setTsToken} resetKey={tsReset} /> : null;
+  const tsWaiting = tsNeeded && !tsToken;
 
   const reason =
     mode === 'link'
@@ -322,7 +345,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
                 <p className="text-xs text-on-surface-variant">Não lembra a senha? A recuperação por e-mail ainda não está disponível.</p>
               )}
             </div>
-            <button type="submit" disabled={loading || !password} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">
+            {tsBlock}
+            <button type="submit" disabled={loading || !password || tsWaiting} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">
               {loading ? 'Confirmando...' : 'Confirmar e ligar o Google'}
             </button>
             <button type="button" onClick={onClose} className="text-sm text-on-surface-variant hover:text-on-surface cursor-pointer self-start">
@@ -372,7 +396,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
                   <input id="auth-forgot-email" type="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} required className={fieldClass} />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">{loading ? 'Enviando...' : 'Enviar link'}</button>
+              {tsBlock}
+              <button type="submit" disabled={loading || tsWaiting} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">{loading ? 'Enviando...' : 'Enviar link'}</button>
               <button type="button" onClick={() => switchMode('login')} className="text-sm text-on-surface-variant hover:text-on-surface cursor-pointer">Voltar</button>
             </form>
           )
@@ -472,9 +497,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             )}
           </div>
 
+          {tsBlock}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || tsWaiting}
             className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer"
           >
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
