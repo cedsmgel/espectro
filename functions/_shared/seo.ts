@@ -17,9 +17,36 @@ export interface PageMeta {
   status?: number;
   jsonLd?: Record<string, unknown>;
   noscript?: string; // texto simples para quem não roda JavaScript
+  bodyHtml?: string; // corpo da página já em HTML (SSR por texto); o app assume o lugar dele ao carregar
 }
 
 export const SITE_NAME = "Espectro";
+
+// Quem está logado não deve ver o conteúdo público piscar antes do app montar
+const SESSION_GUARD = `    <script>try{if(localStorage.getItem('espectro_token'))document.documentElement.classList.add('has-session')}catch(e){}</script>
+    <style>html.has-session #root[data-ssr]>*{visibility:hidden}</style>
+`;
+
+// Cache de borda (Cache API) para visitantes: a primeira visita monta a página, as seguintes saem prontas por 60 s.
+// Poupa banco e CPU (limite de 10 ms no plano gratuito). Quem manda Authorization ou no-cache fica de fora.
+export async function cachedPage(request: Request, build: () => Promise<Response>): Promise<Response> {
+  const skip = request.headers.has("Authorization") || /no-cache/i.test(request.headers.get("Cache-Control") || "");
+  const cache = typeof caches !== "undefined" ? (caches as unknown as { default?: Cache }).default : undefined;
+  if (skip || !cache) return build();
+
+  const key = new Request(new URL(request.url).toString(), { method: "GET" });
+  const hit = await cache.match(key);
+  if (hit) return hit;
+
+  const fresh = await build();
+  if (fresh.status === 200) {
+    const stored = new Response(fresh.clone().body, fresh);
+    stored.headers.set("Cache-Control", "public, max-age=0, s-maxage=60");
+    await cache.put(key, stored.clone());
+    return stored;
+  }
+  return fresh;
+}
 const DEFAULT_IMAGE = "/icons/icon-512.png";
 
 export function siteOrigin(request: Request, env: { SITE_URL?: string }): string {
@@ -98,7 +125,16 @@ export async function renderShell(request: Request, env: SeoEnv, meta: PageMeta)
     })
     .on("head", {
       element(el) {
-        el.append("\n    " + metaTags(meta, origin) + "\n", { html: true });
+        el.append("\n    " + metaTags(meta, origin) + "\n" + (meta.bodyHtml ? SESSION_GUARD : ""), { html: true });
+      },
+    })
+    // Corpo renderizado no servidor. Fica em #root com data-ssr="static": o app não hidrata, ele troca o conteúdo
+    .on("#root", {
+      element(el) {
+        if (meta.bodyHtml) {
+          el.setAttribute("data-ssr", "static");
+          el.setInnerContent(meta.bodyHtml, { html: true });
+        }
       },
     })
     .on("body", {

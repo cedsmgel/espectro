@@ -1,10 +1,15 @@
 import { hiddenMeta, PageMeta, plainText, renderShell, SeoEnv, SITE_NAME, siteOrigin } from "./seo";
+import { communityBody, ListedPost, postBody, profileBody, tagBody } from "./seoHtml";
 
 export interface SeoPagesEnv extends SeoEnv {
   DB: D1Database;
 }
 
 type Ctx = { request: Request; env: SeoPagesEnv };
+
+// Só publicações de perfis públicos, fora de comunidade privada (mesma regra do sitemap)
+const PUBLIC_POST = "COALESCE(u.is_private, 0) = 0 AND u.deletion_requested_at IS NULL AND u.suspended_at IS NULL AND (p.community_id IS NULL OR p.community_id NOT IN (SELECT id FROM communities WHERE type = 'private'))";
+const LIST_COLUMNS = "p.id, p.title, p.content, p.created_at, p.upvotes, u.username, (SELECT COUNT(1) FROM comments cm WHERE cm.post_id = p.id) AS comments";
 
 const isoDate = (value: string) => new Date(value.replace(" ", "T") + "Z").toISOString();
 
@@ -18,7 +23,7 @@ export async function postPage({ request, env }: Ctx, rawId: string): Promise<Re
   const p = await env.DB.prepare(
     `SELECT p.id, p.title, p.content, p.post_type, p.media_url, p.media_type, p.created_at, p.upvotes,
             u.username, u.name, u.is_private, u.deletion_requested_at, u.suspended_at,
-            c.type AS community_type, c.name AS community_name
+            c.type AS community_type, c.name AS community_name, c.slug AS community_slug
      FROM posts p JOIN users u ON u.id = p.author_id LEFT JOIN communities c ON c.id = p.community_id
      WHERE p.id = ?`
   )
@@ -39,6 +44,7 @@ export async function postPage({ request, env }: Ctx, rawId: string): Promise<Re
       suspended_at: string | null;
       community_type: string | null;
       community_name: string | null;
+      community_slug: string | null;
     }>();
 
   // Perfil privado, conta em exclusão ou suspensa e comunidade privada nunca aparecem para buscadores
@@ -51,7 +57,15 @@ export async function postPage({ request, env }: Ctx, rawId: string): Promise<Re
   const headline = (p.title?.trim() || plainText(p.content, 70) || "Publicação").slice(0, 110);
   const image = p.media_url && p.media_type !== "video" ? p.media_url : null;
   const description = plainText(p.content, 160) || `Publicação de ${author} no ${SITE_NAME}${p.community_name ? ` em e/${p.community_name}` : ""}.`;
+  const { results: commentRows } = await env.DB.prepare(
+    `SELECT cm.content, cm.created_at, u.username, u.name FROM comments cm JOIN users u ON u.id = cm.author_id
+     WHERE cm.post_id = ? AND COALESCE(u.is_private, 0) = 0 AND u.deletion_requested_at IS NULL AND u.suspended_at IS NULL
+     ORDER BY cm.id ASC LIMIT 30`
+  )
+    .bind(id)
+    .all<{ content: string; created_at: string; username: string; name: string | null }>();
   const meta: PageMeta = {
+    bodyHtml: postBody(p, commentRows || []),
     title: `${headline} - ${author} no ${SITE_NAME}`,
     description,
     path,
@@ -78,10 +92,11 @@ export async function profilePage({ request, env }: Ctx, rawUsername: string): P
   const path = `/perfil/${encodeURIComponent(rawUsername)}`;
   const origin = siteOrigin(request, env);
   const u = await env.DB.prepare(
-    "SELECT username, name, bio, avatar_url, is_private, created_at, deletion_requested_at, suspended_at FROM users WHERE username = ? COLLATE NOCASE"
+    "SELECT id, username, name, bio, avatar_url, is_private, created_at, deletion_requested_at, suspended_at FROM users WHERE username = ? COLLATE NOCASE"
   )
     .bind(rawUsername.trim())
     .first<{
+      id: number;
       username: string;
       name: string | null;
       bio: string | null;
@@ -109,7 +124,12 @@ export async function profilePage({ request, env }: Ctx, rawUsername: string): P
   }
 
   const description = plainText(u.bio, 160) || `Veja as publicações de ${display} no ${SITE_NAME}.`;
+  const [{ results: postRows }, total] = await Promise.all([
+    env.DB.prepare(`SELECT ${LIST_COLUMNS} FROM posts p JOIN users u ON u.id = p.author_id WHERE p.author_id = ? AND ${PUBLIC_POST} ORDER BY p.id DESC LIMIT 20`).bind(u.id).all<ListedPost>(),
+    env.DB.prepare(`SELECT COUNT(1) AS n FROM posts p JOIN users u ON u.id = p.author_id WHERE p.author_id = ? AND ${PUBLIC_POST}`).bind(u.id).first<{ n: number }>(),
+  ]);
   return renderShell(request, env, {
+    bodyHtml: profileBody({ username: u.username, name: u.name, bio: u.bio, avatar_url: u.avatar_url, posts: total?.n ?? 0 }, postRows || []),
     title: profileTitle,
     description,
     path: canonical,
@@ -136,19 +156,25 @@ export async function profilePage({ request, env }: Ctx, rawUsername: string): P
 export async function communityPage({ request, env }: Ctx, rawSlug: string): Promise<Response> {
   const path = `/e/${encodeURIComponent(rawSlug)}`;
   const c = await env.DB.prepare(
-    `SELECT c.name, c.slug, c.description, c.type, c.icon_url, c.banner_url,
+    `SELECT c.id, c.name, c.slug, c.description, c.type, c.icon_url, c.banner_url, c.welcome_message,
             (SELECT COUNT(1) FROM community_members m WHERE m.community_id = c.id AND m.status = 'active') AS members
      FROM communities c WHERE c.slug = ? OR CAST(c.id AS TEXT) = ?`
   )
     .bind(rawSlug, rawSlug)
-    .first<{ name: string; slug: string | null; description: string | null; type: string; icon_url: string | null; banner_url: string | null; members: number }>();
+    .first<{ id: number; name: string; slug: string | null; description: string | null; type: string; icon_url: string | null; banner_url: string | null; welcome_message: string | null; members: number }>();
 
   // Comunidade privada: nem o nome sai no HTML público
   if (!c || c.type === "private") return renderShell(request, env, hiddenMeta(path));
 
   const canonical = `/e/${encodeURIComponent(c.slug || rawSlug)}`;
   const description = plainText(c.description, 160) || `Comunidade e/${c.name} no ${SITE_NAME}, com ${c.members} ${c.members === 1 ? "membro" : "membros"}.`;
+  const [tagRows, ruleRows, { results: postRows }] = await Promise.all([
+    env.DB.prepare("SELECT tag FROM community_tags WHERE community_id = ? ORDER BY tag").bind(c.id).all<{ tag: string }>(),
+    env.DB.prepare("SELECT title, description FROM community_rules WHERE community_id = ? ORDER BY position, id").bind(c.id).all<{ title: string; description: string | null }>(),
+    env.DB.prepare(`SELECT ${LIST_COLUMNS} FROM posts p JOIN users u ON u.id = p.author_id WHERE p.community_id = ? AND COALESCE(u.is_private, 0) = 0 AND u.deletion_requested_at IS NULL AND u.suspended_at IS NULL ORDER BY p.id DESC LIMIT 20`).bind(c.id).all<ListedPost>(),
+  ]);
   return renderShell(request, env, {
+    bodyHtml: communityBody(c, (tagRows.results || []).map((t) => t.tag), ruleRows.results || [], postRows || []),
     title: `e/${c.name} - comunidade no ${SITE_NAME}`,
     description,
     path: canonical,
@@ -178,5 +204,11 @@ export async function tagPage({ request, env }: Ctx, rawTag: string): Promise<Re
   const total = row?.n ?? 0;
   if (!total) return renderShell(request, env, { ...hiddenMeta(path), title: `#${tag} - ${SITE_NAME}` });
   const description = `${total} ${total === 1 ? "publicação" : "publicações"} com #${tag} no ${SITE_NAME}.`;
-  return renderShell(request, env, { title: `#${tag} - publicações no ${SITE_NAME}`, description, path, noscript: description });
+  const { results: tagPosts } = await env.DB.prepare(
+    `SELECT ${LIST_COLUMNS} FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id JOIN posts p ON p.id = ph.post_id JOIN users u ON u.id = p.author_id
+     WHERE h.tag = ? AND ${PUBLIC_POST} ORDER BY p.id DESC LIMIT 20`
+  )
+    .bind(tag)
+    .all<ListedPost>();
+  return renderShell(request, env, { bodyHtml: tagBody(tag, total, tagPosts || []), title: `#${tag} - publicações no ${SITE_NAME}`, description, path, noscript: description });
 }
