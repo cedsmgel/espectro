@@ -126,7 +126,7 @@ export const RightSidebarSearch: React.FC = () => {
                         className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
                       >
                         {u.avatar_url ? (
-                          <img
+                          <img loading="lazy" decoding="async"
                             src={u.avatar_url}
                             alt={u.username}
                             className="w-8 h-8 rounded-full object-cover shrink-0"

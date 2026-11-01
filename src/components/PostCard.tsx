@@ -225,7 +225,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               title={`Ver perfil de @${post.author_name}`}
             >
               {post.author_avatar ? (
-                <img src={post.author_avatar} alt={post.author_name} className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={post.author_avatar} alt={post.author_name} className="w-full h-full object-cover" />
               ) : (
                 post.author_name.charAt(0)
               )}

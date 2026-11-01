@@ -25,7 +25,7 @@ const initialOf = (name: string) => name.charAt(0).toUpperCase();
 
 const Avatar: React.FC<{ username: string; url?: string | null; size?: string }> = ({ username, url, size = 'w-11 h-11' }) => (
   <div className={`${size} rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold text-on-surface`}>
-    {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : initialOf(username)}
+    {url ? <img loading="lazy" decoding="async" src={url} alt="" className="w-full h-full object-cover" /> : initialOf(username)}
   </div>
 );
 

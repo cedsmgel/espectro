@@ -15,7 +15,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 const Avatar: React.FC<{ username: string; url?: string | null }> = ({ username, url }) => (
   <div className="w-12 h-12 rounded-full bg-primary-container text-on-primary flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold">
-    {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : username.charAt(0).toUpperCase()}
+    {url ? <img loading="lazy" decoding="async" src={url} alt="" className="w-full h-full object-cover" /> : username.charAt(0).toUpperCase()}
   </div>
 );
 

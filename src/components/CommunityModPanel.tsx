@@ -178,7 +178,7 @@ export const CommunityModPanel: React.FC<Props> = ({ community, onChanged }) => 
               style={{ background: bannerUrl ? `center / cover no-repeat url("${bannerUrl}")` : `linear-gradient(135deg, ${color}dd 0%, #1e1b4b 100%)` }}
             >
               <div className="absolute left-3 bottom-3 w-14 h-14 rounded-xl border-2 border-surface-container-lowest overflow-hidden flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: color }}>
-                {iconUrl ? <img src={iconUrl} alt="" className="w-full h-full object-cover" /> : community.name.charAt(0).toUpperCase()}
+                {iconUrl ? <img loading="lazy" decoding="async" src={iconUrl} alt="" className="w-full h-full object-cover" /> : community.name.charAt(0).toUpperCase()}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">

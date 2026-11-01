@@ -41,7 +41,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(friendId, user.id)
       .run();
 
-    await env.DB.prepare("UPDATE conversation_settings SET manual_unread = 0 WHERE user_id = ? AND friend_id = ?")
+    await env.DB.prepare("UPDATE conversation_settings SET manual_unread = 0 WHERE user_id = ? AND friend_id = ? AND COALESCE(manual_unread, 0) != 0")
       .bind(user.id, friendId)
       .run();
 

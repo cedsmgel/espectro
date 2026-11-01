@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                               className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
                             >
                               {u.avatar_url ? (
-                                <img
+                                <img loading="lazy" decoding="async"
                                   src={u.avatar_url}
                                   alt={u.username}
                                   className="w-8 h-8 rounded-full object-cover shrink-0"
@@ -488,7 +488,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             {u.avatar_url ? (
-                              <img
+                              <img loading="lazy" decoding="async"
                                 src={u.avatar_url}
                                 alt={u.username}
                                 className="w-10 h-10 rounded-full object-cover shrink-0"
@@ -553,7 +553,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             {p.media_url && p.media_type === 'image' ? (
-                              <img
+                              <img loading="lazy" decoding="async"
                                 src={p.media_url}
                                 alt=""
                                 className="w-10 h-10 rounded-lg object-cover shrink-0"

@@ -331,7 +331,7 @@ export const ProfilePage: React.FC = () => {
               <div className="flex flex-row items-start sm:items-center gap-4 sm:gap-6 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={userProfile.avatar_url}
                       alt={usernameHandle}
                       className="w-[84px] h-[84px] sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-surface-container-low"

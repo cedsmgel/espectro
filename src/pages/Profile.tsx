@@ -137,7 +137,7 @@ export const Profile: React.FC = () => {
               <div className="flex items-center gap-5 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={userProfile.avatar_url}
                       alt={usernameHandle}
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-surface-container-low"

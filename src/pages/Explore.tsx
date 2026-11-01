@@ -157,7 +157,7 @@ export const Explore: React.FC = () => {
                         {results.communities.map((c) => (
                           <Link key={c.id} to={`/e/${c.slug || c.id}`} onClick={close} className={rowCls}>
                             {c.icon_url ? (
-                              <img src={c.icon_url} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0" />
+                              <img loading="lazy" decoding="async" src={c.icon_url} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0" />
                             ) : (
                               <span className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shrink-0" style={{ backgroundColor: c.icon_color || '#404040' }}>
                                 {c.name.charAt(0).toUpperCase()}
@@ -180,7 +180,7 @@ export const Explore: React.FC = () => {
                         {results.users.map((u) => (
                           <Link key={u.id} to={`/perfil/${u.username}`} onClick={close} className={rowCls}>
                             {u.avatar_url ? (
-                              <img src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                              <img loading="lazy" decoding="async" src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
                             ) : (
                               <span className="w-9 h-9 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0">
                                 {(u.name || u.username).charAt(0)}

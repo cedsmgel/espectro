@@ -96,7 +96,7 @@ export const ProfileDiscover: React.FC<ProfileDiscoverProps> = ({ isSelf, userna
                 </button>
                 <Link to={`/perfil/${encodeURIComponent(person.username)}`} className="flex flex-col items-center gap-1.5 min-w-0 w-full">
                   <div className="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden text-lg font-bold text-on-surface">
-                    {person.avatar_url ? <img src={person.avatar_url} alt="" className="w-full h-full object-cover" /> : initialOf(person.username)}
+                    {person.avatar_url ? <img loading="lazy" decoding="async" src={person.avatar_url} alt="" className="w-full h-full object-cover" /> : initialOf(person.username)}
                   </div>
                   <span className="text-xs font-semibold text-on-surface truncate w-full">{person.name || `@${person.username}`}</span>
                   <span className="text-[11px] text-on-surface-variant truncate w-full">

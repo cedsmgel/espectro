@@ -139,7 +139,7 @@ const ArchivedGrid: React.FC = () => {
         {items.map((m) => (
           <li key={m.id} className="relative aspect-[3/4] overflow-hidden bg-surface-container-low">
             {m.media_type === 'image' && m.media_url ? (
-              <img src={m.media_url} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+              <img decoding="async" src={m.media_url} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
             ) : m.media_type === 'video' && m.media_url ? (
               <video src={`${m.media_url}#t=0.1`} muted playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
             ) : (
@@ -185,7 +185,7 @@ const BlockedList: React.FC = () => {
       {users.map((u) => (
         <li key={u.id} className="flex items-center gap-3 py-3 border-b border-outline-variant">
           <div className="w-11 h-11 rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold">
-            {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username.charAt(0).toUpperCase()}
+            {u.avatar_url ? <img loading="lazy" decoding="async" src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username.charAt(0).toUpperCase()}
           </div>
           <p className="flex-1 min-w-0 text-sm font-semibold truncate">{u.username}</p>
           <button type="button" disabled={busyId === u.id} onClick={() => void unblock(u)} className="h-9 px-4 rounded-full bg-surface-container text-xs font-semibold hover:bg-surface-container-high cursor-pointer disabled:opacity-50">

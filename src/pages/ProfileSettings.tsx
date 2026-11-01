@@ -245,7 +245,7 @@ export const ProfileSettings: React.FC = () => {
                   <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-outline-variant">
                     <div className="relative group shrink-0">
                       {avatarUrl ? (
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={avatarUrl}
                           alt="Avatar do Usuário"
                           className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover shadow-sm ring-4 ring-surface-container-low"
