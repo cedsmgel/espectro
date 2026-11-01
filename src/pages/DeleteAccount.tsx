@@ -72,7 +72,7 @@ export const DeleteAccount: React.FC = () => {
       <div className="pt-16 md:pt-0 md:pl-20">
         <main className="w-full max-w-xl mx-auto px-4 pt-4 pb-24 md:pb-8">
           <div className="flex items-center gap-2 pb-2">
-            <Link to="/configuracoes/dados" aria-label="Voltar" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+            <Link to="/settings/account" aria-label="Voltar" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>
             </Link>
             <h1 className="text-2xl font-bold">Excluir conta</h1>
@@ -135,7 +135,7 @@ export const DeleteAccount: React.FC = () => {
               </fieldset>
 
               <div className="flex items-center justify-between gap-3 pt-2">
-                <Link to="/configuracoes/dados" className="h-10 px-5 rounded-full border border-outline-variant text-xs font-semibold flex items-center hover:bg-surface-container">Cancelar</Link>
+                <Link to="/settings/account" className="h-10 px-5 rounded-full border border-outline-variant text-xs font-semibold flex items-center hover:bg-surface-container">Cancelar</Link>
                 <button type="button" disabled={reasons.length === 0} onClick={() => setStep('confirmar')} className="h-10 px-6 rounded-full bg-primary-container text-on-primary text-xs font-semibold cursor-pointer disabled:opacity-40">
                   Continuar
                 </button>
@@ -155,7 +155,7 @@ export const DeleteAccount: React.FC = () => {
                   <li>Entrar de novo dentro de 30 dias cancela a exclusão.</li>
                 </ul>
                 <p className="text-xs mt-3">
-                  Quer uma cópia antes? <Link to="/configuracoes/dados" className="font-semibold text-primary hover:underline">Baixe seus dados</Link>.
+                  Quer uma cópia antes? <Link to="/settings/account" className="font-semibold text-primary hover:underline">Baixe seus dados</Link>.
                 </p>
               </div>
 

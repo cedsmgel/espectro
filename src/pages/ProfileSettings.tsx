@@ -6,6 +6,7 @@ import { useSidebar } from '../context/SidebarContext';
 import { authStorage, profileApi, uploadApi, UserProfile } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 import { ProfileDetailsEditor } from '../components/ProfileDetailsEditor';
+import { PrivacySettings } from '../components/PrivacySettings';
 
 export const ProfileSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -204,6 +205,15 @@ export const ProfileSettings: React.FC = () => {
               >
                 <span className="material-symbols-outlined text-[16px]">visibility</span>
                 <span>Ver Perfil</span>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start w-fit">
+              <span aria-current="page" className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary shadow-xs">
+                Perfil
+              </span>
+              <Link to="/settings/account" className="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
+                Segurança
               </Link>
             </div>
 
@@ -428,6 +438,7 @@ export const ProfileSettings: React.FC = () => {
             </div>
 
             {!loading && <ProfileDetailsEditor coverUrl={coverUrl} onCoverChange={setCoverUrl} />}
+            {!loading && <PrivacySettings />}
           </div>
         </main>
       </div>
