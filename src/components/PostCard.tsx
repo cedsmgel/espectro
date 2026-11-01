@@ -395,7 +395,11 @@ export const PostCard: React.FC<PostCardProps> = ({
           /\.(mp4|webm|mov|ogg|m4v)($|\?)/i.test(post.media_url) ||
           post.media_url.includes('/videos/') ? (
             <div className="w-full bg-black flex justify-center">
-              <LazyVideoPlayer src={post.media_url} title={title || undefined} />
+              <LazyVideoPlayer
+                src={post.media_url}
+                title={title || undefined}
+                caption={(title.trim() || parseScrap(content || '').body.trim()).slice(0, 140) || undefined}
+              />
             </div>
           ) : (
             <div className="w-full bg-surface-container-high dark:bg-black flex justify-center overflow-hidden">

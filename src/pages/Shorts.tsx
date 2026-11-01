@@ -4,19 +4,9 @@ import { SidebarNav } from '../components/SidebarNav';
 import { ShareButton } from '../components/ShareButton';
 import { api, authStorage, Post } from '../lib/api';
 import { parseScrap } from '../lib/scrapStyle';
+import { useMutedPreference } from '../lib/mutePreference';
 
 const PAGE_SIZE = 10;
-const MUTE_KEY = 'espectro_shorts_muted';
-
-// O navegador só deixa tocar com som depois de um toque, então a sessão começa no mudo
-function readMuted(): boolean {
-  try {
-    return sessionStorage.getItem(MUTE_KEY) !== '0';
-  } catch {
-    return true;
-  }
-}
-
 function formatCount(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace('.0', '')} mi`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1).replace('.0', '')} mil`;
@@ -236,7 +226,7 @@ export const Shorts: React.FC = () => {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [active, setActive] = useState(0);
-  const [muted, setMuted] = useState(readMuted);
+  const { muted, toggleMuted: toggleMute } = useMutedPreference();
   const [voted, setVoted] = useState<Record<number, boolean>>({});
 
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -321,15 +311,6 @@ export const Shorts: React.FC = () => {
       .catch(() => setDone(true))
       .finally(() => setLoadingMore(false));
   }, [active, items, done, loadingMore]);
-
-  const toggleMute = useCallback(() => {
-    setMuted((current) => {
-      try {
-        sessionStorage.setItem(MUTE_KEY, current ? '0' : '1');
-      } catch {}
-      return !current;
-    });
-  }, []);
 
   const step = useCallback((direction: 1 | -1) => {
     const scroller = scrollerRef.current;
