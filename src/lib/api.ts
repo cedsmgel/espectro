@@ -48,6 +48,7 @@ export interface Community {
   my_role?: 'owner' | 'moderator' | 'member' | null;
   my_status?: 'active' | 'pending' | 'banned' | null;
   i_am_mod?: boolean;
+  pending_count?: number;
   can_post_here?: boolean;
   locked?: boolean;
   ban_reason?: string | null;
@@ -441,6 +442,37 @@ export const communitiesApi = {
   create: (data: CreateCommunityData) => api.createCommunity(data),
   join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
   leave: (communityId: number) => api.leaveCommunity(communityId),
+};
+
+export interface ModMember {
+  user_id: number;
+  username: string;
+  avatar_url?: string | null;
+  role: 'owner' | 'moderator' | 'member';
+  status: 'active' | 'pending' | 'banned';
+  approved_poster: boolean;
+  banned_until: string | null;
+  ban_reason: string | null;
+  joined_at: string;
+}
+
+export interface ModLogEntry {
+  id: number;
+  action: string;
+  note: string | null;
+  created_at: string;
+  target_post_id: number | null;
+  moderator_name: string | null;
+  target_name: string | null;
+}
+
+// Moderação de comunidade (só quem é dono ou moderador)
+export const communityModApi = {
+  list: (communityId: number, view: 'requests' | 'members' | 'banned') =>
+    apiRequest<ModMember[]>(`/api/community_mod?community_id=${communityId}&view=${view}`, { method: 'GET' }),
+  log: (communityId: number) => apiRequest<ModLogEntry[]>(`/api/community_mod?community_id=${communityId}&view=log`, { method: 'GET' }),
+  act: (communityId: number, action: string, extra: Record<string, unknown> = {}) =>
+    apiRequest<{ ok: boolean }>('/api/community_mod', { method: 'POST', body: JSON.stringify({ community_id: communityId, action, ...extra }) }),
 };
 
 export const commentsApi = {

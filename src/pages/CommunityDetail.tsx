@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { requestAuth } from '../lib/authEvents';
-import { communitiesApi, postsApi, Community, Post, CreatePostData, authStorage } from '../lib/api';
+import { communitiesApi, communityModApi, postsApi, Community, Post, CreatePostData, authStorage } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
@@ -9,6 +9,7 @@ import { CreatePostForm } from '../components/CreatePostForm';
 import { PostCard } from '../components/PostCard';
 import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
+import { CommunityModPanel } from '../components/CommunityModPanel';
 import { ErrorState } from '../components/ErrorState';
 
 interface CommunityMember {
@@ -31,7 +32,7 @@ export const CommunityDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
-  const [activeTab, setActiveTab] = useState<'discussions' | 'members'>('discussions');
+  const [activeTab, setActiveTab] = useState<'discussions' | 'members' | 'moderation'>('discussions');
   const [isMember, setIsMember] = useState(false);
   const [myStatus, setMyStatus] = useState<'active' | 'pending' | 'banned' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -42,9 +43,9 @@ export const CommunityDetail: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     if (!slug) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setHasError(false);
     const token = authStorage.getToken();
     const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
@@ -224,6 +225,20 @@ export const CommunityDetail: React.FC = () => {
     setPosts((prev) => [postWithComm, ...prev.filter((p) => p.id !== postWithComm.id)]);
     setActiveTab('discussions');
     showToast('Post publicado com sucesso no Espectro!');
+  };
+
+  // Moderação: remove a publicação de outra pessoa da comunidade
+  const handleModRemove = async (postId: number) => {
+    if (!community) return;
+    const reason = window.prompt('Motivo da remoção (opcional, fica no registro):');
+    if (reason === null) return;
+    try {
+      await communityModApi.act(community.id, 'remove_post', { post_id: postId, reason });
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      showToast('Publicação removida pela moderação.');
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível remover.');
+    }
   };
 
   const handleDeletePost = (deletedId: number) => {
@@ -432,6 +447,19 @@ export const CommunityDetail: React.FC = () => {
                           <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
                         )}
                       </button>
+                      {community.i_am_mod && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('moderation')}
+                          className={`pb-2 relative cursor-pointer flex items-center gap-1.5 ${
+                            activeTab === 'moderation' ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">shield_person</span>
+                          <span>Moderação{community.pending_count ? ` (${community.pending_count})` : ''}</span>
+                          {activeTab === 'moderation' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -532,12 +560,19 @@ export const CommunityDetail: React.FC = () => {
                     ) : (
                       <div className="flex flex-col gap-4">
                         {communityFilteredPosts.map((post) => (
-                          <PostCard
-                            key={post.id}
-                            post={post}
-                            onDelete={handleDeletePost}
-                            onUpdate={handleUpdatePost}
-                          />
+                          <div key={post.id} className="flex flex-col gap-1">
+                            <PostCard post={post} onDelete={handleDeletePost} onUpdate={handleUpdatePost} />
+                            {community.i_am_mod && post.author_id !== user?.id && (
+                              <button
+                                type="button"
+                                onClick={() => handleModRemove(post.id)}
+                                className="self-end px-3 py-1 rounded-full bg-error-container text-error text-[11px] font-semibold cursor-pointer flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">shield_person</span>
+                                Remover (moderação)
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -545,6 +580,10 @@ export const CommunityDetail: React.FC = () => {
                 )}
 
                 {/* ABA DE MEMBROS: Lista da tabela community_members */}
+                {!community.locked && activeTab === 'moderation' && community.i_am_mod && (
+                  <CommunityModPanel key={community.id} community={community} onChanged={() => fetchData(true)} />
+                )}
+
                 {!community.locked && activeTab === 'members' && (
                   <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant shadow-sm flex flex-col gap-4">
                     <div className="flex items-center justify-between pb-2 border-b border-outline-variant">

@@ -27,6 +27,11 @@ export async function loadCommunityDetail(db: D1Database, slugOrId: string, view
     banned_until: membership.status === "banned" ? membership.bannedUntil : null,
   };
 
+  if (isMod(membership)) {
+    const pending = await db.prepare("SELECT COUNT(1) AS n FROM community_members WHERE community_id = ? AND status = 'pending'").bind(base.id).first<{ n: number }>();
+    detail.pending_count = pending ? pending.n : 0;
+  }
+
   // Comunidade privada: quem não é membro vê só o cartão de apresentação (sem regras, hashtags nem boas-vindas)
   const locked = base.type === "private" && !isActive(membership);
   detail.locked = locked;
