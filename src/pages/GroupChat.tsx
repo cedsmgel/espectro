@@ -11,8 +11,7 @@ import {
   groupsApi,
   uploadApi,
 } from '../lib/api';
-import Picker from '@emoji-mart/react';
-import data from '@emoji-mart/data';
+import { EmojiPicker } from '../components/chat/EmojiPicker';
 import { ChatMenu } from '../components/chat/ChatMenu';
 import { ModalShell } from '../components/chat/ModalShell';
 import { MediaPicker } from '../components/chat/MediaPicker';
@@ -26,6 +25,7 @@ import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { useGroupSocket } from '../hooks/useGroupSocket';
 import { canEditMessage } from '../lib/chatEdit';
 import { REACTION_EMOJIS, groupReactions } from '../lib/chatReactions';
+import { visibleInterval } from '../lib/visibleInterval';
 import { ChatLibraryModal } from '../components/chat/ChatLibraryModal';
 import { StarredModal } from '../components/chat/StarredModal';
 import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
@@ -232,13 +232,11 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     setEditingMessage(null);
     void loadDetail();
     void loadLatest();
-    const detailTimer = window.setInterval(() => void loadDetail(), 30000);
-    return () => window.clearInterval(detailTimer);
+    return visibleInterval(() => void loadDetail(), 60000);
   }, [loadDetail, loadLatest]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => void loadLatest(), connected ? 30000 : 4000);
-    return () => window.clearInterval(timer);
+    return visibleInterval(() => void loadLatest(), connected ? 45000 : 5000);
   }, [loadLatest, connected]);
 
   useEffect(() => {
@@ -496,9 +494,9 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
     }
     switch (m.message_type) {
       case 'gif':
-        return m.media_url ? <img src={m.media_url} alt="GIF" className="max-w-[240px] rounded-xl" /> : null;
+        return m.media_url ? <img loading="lazy" decoding="async" src={m.media_url} alt="GIF" className="max-w-[240px] rounded-xl" /> : null;
       case 'sticker':
-        return m.media_url ? <img src={m.media_url} alt="Figurinha" className="max-w-[160px]" /> : null;
+        return m.media_url ? <img loading="lazy" decoding="async" src={m.media_url} alt="Figurinha" className="max-w-[160px]" /> : null;
       case 'image':
         return m.media_url ? (
           <a href={m.media_url} target="_blank" rel="noopener noreferrer">
@@ -688,7 +686,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
                   (isLastInBlock ? (
                     <div className="w-7 h-7 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-xs flex-shrink-0 mb-1 uppercase overflow-hidden">
                       {sender?.avatar_url || m.sender_avatar ? (
-                        <img src={(sender?.avatar_url || m.sender_avatar) as string} alt="" className="w-full h-full object-cover" />
+                        <img loading="lazy" decoding="async" src={(sender?.avatar_url || m.sender_avatar) as string} alt="" className="w-full h-full object-cover" />
                       ) : (
                         (m.sender_username || '?').charAt(0)
                       )}
@@ -855,8 +853,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
       <div className="p-2.5 sm:p-4 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.6rem))] bg-surface-container-lowest border-t border-outline-variant flex-shrink-0 relative">
         {showEmoji && (
           <div className="absolute bottom-20 left-3 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl">
-            <Picker
-              data={data}
+            <EmojiPicker
               onEmojiSelect={(e: any) => setText((t) => t + e.native)}
               theme={isDarkTheme ? 'dark' : 'light'}
               locale="pt"

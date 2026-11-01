@@ -162,7 +162,7 @@ const ShortItem = React.memo<ShortItemProps>(
               >
                 <span className="w-9 h-9 border border-white/70 bg-white/10 flex items-center justify-center text-sm font-bold uppercase overflow-hidden shrink-0 rounded-full">
                   {post.author_avatar ? (
-                    <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
+                    <img loading="lazy" decoding="async" src={post.author_avatar} alt="" className="w-full h-full object-cover" />
                   ) : (
                     post.author_name.charAt(0)
                   )}

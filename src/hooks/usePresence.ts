@@ -1,3 +1,4 @@
+import { visibleInterval } from '../lib/visibleInterval';
 import { useEffect, useState } from 'react';
 import { authStorage, FriendPresence, presenceApi } from '../lib/api';
 import { usePulseOwner } from '../lib/pulse';
@@ -29,11 +30,11 @@ export function useFriendPresence(friendId: number | null | undefined): FriendPr
     };
 
     load();
-    const timer = window.setInterval(load, 60000);
+    const stopTimer = visibleInterval(load, 60000);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopTimer();
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [friendId]);

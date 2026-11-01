@@ -84,7 +84,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     // Marca como lidas até a mensagem mais recente (só na primeira página)
     if (beforeId === null && messages.length > 0) {
       await env.DB.prepare(
-        "UPDATE chat_group_members SET last_read_id = MAX(last_read_id, ?) WHERE group_id = ? AND user_id = ?"
+        "UPDATE chat_group_members SET last_read_id = ?1 WHERE group_id = ?2 AND user_id = ?3 AND last_read_id < ?1"
       )
         .bind(Number(messages[messages.length - 1].id), groupId, user.id)
         .run();

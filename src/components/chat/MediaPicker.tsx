@@ -141,7 +141,7 @@ export const MediaPicker: React.FC<MediaPickerProps> = ({ onSelect, onClose }) =
               className="rounded-xl overflow-hidden bg-surface-container aspect-square cursor-pointer hover:opacity-80 transition-opacity"
               title={item.title}
             >
-              <img src={item.preview} alt={item.title} loading="lazy" className="w-full h-full object-contain" />
+              <img decoding="async" src={item.preview} alt={item.title} loading="lazy" className="w-full h-full object-contain" />
             </button>
           ))}
       </div>

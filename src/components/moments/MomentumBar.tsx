@@ -27,7 +27,7 @@ export const MomentumBar: React.FC = () => {
 
   const avatar = (username: string, url: string | null, size: string) => (
     <div className={`${size} rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden`}>
-      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <span className="text-lg font-bold text-on-surface uppercase">{username.charAt(0)}</span>}
+      {url ? <img loading="lazy" decoding="async" src={url} alt="" className="w-full h-full object-cover" /> : <span className="text-lg font-bold text-on-surface uppercase">{username.charAt(0)}</span>}
     </div>
   );
 

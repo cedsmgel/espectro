@@ -379,7 +379,7 @@ export const CommunityDetail: React.FC = () => {
                       <div className="flex items-end gap-4">
                         <div className="w-24 h-24 rounded-2xl p-1 bg-surface-container-lowest shadow-md">
                           {community.icon_url ? (
-                            <img src={community.icon_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                            <img loading="lazy" decoding="async" src={community.icon_url} alt="" className="w-full h-full rounded-xl object-cover" />
                           ) : (
                             <div
                               className="w-full h-full rounded-xl flex items-center justify-center font-bold text-3xl text-white shadow-xs"

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
+import { EmojiPicker } from '../components/chat/EmojiPicker';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { useSidebar } from '../context/SidebarContext';
@@ -48,6 +47,7 @@ import { notifyUnreadChanged } from '../hooks/useUnreadDms';
 import { EmptyState } from '../components/EmptyState';
 import { useChat, ChatMessage, ChatMessageType } from '../hooks/useChat';
 import { useVisualViewport } from '../hooks/useVisualViewport';
+import { visibleInterval } from '../lib/visibleInterval';
 import { ChatLibraryModal } from '../components/chat/ChatLibraryModal';
 import { StarredModal } from '../components/chat/StarredModal';
 import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
@@ -266,13 +266,13 @@ export const DirectMessages: React.FC = () => {
 
   useEffect(() => {
     refreshConversations();
-    const timer = window.setInterval(refreshConversations, 15000);
+    const stopTimer = visibleInterval(refreshConversations, 45000);
     const onVisible = () => {
       if (document.visibilityState === 'visible') refreshConversations();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
-      window.clearInterval(timer);
+      stopTimer();
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [refreshConversations]);
@@ -1150,7 +1150,7 @@ export const DirectMessages: React.FC = () => {
       if (msgType === 'gif' || msgType === 'sticker') {
         return (
           <div className="max-w-[240px] rounded-lg overflow-hidden">
-            <img
+            <img loading="lazy" decoding="async"
               src={m.media_url}
               alt="GIF Animado"
               className="w-full h-auto object-cover rounded-lg"
@@ -1248,7 +1248,7 @@ export const DirectMessages: React.FC = () => {
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
-            <img
+            <img loading="lazy" decoding="async"
               src={previewImageUrl}
               alt="Visualização"
               className="w-full h-auto max-h-[85vh] object-contain rounded-2xl"
@@ -2297,8 +2297,7 @@ export const DirectMessages: React.FC = () => {
                         className="absolute bottom-20 left-4 sm:left-12 z-30 rounded-2xl overflow-hidden shadow-xl animate-in fade-in slide-in-from-bottom-2"
                       >
                         <div>
-                          <Picker
-                            data={data}
+                          <EmojiPicker
                             onEmojiSelect={handleSelectEmoji}
                             theme={isDarkTheme ? 'dark' : 'light'}
                             perLine={8}

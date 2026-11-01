@@ -237,7 +237,7 @@ export const MomentViewerScreen: React.FC<MomentViewerProps> = ({ groups, startG
           </div>
           <div className="mt-3 flex items-center gap-2 pointer-events-auto">
             <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center text-xs font-bold uppercase overflow-hidden shrink-0">
-              {group.avatar_url ? <img src={group.avatar_url} alt="" className="w-full h-full object-cover" /> : group.username.charAt(0)}
+              {group.avatar_url ? <img loading="lazy" decoding="async" src={group.avatar_url} alt="" className="w-full h-full object-cover" /> : group.username.charAt(0)}
             </div>
             <span className="text-sm font-semibold truncate">{isMine ? 'Seu Momentum' : `@${group.username}`}</span>
             <span className="text-xs text-white/70">{timeAgo(moment.created_at)}</span>
@@ -308,7 +308,7 @@ export const MomentViewerScreen: React.FC<MomentViewerProps> = ({ groups, startG
                 {viewers.map((v) => (
                   <li key={v.id} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center text-xs font-bold uppercase overflow-hidden">
-                      {v.avatar_url ? <img src={v.avatar_url} alt="" className="w-full h-full object-cover" /> : v.username.charAt(0)}
+                      {v.avatar_url ? <img loading="lazy" decoding="async" src={v.avatar_url} alt="" className="w-full h-full object-cover" /> : v.username.charAt(0)}
                     </div>
                     <span className="text-sm flex-1 truncate">@{v.username}</span>
                     <span className="text-[11px] text-white/60">{timeAgo(v.viewed_at)}</span>

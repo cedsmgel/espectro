@@ -60,7 +60,7 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
         {items.map((c) => (
           <li key={c.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-surface-container transition-colors">
             {c.icon_url ? (
-              <img src={c.icon_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+              <img loading="lazy" decoding="async" src={c.icon_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
             ) : (
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-xs flex-shrink-0 shadow-xs"

@@ -842,7 +842,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             ) : (
               /* Tarefa 3: Miniatura da imagem já recortada e comprimida */
               <div className="relative w-full max-h-64 bg-zinc-950 flex items-center justify-center overflow-hidden">
-                <img
+                <img loading="lazy" decoding="async"
                   src={localPreviewUrl || mediaUrl}
                   alt="Miniatura recortada"
                   className="w-full h-auto max-h-64 object-cover"

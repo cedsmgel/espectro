@@ -48,7 +48,7 @@ export const CloseFriends: React.FC = () => {
   const row = (f: CloseFriendRow) => (
     <li key={f.id} className="flex items-center gap-3 py-3 border-b border-outline-variant">
       <div className="w-11 h-11 rounded-full bg-surface-container-low flex items-center justify-center overflow-hidden shrink-0 text-sm font-bold text-on-surface">
-        {f.avatar_url ? <img src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : f.username.charAt(0).toUpperCase()}
+        {f.avatar_url ? <img loading="lazy" decoding="async" src={f.avatar_url} alt="" className="w-full h-full object-cover" /> : f.username.charAt(0).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-on-surface truncate">{f.username}</p>

@@ -1,3 +1,4 @@
+import { visibleInterval } from '../lib/visibleInterval';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
@@ -125,11 +126,10 @@ export const Notifications: React.FC = () => {
     void loadFriends();
     communitiesApi.list().then(setCommunities).catch(() => {});
 
-    const timer = window.setInterval(() => {
+    return visibleInterval(() => {
       void loadFeed();
       void loadFriends();
-    }, 30000);
-    return () => window.clearInterval(timer);
+    }, 45000);
   }, [user?.id, loadFeed, loadFriends]);
 
   const applySummary = (next: NotificationSummary) => {
