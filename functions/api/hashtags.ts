@@ -1,4 +1,5 @@
 import { getAuthUser, getJwtSecret, jsonResponse, errorResponse, serverError } from "../_shared/auth";
+import { NOT_IN_PRIVATE_SQL } from "../_shared/communities";
 import { normalizeTag } from "../_shared/hashtags";
 
 export interface Env {
@@ -12,7 +13,8 @@ const VISIBLE_POSTS = `
      SELECT 1 FROM friendships f WHERE f.status = 'accepted'
        AND ((f.user_id = u.id AND f.friend_id = ?1) OR (f.user_id = ?1 AND f.friend_id = u.id))))
   AND u.deletion_requested_at IS NULL
-  AND u.suspended_at IS NULL`;
+  AND u.suspended_at IS NULL
+  AND ${NOT_IN_PRIVATE_SQL}`;
 
 // GET /api/hashtags?trending=1[&limit=10]  -> mais usadas na última semana
 // GET /api/hashtags?q=mus                  -> sugestões por prefixo (ordem de uso)

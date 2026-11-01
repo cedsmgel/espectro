@@ -21,13 +21,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
        ),
        candidates AS (
          SELECT c.id, c.name, c.slug, c.description, c.icon_color,
-           (SELECT COUNT(*) FROM community_members m WHERE m.community_id = c.id) AS members_count,
+           (SELECT COUNT(*) FROM community_members m WHERE m.community_id = c.id AND m.status = 'active') AS members_count,
            (SELECT COUNT(*) FROM community_members m
-              WHERE m.community_id = c.id AND m.user_id IN (SELECT fid FROM my_friends)) AS friends_in,
+              WHERE m.community_id = c.id AND m.status = 'active' AND m.user_id IN (SELECT fid FROM my_friends)) AS friends_in,
            (SELECT COUNT(*) FROM posts p
               WHERE p.community_id = c.id AND p.created_at >= datetime('now', '-14 days')) AS recent_posts
          FROM communities c
-         WHERE c.id NOT IN (SELECT community_id FROM community_members WHERE user_id = ?1)
+         WHERE c.type != 'private'
+           AND c.id NOT IN (SELECT community_id FROM community_members WHERE user_id = ?1)
            AND c.id NOT IN (SELECT community_id FROM dismissed_community_suggestions WHERE user_id = ?1)
        )
        SELECT * FROM candidates

@@ -36,7 +36,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                   OR (f.friend_id = u.id AND f.user_id IN (SELECT fid FROM my_friends)))) AS mutual_friends,
            (SELECT COUNT(*) FROM community_members a
               JOIN community_members b ON a.community_id = b.community_id
-              WHERE a.user_id = ?1 AND b.user_id = u.id) AS shared_communities,
+              WHERE a.user_id = ?1 AND b.user_id = u.id AND a.status = 'active' AND b.status = 'active') AS shared_communities,
            (SELECT COUNT(*) FROM comments c JOIN posts p ON p.id = c.post_id
               WHERE (c.author_id = u.id AND p.author_id = ?1)
                  OR (c.author_id = ?1 AND p.author_id = u.id)) AS interactions,

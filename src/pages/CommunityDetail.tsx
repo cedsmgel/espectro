@@ -33,6 +33,7 @@ export const CommunityDetail: React.FC = () => {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [activeTab, setActiveTab] = useState<'discussions' | 'members'>('discussions');
   const [isMember, setIsMember] = useState(false);
+  const [myStatus, setMyStatus] = useState<'active' | 'pending' | 'banned' | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -90,6 +91,7 @@ export const CommunityDetail: React.FC = () => {
       if (current) {
         setCommunity(current);
         setIsMember(Boolean(current.is_member));
+        setMyStatus(current.my_status ?? (current.is_member ? 'active' : null));
         setHasError(false);
 
         // 3. Puxa posts reais da comunidade via /api/posts?community_id=...
@@ -157,36 +159,47 @@ export const CommunityDetail: React.FC = () => {
 
     if (!community) return;
 
+    if (myStatus === 'banned') return;
+    if (community.my_role === 'owner') {
+      showToast('Quem criou a comunidade não pode sair dela.');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      if (isMember) {
-        // Sair da comunidade
+      if (isMember || myStatus === 'pending') {
+        // Sair da comunidade (ou cancelar o pedido de entrada)
+        const wasPending = myStatus === 'pending';
         const res = await communitiesApi.leave(community.id);
         setIsMember(false);
+        setMyStatus(null);
         setCommunity((prev) =>
           prev
             ? {
                 ...prev,
                 is_member: false,
-                members_count: Math.max(0, (res.members_count ?? (prev.members_count || 1) - 1)),
+                my_status: null,
+                my_role: null,
+                i_am_mod: false,
+                can_post_here: false,
+                members_count: res.members_count ?? Math.max(0, (prev.members_count || 1) - 1),
               }
             : null
         );
-        showToast(`Você saiu da comunidade e/${community.name}.`);
+        showToast(wasPending ? 'Pedido cancelado.' : `Você saiu da comunidade e/${community.name}.`);
+        if (community.type === 'private') fetchData();
       } else {
-        // Entrar na comunidade (insere em community_members)
         const res = await communitiesApi.join(community.id);
-        setIsMember(true);
-        setCommunity((prev) =>
-          prev
-            ? {
-                ...prev,
-                is_member: true,
-                members_count: res.members_count ?? ((prev.members_count || 0) + 1),
-              }
-            : null
-        );
-        showToast(`Bem-vindo à comunidade e/${community.name}!`);
+        if (res.status === 'pending') {
+          setMyStatus('pending');
+          setCommunity((prev) => (prev ? { ...prev, my_status: 'pending' } : null));
+          showToast(res.message);
+        } else {
+          setIsMember(true);
+          setMyStatus('active');
+          showToast(`Bem-vindo à comunidade e/${community.name}!`);
+          fetchData();
+        }
       }
     } catch (err: any) {
       alert(err.message || 'Erro ao processar filiação à comunidade.');
@@ -323,20 +336,40 @@ export const CommunityDetail: React.FC = () => {
                               verified
                             </span>
                           </h1>
-                          <span className="text-xs text-on-surface-variant">
-                            {community.members_count || 1} {community.members_count === 1 ? 'membro' : 'membros'} no Espectro
+                          <span className="text-xs text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">
+                                {community.type === 'private' ? 'lock' : community.type === 'restricted' ? 'visibility' : 'public'}
+                              </span>
+                              {community.type === 'private' ? 'Privada' : community.type === 'restricted' ? 'Restrita' : 'Pública'}
+                            </span>
+                            <span>·</span>
+                            <span>
+                              {community.members_count || 1} {community.members_count === 1 ? 'membro' : 'membros'}
+                            </span>
                           </span>
                         </div>
                       </div>
 
                       {/* Join / Participar da Comunidade Button */}
                       <div className="flex items-center gap-2">
+                        {myStatus === 'banned' ? (
+                          <span className="px-4 py-2.5 rounded-full bg-error-container text-error text-xs font-semibold flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[16px]">block</span>
+                            <span>Você foi banido</span>
+                          </span>
+                        ) : community.my_role === 'owner' ? (
+                          <span className="px-4 py-2.5 rounded-full bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[16px]">shield_person</span>
+                            <span>Você é o fundador</span>
+                          </span>
+                        ) : (
                         <button
                           type="button"
                           onClick={handleToggleJoin}
                           disabled={actionLoading}
                           className={`px-6 py-2.5 rounded-full font-semibold text-xs transition-all shadow-xs cursor-pointer flex items-center gap-1.5 ${
-                            isMember
+                            isMember || myStatus === 'pending'
                               ? 'bg-surface-container-high text-on-surface hover:bg-error-container hover:text-error'
                               : 'bg-primary-container text-on-primary hover:bg-primary'
                           }`}
@@ -348,13 +381,19 @@ export const CommunityDetail: React.FC = () => {
                               <span className="material-symbols-outlined text-[16px] text-emerald-500">check</span>
                               <span>Participando (Sair)</span>
                             </>
+                          ) : myStatus === 'pending' ? (
+                            <>
+                              <span className="material-symbols-outlined text-[16px]">schedule</span>
+                              <span>Pedido enviado (cancelar)</span>
+                            </>
                           ) : (
                             <>
-                              <span className="material-symbols-outlined text-[16px]">group_add</span>
-                              <span>Participar</span>
+                              <span className="material-symbols-outlined text-[16px]">{community.type === 'private' ? 'lock_open' : 'group_add'}</span>
+                              <span>{community.type === 'private' ? 'Pedir para entrar' : 'Participar'}</span>
                             </>
                           )}
                         </button>
+                        )}
                       </div>
                     </div>
 
@@ -366,7 +405,7 @@ export const CommunityDetail: React.FC = () => {
                     )}
 
                     {/* Sub-tabs inside community */}
-                    <div className="flex items-center gap-4 pt-4 border-t border-outline-variant text-xs font-semibold">
+                    <div className={`${community.locked ? 'hidden' : 'flex'} items-center gap-4 pt-4 border-t border-outline-variant text-xs font-semibold`}>
                       <button
                         type="button"
                         onClick={() => setActiveTab('discussions')}
@@ -397,15 +436,83 @@ export const CommunityDetail: React.FC = () => {
                   </div>
                 </div>
 
+                {community.locked && (
+                  <div className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant flex flex-col items-center gap-2 text-center">
+                    <span className="material-symbols-outlined text-[36px] text-on-surface-variant">lock</span>
+                    <h2 className="text-sm font-bold text-on-surface">Esta comunidade é privada</h2>
+                    <p className="text-xs text-on-surface-variant max-w-sm">
+                      {myStatus === 'pending'
+                        ? 'Seu pedido está com a moderação. Você vai ver as publicações assim que for aprovado.'
+                        : myStatus === 'banned'
+                        ? `Você não pode entrar nesta comunidade${community.ban_reason ? `: ${community.ban_reason}` : '.'}`
+                        : 'Só membros veem as publicações e a lista de membros. Peça para entrar e aguarde a aprovação.'}
+                    </p>
+                  </div>
+                )}
+
+                {!community.locked && myStatus === 'banned' && (
+                  <div className="p-3 rounded-xl bg-error-container text-error text-xs font-medium">
+                    Você foi banido desta comunidade{community.ban_reason ? `: ${community.ban_reason}` : '.'}
+                    {community.banned_until ? ` Até ${new Date(community.banned_until).toLocaleDateString('pt-BR')}.` : ''}
+                  </div>
+                )}
+
+                {!community.locked && (community.welcome_message || (community.rules && community.rules.length > 0) || (community.tags && community.tags.length > 0)) && (
+                  <section className="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant flex flex-col gap-4">
+                    {community.welcome_message && (
+                      <p className="text-xs sm:text-sm text-on-surface leading-relaxed whitespace-pre-line">{community.welcome_message}</p>
+                    )}
+                    {community.tags && community.tags.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-xs font-bold text-on-surface">Hashtags da comunidade{community.require_tag ? ' (uma é obrigatória)' : ''}</h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {community.tags.map((tag) => (
+                            <Link
+                              key={tag}
+                              to={`/hashtag/${encodeURIComponent(tag)}`}
+                              className="px-2.5 py-1 rounded-full bg-surface-container text-xs font-semibold text-primary hover:bg-surface-container-high"
+                            >
+                              #{tag}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {community.rules && community.rules.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-xs font-bold text-on-surface">Regras de e/{community.name}</h3>
+                        <ol className="flex flex-col gap-2 list-decimal pl-5">
+                          {community.rules.map((rule, i) => (
+                            <li key={i} className="text-xs text-on-surface">
+                              <span className="font-semibold">{rule.title}</span>
+                              {rule.description && <span className="block text-on-surface-variant">{rule.description}</span>}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+                  </section>
+                )}
+
                 {/* ABA DE DISCUSSÕES: Composer & Posts filtrados estritamente por ID */}
-                {activeTab === 'discussions' && (
+                {!community.locked && activeTab === 'discussions' && (
                   <>
                     {/* Composer com communityId pré-selecionado */}
-                    <CreatePostForm
-                      onPostCreated={handlePostCreated}
-                      defaultCommunityId={community.id}
-                      communities={allCommunities}
-                    />
+                    {community.can_post_here ? (
+                      <CreatePostForm
+                        onPostCreated={handlePostCreated}
+                        defaultCommunityId={community.id}
+                        communities={allCommunities}
+                      />
+                    ) : (
+                      myStatus !== 'banned' && (
+                        <div className="p-3 rounded-xl bg-surface-container text-on-surface-variant text-xs">
+                          {community.type === 'restricted'
+                            ? 'Nesta comunidade só pessoas aprovadas pela moderação publicam. Você pode ler tudo.'
+                            : 'Entre na comunidade para publicar.'}
+                        </div>
+                      )
+                    )}
 
                     {/* Posts exclusivos da comunidade (filtrados por community_id) */}
                     {communityFilteredPosts.length === 0 ? (
@@ -438,7 +545,7 @@ export const CommunityDetail: React.FC = () => {
                 )}
 
                 {/* ABA DE MEMBROS: Lista da tabela community_members */}
-                {activeTab === 'members' && (
+                {!community.locked && activeTab === 'members' && (
                   <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant shadow-sm flex flex-col gap-4">
                     <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
                       <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">

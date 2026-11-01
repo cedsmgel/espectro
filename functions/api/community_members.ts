@@ -1,4 +1,6 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../_shared/auth";
+import { canViewCommunityId } from "../_shared/communities";
+import { joinCommunity, leaveCommunity } from "../_shared/communityJoin";
 
 export interface Env {
   DB: D1Database;
@@ -19,12 +21,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const commId = Number(communityId);
     const authUser = await getAuthUser(request, secret);
+    // A lista de membros de comunidade privada é só para membros
+    if (!(await canViewCommunityId(env.DB, commId, authUser ? authUser.id : null))) {
+      return errorResponse("Comunidade não encontrada.", 404);
+    }
 
     // Consulta se o usuário autenticado é membro
     let isMember = false;
     if (authUser) {
       const membership = await env.DB.prepare(
-        "SELECT 1 FROM community_members WHERE user_id = ? AND community_id = ?"
+        "SELECT 1 FROM community_members WHERE user_id = ? AND community_id = ? AND status = 'active'"
       )
         .bind(authUser.id, commId)
         .first();
@@ -42,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         u.avatar_url
       FROM community_members cm
       JOIN users u ON cm.user_id = u.id
-      WHERE cm.community_id = ?
+      WHERE cm.community_id = ? AND cm.status = 'active'
       ORDER BY cm.id DESC
       LIMIT 100
     `;
@@ -99,35 +105,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return errorResponse("ID ou slug da comunidade é obrigatório.", 400);
     }
 
-    // Verifica se a comunidade existe
-    const community = await env.DB.prepare("SELECT id, name FROM communities WHERE id = ?")
-      .bind(commId)
-      .first<{ id: number; name: string }>();
-
-    if (!community) {
-      return errorResponse("Comunidade não encontrada.", 404);
-    }
-
-    // Insere na tabela community_members (INSERT OR IGNORE para evitar duplicações)
-    await env.DB.prepare(
-      "INSERT OR IGNORE INTO community_members (user_id, community_id) VALUES (?, ?)"
-    )
-      .bind(user.id, commId)
-      .run();
-
-    // Conta o total atualizado de membros
-    const countResult = await env.DB.prepare(
-      "SELECT COUNT(1) AS total FROM community_members WHERE community_id = ?"
-    )
-      .bind(commId)
-      .first<{ total: number }>();
-
-    return jsonResponse({
-      message: `Você entrou na comunidade e/${community.name}!`,
-      community_id: commId,
-      is_member: true,
-      members_count: countResult ? countResult.total : 1,
-    });
+    const result = await joinCommunity(env.DB, commId, user.id);
+    return jsonResponse(result.body, result.status);
   } catch (err: unknown) {
     return serverError(err, "community_members");
   }
@@ -151,24 +130,8 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       return errorResponse("Parâmetro community_id obrigatório.", 400);
     }
 
-    await env.DB.prepare(
-      "DELETE FROM community_members WHERE user_id = ? AND community_id = ?"
-    )
-      .bind(user.id, commId)
-      .run();
-
-    const countResult = await env.DB.prepare(
-      "SELECT COUNT(1) AS total FROM community_members WHERE community_id = ?"
-    )
-      .bind(commId)
-      .first<{ total: number }>();
-
-    return jsonResponse({
-      message: "Você saiu da comunidade.",
-      community_id: commId,
-      is_member: false,
-      members_count: countResult ? countResult.total : 0,
-    });
+    const result = await leaveCommunity(env.DB, commId, user.id);
+    return jsonResponse(result.body, result.status);
   } catch (err: unknown) {
     return serverError(err, "community_members");
   }
