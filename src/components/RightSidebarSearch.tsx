@@ -157,7 +157,7 @@ export const RightSidebarSearch: React.FC = () => {
                     {searchResults.communities.slice(0, 3).map((c) => (
                       <Link
                         key={c.id}
-                        to={`/c/${c.slug || c.id}`}
+                        to={`/e/${c.slug || c.id}`}
                         onClick={() => setShowSearchResults(false)}
                         className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
                       >
@@ -169,7 +169,7 @@ export const RightSidebarSearch: React.FC = () => {
                         </div>
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs font-bold text-on-surface group-hover:text-secondary transition-colors truncate">
-                            c/{c.name}
+                            e/{c.name}
                           </span>
                           <span className="text-[11px] text-on-surface-variant truncate">
                             {c.description || `${c.members_count || 1} membros`}

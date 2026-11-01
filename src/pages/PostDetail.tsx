@@ -147,7 +147,7 @@ export const PostDetail: React.FC = () => {
               </h1>
               {post && (
                 <span className="text-[11px] text-on-surface-variant">
-                  por @{post.author_name} {post.community_name ? `em c/${post.community_name}` : ''}
+                  por @{post.author_name} {post.community_name ? `em e/${post.community_name}` : ''}
                 </span>
               )}
             </div>

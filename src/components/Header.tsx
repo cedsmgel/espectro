@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                           {searchResults.communities.map((c) => (
                             <Link
                               key={c.id}
-                              to={`/c/${c.slug || c.id}`}
+                              to={`/e/${c.slug || c.id}`}
                               onClick={() => setShowSearchResults(false)}
                               className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors group cursor-pointer"
                             >
@@ -256,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <span className="text-xs font-bold text-on-surface group-hover:text-secondary transition-colors truncate">
-                                  c/{c.name}
+                                  e/{c.name}
                                 </span>
                                 <span className="text-[11px] text-on-surface-variant truncate">
                                   {c.description || `${c.members_count || 1} membros`}
@@ -291,7 +291,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                                   {p.title || parseScrap(p.content).body}
                                 </span>
                                 <span className="text-[10px] text-on-surface-variant truncate">
-                                  por @{p.author_name} {p.community_name ? `em c/${p.community_name}` : ''}
+                                  por @{p.author_name} {p.community_name ? `em e/${p.community_name}` : ''}
                                 </span>
                               </div>
                             </Link>
@@ -513,7 +513,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                         <button
                           key={`comm-${c.id}`}
                           type="button"
-                          onClick={() => handleSelectResult(`/c/${encodeURIComponent(c.slug || c.name || c.id)}`)}
+                          onClick={() => handleSelectResult(`/e/${encodeURIComponent(c.slug || c.name || c.id)}`)}
                           className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-surface-container active:bg-surface-container-high transition-colors text-left cursor-pointer"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -525,7 +525,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                             </div>
                             <div className="flex flex-col min-w-0 flex-1">
                               <span className="text-sm font-semibold text-on-surface truncate">
-                                c/{c.name}
+                                e/{c.name}
                               </span>
                               <span className="text-xs text-on-surface-variant truncate">
                                 {c.description || `${c.members_count || 1} membros`}
@@ -565,7 +565,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                                 {p.title || parseScrap(p.content).body}
                               </span>
                               <span className="text-xs text-on-surface-variant truncate">
-                                por @{p.author_name} {p.community_name ? `em c/${p.community_name}` : ''}
+                                por @{p.author_name} {p.community_name ? `em e/${p.community_name}` : ''}
                               </span>
                             </div>
                           </div>

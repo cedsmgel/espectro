@@ -66,8 +66,8 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
               {c.name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <Link to={`/c/${c.slug || c.id}`} className="block text-xs font-semibold text-on-surface truncate hover:text-primary">
-                c/{c.name}
+              <Link to={`/e/${c.slug || c.id}`} className="block text-xs font-semibold text-on-surface truncate hover:text-primary">
+                e/{c.name}
               </Link>
               <span className="block text-[11px] text-on-surface-variant truncate">{reasonOf(c)}</span>
             </div>
@@ -83,7 +83,7 @@ export const CommunitySuggestions: React.FC<CommunitySuggestionsProps> = ({ onJo
               type="button"
               onClick={() => dismiss(c)}
               title="Dispensar recomendação"
-              aria-label={`Dispensar c/${c.name}`}
+              aria-label={`Dispensar e/${c.name}`}
               className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high cursor-pointer shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>

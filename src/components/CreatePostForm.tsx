@@ -828,7 +828,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               <option value="" className="bg-surface text-on-surface">Feed Geral</option>
               {communities.map((c) => (
                 <option key={c.id} value={c.id} className="bg-surface text-on-surface">
-                  c/{c.name}
+                  e/{c.name}
                 </option>
               ))}
             </select>
