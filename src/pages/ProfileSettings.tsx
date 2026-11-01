@@ -23,7 +23,6 @@ export const ProfileSettings: React.FC = () => {
   const [email, setEmail] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   // Estados de feedback
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -48,7 +47,6 @@ export const ProfileSettings: React.FC = () => {
         setEmail(data.email || '');
         setBio(data.bio || '');
         setAvatarUrl(data.avatar_url || null);
-        setCoverUrl(data.cover_url || null);
       } catch (err: any) {
         console.error('Erro ao carregar perfil:', err);
         setErrorMessage(err.message || 'Falha ao carregar seus dados de perfil.');
@@ -437,7 +435,7 @@ export const ProfileSettings: React.FC = () => {
               )}
             </div>
 
-            {!loading && <ProfileDetailsEditor coverUrl={coverUrl} onCoverChange={setCoverUrl} />}
+            {!loading && <ProfileDetailsEditor />}
             {!loading && <PrivacySettings />}
           </div>
         </main>

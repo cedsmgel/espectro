@@ -10,20 +10,13 @@ interface FieldState {
 const inputClass =
   'block w-full min-w-0 max-w-full appearance-none px-0 py-2 rounded-none bg-transparent border-0 text-on-surface text-sm outline-none focus:ring-0';
 
-interface ProfileDetailsEditorProps {
-  coverUrl: string | null;
-  onCoverChange: (url: string | null) => void;
-}
-
-// Capa e informações pessoais, cada uma com a sua privacidade (nasce "Só eu")
-export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ coverUrl, onCoverChange }) => {
+// Informações pessoais, cada uma com a sua privacidade (nasce "Só eu")
+export const ProfileDetailsEditor: React.FC = () => {
   const [fields, setFields] = useState<Record<string, FieldState>>({});
   const [links, setLinks] = useState<ProfileLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
-  const coverInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     profileDetailsApi
@@ -40,30 +33,6 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
     setFields((prev) => ({ ...prev, [key]: { value, visibility: prev[key]?.visibility ?? 'private' } }));
   const setVisibility = (key: string, visibility: Visibility) =>
     setFields((prev) => ({ ...prev, [key]: { value: prev[key]?.value ?? '', visibility } }));
-
-  const handleCover = async (file: File | undefined) => {
-    if (!file) return;
-    setMessage(null);
-    setUploading(true);
-    try {
-      const uploaded = await uploadApi.upload(file, { context: 'cover' });
-      await profileApi.update({ cover_url: uploaded.url });
-      onCoverChange(uploaded.url);
-    } catch (err: any) {
-      setMessage({ kind: 'error', text: err?.message || 'Não foi possível enviar a capa.' });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const removeCover = async () => {
-    try {
-      await profileApi.update({ cover_url: null });
-      onCoverChange(null);
-    } catch {
-      setMessage({ kind: 'error', text: 'Não foi possível remover a capa.' });
-    }
-  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,25 +76,6 @@ export const ProfileDetailsEditor: React.FC<ProfileDetailsEditorProps> = ({ cove
       <div>
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Informações do perfil</h2>
         <p className="text-xs text-on-surface-variant mt-1">Tudo é opcional e começa visível só para você. Escolha quem vê cada informação.</p>
-      </div>
-
-      {/* Capa */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-xs font-semibold text-on-surface">Capa</h3>
-        <div className="relative h-28 sm:h-36 overflow-hidden border border-outline-variant">
-          {coverUrl && <img src={coverUrl} alt="Capa do perfil" className="w-full h-full object-cover" />}
-        </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={() => coverInputRef.current?.click()} disabled={uploading} className="px-4 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs cursor-pointer disabled:opacity-50">
-            {uploading ? 'Enviando...' : coverUrl ? 'Trocar capa' : 'Adicionar capa'}
-          </button>
-          {coverUrl && (
-            <button type="button" onClick={() => void removeCover()} className="px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant hover:text-error font-semibold text-xs cursor-pointer">
-              Remover
-            </button>
-          )}
-          <input ref={coverInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => { void handleCover(e.target.files?.[0]); e.target.value = ''; }} />
-        </div>
       </div>
 
       {loading ? (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { authStorage, Community, MyActivity, Post, postsApi, ProfileFriend, profileSectionsApi, UserProfile, usersApi } from '../lib/api';
+import { authStorage, Community, followsApi, MyActivity, Post, postsApi, ProfileFollowUser, ProfileFriend, profileSectionsApi, UserProfile, usersApi } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { PostCard } from '../components/PostCard';
@@ -9,10 +9,12 @@ import { MediaGrid } from '../components/MediaGrid';
 import { ProfileAbout } from '../components/ProfileAbout';
 import { EmptyState } from '../components/EmptyState';
 
-export type ProfileSectionId = 'amigos' | 'sobre' | 'fotos' | 'videos' | 'comunidades' | 'salvos' | 'atividade';
+export type ProfileSectionId = 'amigos' | 'seguidores' | 'seguindo' | 'sobre' | 'fotos' | 'videos' | 'comunidades' | 'salvos' | 'atividade';
 
 const SECTIONS: { id: ProfileSectionId; label: string; icon: string; ownerOnly?: boolean }[] = [
   { id: 'sobre', label: 'Sobre', icon: 'info' },
+  { id: 'seguidores', label: 'Seguidores', icon: 'groups' },
+  { id: 'seguindo', label: 'Seguindo', icon: 'person_check' },
   { id: 'amigos', label: 'Amigos', icon: 'group' },
   { id: 'comunidades', label: 'Comunidades', icon: 'forum' },
   { id: 'salvos', label: 'Salvos', icon: 'bookmark', ownerOnly: true },
@@ -78,6 +80,92 @@ const FriendsSection: React.FC<{ username: string }> = ({ username }) => {
                 </div>
                 {Boolean(f.mutual) && <span className="text-[11px] text-on-surface-variant shrink-0">Amigo em comum</span>}
               </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+// Seguidores e Seguindo: lista com busca e botão de seguir (menos nas linhas da própria pessoa)
+const FollowsSection: React.FC<{ username: string; type: 'followers' | 'following' }> = ({ username, type }) => {
+  const me = authStorage.getUser();
+  const [users, setUsers] = useState<ProfileFollowUser[] | null>(null);
+  const [locked, setLocked] = useState(false);
+  const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setUsers(null);
+    const timer = window.setTimeout(() => {
+      profileSectionsApi
+        .follows(username, type, query.trim() || undefined)
+        .then((res) => {
+          if (!active) return;
+          setUsers(res.users);
+          setLocked(res.locked);
+        })
+        .catch(() => active && setUsers([]));
+    }, query ? 250 : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [username, type, query]);
+
+  const toggle = async (u: ProfileFollowUser) => {
+    setBusyId(u.id);
+    try {
+      if (u.i_follow) await followsApi.unfollow(u.id);
+      else await followsApi.follow(u.id);
+      setUsers((list) => (list ? list.map((x) => (x.id === u.id ? { ...x, i_follow: !u.i_follow } : x)) : list));
+    } catch {
+      // perfil privado ou bloqueio: o estado do botão não muda
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (locked) return <Empty text="Só amigos podem ver esta lista." />;
+  return (
+    <div className="flex flex-col">
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Pesquisar"
+        aria-label={type === 'followers' ? 'Buscar seguidores' : 'Buscar quem segue'}
+        className="w-full py-3 bg-transparent border-0 border-b border-outline-variant outline-none text-base text-on-surface placeholder:text-on-surface-variant"
+      />
+      {users === null ? (
+        <Empty text="Carregando..." />
+      ) : users.length === 0 ? (
+        <Empty text={query ? 'Ninguém encontrado.' : type === 'followers' ? 'Ainda não há seguidores.' : 'Ainda não segue ninguém.'} />
+      ) : (
+        <ul>
+          {users.map((u) => (
+            <li key={u.id} className="border-b border-outline-variant flex items-center gap-3 py-3">
+              <Link to={`/perfil/${encodeURIComponent(u.username)}`} className="flex items-center gap-3 min-w-0 flex-1">
+                <Avatar username={u.username} url={u.avatar_url} />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-on-surface truncate">{u.username}</p>
+                  {u.name && <p className="text-xs text-on-surface-variant truncate">{u.name}</p>}
+                </div>
+              </Link>
+              {me && me.id !== u.id && (
+                <button
+                  type="button"
+                  disabled={busyId === u.id}
+                  onClick={() => void toggle(u)}
+                  className={`h-9 px-4 rounded-full text-xs font-semibold cursor-pointer disabled:opacity-50 shrink-0 ${
+                    u.i_follow ? 'bg-surface-container text-on-surface hover:bg-surface-container-high' : 'bg-on-surface text-surface hover:opacity-90'
+                  }`}
+                >
+                  {u.i_follow ? 'Seguindo' : 'Seguir'}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -196,6 +284,10 @@ export const ProfileSection: React.FC = () => {
         return <ProfileAbout username={profile.username} isSelf={isSelf} />;
       case 'amigos':
         return <FriendsSection username={profile.username} />;
+      case 'seguidores':
+        return <FollowsSection username={profile.username} type="followers" />;
+      case 'seguindo':
+        return <FollowsSection username={profile.username} type="following" />;
       case 'fotos':
         return (
           <PostsSection
