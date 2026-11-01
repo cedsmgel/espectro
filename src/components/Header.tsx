@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { tagKey } from '../lib/hashtags';
 import { requestAuth } from '../lib/authEvents';
 import { Link, useNavigate } from 'react-router-dom';
 import { authStorage, searchApi, SearchResults } from '../lib/api';
@@ -90,11 +91,15 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     };
   }, []);
 
+  // Busca que começa com # leva direto à página da hashtag
+  const searchTarget = (query: string) =>
+    /^#[\p{L}\p{N}_]{2,50}$/u.test(query) ? `/tag/${encodeURIComponent(tagKey(query.slice(1)))}` : `/?q=${encodeURIComponent(query)}`;
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setShowSearchResults(false);
-      navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(searchTarget(searchQuery.trim()));
     }
   };
 
@@ -113,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       mobileInputRef.current?.blur();
       setShowSearchResults(false);
       setMobileSearchOpen(false);
-      navigate('/?q=' + encodeURIComponent(searchQuery.trim()));
+      navigate(searchTarget(searchQuery.trim()));
     }
   };
 

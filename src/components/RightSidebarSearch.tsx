@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { tagKey } from '../lib/hashtags';
 import { Link, useNavigate } from 'react-router-dom';
 import { searchApi, SearchResults } from '../lib/api';
 import { parseScrap } from '../lib/scrapStyle';
@@ -59,7 +60,9 @@ export const RightSidebarSearch: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       setShowSearchResults(false);
-      navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+      const query = searchQuery.trim();
+      // Busca que começa com # leva direto à página da hashtag
+      navigate(/^#[\p{L}\p{N}_]{2,50}$/u.test(query) ? `/tag/${encodeURIComponent(tagKey(query.slice(1)))}` : `/?q=${encodeURIComponent(query)}`);
     }
   };
 

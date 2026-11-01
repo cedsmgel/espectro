@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { splitHashtags } from './hashtags';
 
 /**
  * Renderiza formatação Markdown simples:
@@ -83,7 +85,25 @@ export function renderMarkdown(content: string): React.ReactNode {
                 );
               }
 
-              return <React.Fragment key={partIndex}>{part}</React.Fragment>;
+              // 5. Hashtags: #palavra vira link para /tag/palavra
+              return (
+                <React.Fragment key={partIndex}>
+                  {splitHashtags(part).map((piece, pieceIndex) =>
+                    piece.tag ? (
+                      <Link
+                        key={pieceIndex}
+                        to={`/tag/${encodeURIComponent(piece.tag)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold underline decoration-current/40 underline-offset-2 hover:decoration-current"
+                      >
+                        {piece.text}
+                      </Link>
+                    ) : (
+                      <React.Fragment key={pieceIndex}>{piece.text}</React.Fragment>
+                    )
+                  )}
+                </React.Fragment>
+              );
             })}
           </span>
         );

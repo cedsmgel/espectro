@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError, canViewAuthorContent } from "../../_shared/auth";
+import { syncPostHashtags } from "../../_shared/hashtags";
 
 export interface Env {
   DB: D1Database;
@@ -122,6 +123,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     )
       .bind(cleanContent, cleanTitle, numericPostId)
       .run();
+    await syncPostHashtags(env.DB, numericPostId, cleanTitle, cleanContent).catch(() => undefined);
 
     // 4. Retorna a publicação atualizada com os dados do autor e comunidade
     const updatedPost = await env.DB.prepare(
