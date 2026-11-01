@@ -153,6 +153,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return jsonResponse({ ok: true });
     }
 
+    // ---- Fixar / desafixar publicação (até 2)
+    if (action === "pin" || action === "unpin") {
+      const postId = Number(body.post_id);
+      if (!postId) return errorResponse("post_id é obrigatório.", 400);
+      const post = await env.DB.prepare("SELECT id, community_id FROM posts WHERE id = ?").bind(postId).first<{ id: number; community_id: number | null }>();
+      if (!post || post.community_id !== communityId) return errorResponse("Publicação não encontrada nesta comunidade.", 404);
+      if (action === "pin") {
+        const count = await env.DB.prepare("SELECT COUNT(1) AS n FROM community_pins WHERE community_id = ?").bind(communityId).first<{ n: number }>();
+        const already = await env.DB.prepare("SELECT 1 FROM community_pins WHERE community_id = ? AND post_id = ?").bind(communityId, postId).first();
+        if (!already && (count?.n ?? 0) >= 2) return errorResponse("Só é possível fixar 2 publicações. Desafixe uma antes.", 409);
+        await env.DB.prepare("INSERT OR IGNORE INTO community_pins (community_id, post_id, position) VALUES (?, ?, ?)").bind(communityId, postId, count?.n ?? 0).run();
+      } else {
+        await env.DB.prepare("DELETE FROM community_pins WHERE community_id = ? AND post_id = ?").bind(communityId, postId).run();
+      }
+      await logCommunityAction(env.DB, communityId, user.id, action, { postId });
+      return jsonResponse({ ok: true });
+    }
+
     // ---- Remover publicação da comunidade
     if (action === "remove_post") {
       const postId = Number(body.post_id);

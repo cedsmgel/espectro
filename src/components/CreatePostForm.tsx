@@ -23,6 +23,9 @@ interface CreatePostFormProps {
   onPostCreated: (data: CreatePostData) => Promise<void>;
   communities?: Community[];
   defaultCommunityId?: number | null;
+  // Hashtags da comunidade: aparecem como atalhos; requireTag avisa que ao menos uma é obrigatória
+  communityTags?: string[];
+  requireTag?: boolean;
   onClose?: () => void;
   isModal?: boolean;
 }
@@ -35,6 +38,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   onPostCreated,
   communities = [],
   defaultCommunityId = null,
+  communityTags = [],
+  requireTag = false,
   onClose,
   isModal = false,
 }) => {
@@ -74,6 +79,11 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       ta?.focus();
       ta?.setSelectionRange(replaced.length, replaced.length);
     }, 0);
+  };
+  const insertCommunityTag = (tag: string) => {
+    if (new RegExp(`#${tag}(?![\\p{L}\\p{N}_])`, 'iu').test(content)) return;
+    setContent((prev) => `${prev}${prev && !/\s$/.test(prev) ? ' ' : ''}#${tag} `);
+    setTimeout(() => textareaRef.current?.focus(), 0);
   };
   const [communityId, setCommunityId] = useState<number | ''>(defaultCommunityId || '');
   const [mediaUrl, setMediaUrl] = useState('');
@@ -748,6 +758,22 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 rows={6}
                 className="w-full min-h-[160px] bg-transparent text-on-surface text-sm sm:text-base placeholder:text-on-surface-variant/40 focus:outline-none resize-none leading-relaxed"
               />
+            )}
+
+            {communityTags.length > 0 && communityId === defaultCommunityId && (
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <span className="text-[11px] text-on-surface-variant">{requireTag ? 'Use ao menos uma hashtag:' : 'Hashtags da comunidade:'}</span>
+                {communityTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => insertCommunityTag(tag)}
+                    className="h-7 px-2.5 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:border-on-surface cursor-pointer"
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
             )}
 
             {tagSuggestions.length > 0 && (
