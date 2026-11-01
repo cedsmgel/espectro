@@ -19,7 +19,7 @@ Recomendação: fazer **A e B primeiro** (sem treino, valem com poucos usuários
 
 ## 2. Fase 0: coletar certo (sem ML) — fazer agora
 
-Treinar bem depende de logs bem feitos. Hoje faltam:
+Treinar bem depende de logs bem feitos. Hoje faltam (o registro de eventos agora é uma linha `view` por visualização; ver `docs/algoritmo-do-feed.md`):
 
 1. **Posição e origem** de cada impressão: `position` (1.ª, 2.ª...), `feed` (`foryou`/`following`/comunidade) e `ranker_version` (ex.: `rules-v1`). Sem isso o modelo aprende que "o que aparece primeiro é bom".
 2. **Sinal negativo explícito:** botão "Não tenho interesse" (esconder) por publicação e por autor. Impressão sem abrir é um negativo fraco e ruidoso.
