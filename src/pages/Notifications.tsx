@@ -261,7 +261,7 @@ export const Notifications: React.FC = () => {
         }`}
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8 flex-1">
-          <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="w-full max-w-4xl mx-auto px-3 sm:px-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary-container text-on-primary flex items-center justify-center shadow-xs">

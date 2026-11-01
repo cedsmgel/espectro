@@ -247,7 +247,7 @@ export const ProfileSection: React.FC = () => {
       <Header />
       <SidebarNav />
       <div className="pt-16 md:pt-0 md:pl-20">
-        <main className="w-full max-w-3xl mx-auto px-4 pt-4 pb-24 md:pb-8">
+        <main className="w-full max-w-2xl mx-auto px-4 pt-4 pb-24 md:pb-8">
           <div className="flex items-center gap-3 pb-4">
             <Link to={base} aria-label="Voltar ao perfil" className="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>

@@ -67,8 +67,8 @@ export const Communities: React.FC = () => {
           isExpanded ? 'pl-0 md:pl-20' : 'pl-0 md:pl-20'
         }`}
       >
-        <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 flex-1">
-          <section className="flex flex-col gap-6 max-w-5xl mx-auto min-w-0">
+        <main className="w-full max-w-2xl mx-auto px-3 sm:px-4 pt-4 pb-24 md:pb-8 flex-1">
+          <section className="flex flex-col gap-6 mx-auto min-w-0">
             {/* Header Banner */}
             <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant">
               <div>
@@ -146,7 +146,7 @@ export const Communities: React.FC = () => {
 
             {/* Lista de Comunidades */}
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-pulse">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
@@ -191,7 +191,7 @@ export const Communities: React.FC = () => {
                 }}
               />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {filtered.map((comm) => (
                   <div
                     key={comm.id}
