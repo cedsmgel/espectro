@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 
 // Avisa quando a conexão cai e quando ela volta, sem atrapalhar o uso
 export const OfflineBanner: React.FC = () => {
-  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const [online, setOnline] = useState(true); // o servidor não sabe: começa online e confere ao montar
   const [justBack, setJustBack] = useState(false);
 
   useEffect(() => {
     let timer: number | undefined;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) setOnline(false);
 
     const goOffline = () => {
       window.clearTimeout(timer);

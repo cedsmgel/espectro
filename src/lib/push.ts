@@ -13,7 +13,7 @@ export function isPushSupported(): boolean {
 
 // No iPhone/iPad as notificações só funcionam com o site instalado na tela inicial
 export function needsHomeScreenInstall(): boolean {
-  if (typeof navigator === 'undefined') return false;
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const standalone =
     window.matchMedia?.('(display-mode: standalone)').matches ||

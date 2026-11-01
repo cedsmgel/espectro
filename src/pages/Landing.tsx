@@ -106,7 +106,7 @@ export const Landing: React.FC = () => {
         </section>
       </main>
 
-      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 text-xs text-on-surface-variant pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <footer suppressHydrationWarning className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 text-xs text-on-surface-variant pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         Espectro © {new Date().getFullYear()}
       </footer>
     </div>
