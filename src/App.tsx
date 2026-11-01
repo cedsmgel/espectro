@@ -9,6 +9,8 @@ import { Feed } from './pages/Feed';
 import { usePresenceHeartbeat } from './hooks/usePresence';
 import { lazyNamed } from './lib/lazy';
 import { PushPrompt } from './components/PushPrompt';
+import { InstallPrompt } from './components/InstallPrompt';
+import { OfflineBanner } from './components/OfflineBanner';
 
 // Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
 const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities');
@@ -79,6 +81,8 @@ export const App: React.FC = () => {
         <GlobalCreatePostModal />
         <PresenceHeartbeat />
         <PushPrompt />
+        <InstallPrompt />
+        <OfflineBanner />
         <BottomNav />
         </SidebarProvider>
       </ThemeProvider>

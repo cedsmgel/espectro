@@ -5,6 +5,7 @@ import { SidebarNav } from '../components/SidebarNav';
 import { EmptyState } from '../components/EmptyState';
 import { adminApi, AdminReport, AdminUser, authStorage } from '../lib/api';
 import { useIsAdmin } from '../hooks/useIsAdmin';
+import { PerformanceTab } from '../components/admin/PerformanceTab';
 
 const REASON_LABELS: Record<string, string> = {
   spam: 'Spam',
@@ -400,7 +401,7 @@ const UsersTab: React.FC = () => {
 export const Admin: React.FC = () => {
   const user = authStorage.getUser();
   const isAdmin = useIsAdmin();
-  const [tab, setTab] = useState<'reports' | 'users'>('reports');
+  const [tab, setTab] = useState<'reports' | 'users' | 'performance'>('reports');
   const [openCount, setOpenCount] = useState<number | null>(null);
 
   // onCount recebe o total de abertas ou -1 quando uma é resolvida
@@ -471,9 +472,18 @@ export const Admin: React.FC = () => {
           >
             Contas
           </button>
+          <button
+            type="button"
+            onClick={() => setTab('performance')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
+              tab === 'performance' ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Desempenho
+          </button>
         </div>
 
-        {tab === 'reports' ? <ReportsTab onCount={handleCount} /> : <UsersTab />}
+        {tab === 'reports' ? <ReportsTab onCount={handleCount} /> : tab === 'users' ? <UsersTab /> : <PerformanceTab />}
       </div>
     </main>
   );

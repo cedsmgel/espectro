@@ -1,16 +1,43 @@
 {
+  "id": "/",
   "name": "Espectro",
   "short_name": "Espectro",
   "description": "Rede social para conversar, compartilhar e participar de comunidades.",
   "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0b0b0d",
   "theme_color": "#6B8E23",
+  "categories": ["social"],
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mensagens",
+      "short_name": "Mensagens",
+      "description": "Abrir suas conversas",
+      "url": "/mensagens",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Notificações",
+      "short_name": "Avisos",
+      "description": "Pedidos de amizade, respostas e recomendações",
+      "url": "/notificacoes",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Vídeos",
+      "short_name": "Vídeos",
+      "description": "Ver vídeos da comunidade",
+      "url": "/videos",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }

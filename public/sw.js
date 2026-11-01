@@ -1,13 +1,22 @@
-// Service worker do Espectro: notificações push e cache da interface.
+// Service worker do Espectro: notificações push, cache da interface e página offline.
 // Vídeo, áudio e demais mídias nunca entram no Cache Storage: passam direto pela rede,
 // que já responde a Range requests e usa o cache HTTP do navegador.
 
-const UI_CACHE = 'espectro-ui-v1';
+const UI_CACHE = 'espectro-ui-v2';
 const SHELL_URL = '/index.html';
+// O servidor redireciona /offline.html para /offline, e uma resposta redirecionada não pode ser entregue a uma navegação
+const OFFLINE_URL = '/offline';
 const MAX_UI_ENTRIES = 80;
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
+  // A página offline precisa estar guardada antes de a conexão cair
+  event.waitUntil(
+    caches
+      .open(UI_CACHE)
+      .then((cache) => cache.add(OFFLINE_URL))
+      .catch(() => {})
+  );
 });
 
 self.addEventListener('activate', (event) => {
@@ -31,7 +40,7 @@ function isMediaRequest(request, url) {
 
 async function trimCache(cache) {
   const keys = await cache.keys();
-  const excess = keys.filter((key) => !key.url.endsWith(SHELL_URL)).slice(0, Math.max(0, keys.length - MAX_UI_ENTRIES));
+  const excess = keys.filter((key) => !key.url.endsWith(SHELL_URL) && !key.url.endsWith(OFFLINE_URL)).slice(0, Math.max(0, keys.length - MAX_UI_ENTRIES));
   await Promise.all(excess.map((key) => cache.delete(key)));
 }
 
@@ -80,6 +89,9 @@ async function networkFirstPage(event) {
   } catch (err) {
     const cached = await cache.match(SHELL_URL);
     if (cached) return cached;
+    // Sem conexão e sem o app guardado: mostra a página offline em vez do erro do navegador
+    const offline = await cache.match(OFFLINE_URL);
+    if (offline) return offline;
     throw err;
   }
 }

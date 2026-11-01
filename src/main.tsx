@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { registerServiceWorker } from './lib/push';
+import './lib/install';
+import { startVitals } from './lib/vitals';
 
 // Previne gestos de pinça de zoom (gesturestart) indesejados no iOS Safari
 if (typeof document !== 'undefined') {
@@ -17,6 +19,8 @@ if (typeof window !== 'undefined') {
     void registerServiceWorker();
   });
 }
+
+startVitals();
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
