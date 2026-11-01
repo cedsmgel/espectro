@@ -1,5 +1,6 @@
 import { purgeDueAccounts } from "../_shared/accountPurge";
-import { areFriends, getAuthUser, jsonResponse, errorResponse, getJwtSecret, rateLimit, serverError } from "../_shared/auth";
+import { ONLINE_WINDOW_SECONDS, touchPresence } from "../_shared/pulse";
+import { areFriends, getAuthUser, jsonResponse, errorResponse, getJwtSecret, serverError } from "../_shared/auth";
 
 export interface Env {
   DB: D1Database;
@@ -8,7 +9,6 @@ export interface Env {
   BUCKET?: R2Bucket;
 }
 
-const ONLINE_WINDOW_SECONDS = 90;
 
 // POST: batimento de presença do app aberto (atualiza "visto por último")
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -17,15 +17,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const user = await getAuthUser(request, getJwtSecret(env));
     if (!user) return errorResponse("Não autorizado.", 401);
 
-    const limited = await rateLimit(env.DB, request, "presence", 20, 60, user.id);
-    if (limited) return limited;
-
-    await env.DB.prepare(
-      `UPDATE users SET last_seen_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND (last_seen_at IS NULL OR last_seen_at < datetime('now', '-30 seconds'))`
-    )
-      .bind(user.id)
-      .run();
+    await touchPresence(env.DB, user.id);
 
     // Rotina de manutenção: apaga contas cujo prazo de exclusão venceu (no máximo uma vez por hora)
     context.waitUntil(purgeDueAccounts(env).catch(() => 0));

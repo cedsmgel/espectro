@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl, serverError, rateLimit } from "../../_shared/auth";
+import { cachedForVisitors } from "../../_shared/edgeCache";
 import { canPost, getMembership, VISIBLE_IN_PRIVATE_SQL } from "../../_shared/communities";
 import { extractHashtags } from "../../_shared/hashtags";
 import { normalizeTag, syncPostHashtags } from "../../_shared/hashtags";
@@ -14,7 +15,7 @@ export interface Env extends PushEnv {
 }
 
 // GET: lista os posts com filtros opcionais (community_id, community_slug, post_type, feed)
-export const onRequestGet: PagesFunction<Env> = async (context) => {
+const handleGet: PagesFunction<Env> = async (context) => {
   try {
     const { request, env } = context;
     const url = new URL(request.url);
@@ -525,3 +526,4 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   }
 };
 
+export const onRequestGet: PagesFunction<Env> = (context) => cachedForVisitors(context.request, 30, async () => handleGet(context));

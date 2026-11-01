@@ -638,6 +638,11 @@ export const communitySuggestionsApi = {
   join: (communityId: number) => api.joinCommunity({ community_id: communityId }),
 };
 
+export const pulseApi = {
+  beat: () =>
+    apiRequest<{ unread_count: number; notifications: number; pending_requests: number; total_badge: number }>('/api/pulse', { method: 'POST' }),
+};
+
 export const notificationsApi = {
   list: (beforeId?: number) =>
     apiRequest<{ notifications: AppNotification[]; has_more: boolean; summary: NotificationSummary }>(

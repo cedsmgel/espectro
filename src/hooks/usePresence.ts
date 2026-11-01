@@ -1,28 +1,13 @@
 import { useEffect, useState } from 'react';
 import { authStorage, FriendPresence, presenceApi } from '../lib/api';
+import { usePulseOwner } from '../lib/pulse';
 
-// Avisa o servidor que o usuário está com o app aberto (base do "visto por último")
+// Mantém o pulso do app ligado: ele marca presença ("visto por último") e atualiza os selos
 export function usePresenceHeartbeat() {
-  const userId = authStorage.getUser()?.id;
-
-  useEffect(() => {
-    if (!userId) return;
-    const ping = () => {
-      if (document.visibilityState === 'visible') presenceApi.ping().catch(() => {});
-    };
-    ping();
-    const timer = window.setInterval(ping, 45000);
-    document.addEventListener('visibilitychange', ping);
-    window.addEventListener('focus', ping);
-    return () => {
-      window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', ping);
-      window.removeEventListener('focus', ping);
-    };
-  }, [userId]);
+  usePulseOwner(authStorage.getUser()?.id);
 }
 
-// Status de um amigo (online agora ou visto por último); atualiza a cada 30s
+// Status de um amigo (online agora ou visto por último); atualiza a cada 60s
 export function useFriendPresence(friendId: number | null | undefined): FriendPresence | null {
   const [presence, setPresence] = useState<FriendPresence | null>(null);
 
@@ -44,7 +29,7 @@ export function useFriendPresence(friendId: number | null | undefined): FriendPr
     };
 
     load();
-    const timer = window.setInterval(load, 30000);
+    const timer = window.setInterval(load, 60000);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       cancelled = true;
