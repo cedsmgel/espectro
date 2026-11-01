@@ -540,7 +540,7 @@ export const DirectMessages: React.FC = () => {
 
     // 1. Limite de tamanho: máximo 10MB por arquivo no chat
     const MAX_CHAT_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    if (file.size > MAX_CHAT_FILE_SIZE) {
+    if (file.size > MAX_CHAT_FILE_SIZE && !file.type.startsWith('image/')) {
       const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
       const friendlyMsg = `O arquivo "${file.name}" possui ${sizeMB} MB. O limite máximo permitido para envio no chat é de 10 MB por arquivo.`;
 
