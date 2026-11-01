@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authStorage, friendsApi, Friend } from '../lib/api';
 import { EmptyState } from './EmptyState';
 import { useChat } from '../hooks/useChat';
+import { TypingBubble } from './chat/TypingBubble';
 
 interface ContactsDrawerProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
     sendMessage,
     sendTyping,
     isOtherUserTyping,
+    otherUserActivity,
     connectionStatus,
     loadingHistory: loadingMessages,
     reconnect,
@@ -337,14 +339,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
 
               {/* Indicador de Digitação */}
               {isOtherUserTyping && (
-                <div className="flex items-center gap-2 text-[11px] text-on-surface-variant italic pl-2 py-1 animate-pulse">
-                  <div className="flex gap-1 items-center">
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce" />
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1 h-1 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                  <span>@{selectedFriend.username} está digitando...</span>
-                </div>
+                <TypingBubble kind={otherUserActivity} className="mt-2" />
               )}
 
               <div ref={messagesEndRef} />
