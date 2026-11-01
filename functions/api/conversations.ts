@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          FROM (
            SELECT CASE WHEN sender_id = ?1 THEN receiver_id ELSE sender_id END AS peer_id, id
            FROM direct_messages
-           WHERE sender_id = ?1 OR receiver_id = ?1
+           WHERE (sender_id = ?1 OR receiver_id = ?1) AND (expires_at IS NULL OR expires_at > datetime('now'))
          ) m
          WHERE id > COALESCE(
            (SELECT cleared_before_id FROM conversation_settings WHERE user_id = ?1 AND friend_id = m.peer_id), 0)
@@ -40,7 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          COALESCE(dm.message_type, 'text') AS last_message_type,
          strftime('%Y-%m-%dT%H:%M:%SZ', dm.created_at) AS last_created_at,
          (SELECT COUNT(*) FROM direct_messages x
-            WHERE x.sender_id = p.peer_id AND x.receiver_id = ?1 AND x.read_at IS NULL) AS unread_count,
+            WHERE x.sender_id = p.peer_id AND x.receiver_id = ?1 AND x.read_at IS NULL AND (x.expires_at IS NULL OR x.expires_at > datetime('now'))) AS unread_count,
          COALESCE(cs.muted, 0) AS muted,
          COALESCE(cs.theme, 'default') AS theme,
          COALESCE(cs.wallpaper, 'none') AS wallpaper,

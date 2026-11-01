@@ -11,10 +11,13 @@ import {
 } from "../_shared/auth";
 import { EDIT_WINDOW_SECONDS, MESSAGE_COLUMNS, attachReactions, attachViewed, notExpired, userPair, notifyRoom, type ChatEnv, type DirectMessageRow } from "../_shared/chat";
 import { pushNewMessage, type PushEnv } from "../_shared/push";
+import { releaseMedia } from "../_shared/mediaCleanup";
 
 export interface Env extends ChatEnv, PushEnv {
   DB: D1Database;
   JWT_SECRET: string;
+  MEDIA_BUCKET?: R2Bucket;
+  BUCKET?: R2Bucket;
 }
 
 const MESSAGE_TYPES = ["text", "image", "video", "file", "location", "gif", "sticker", "audio"];
@@ -245,10 +248,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     }
 
     const row = await env.DB.prepare(
-      "SELECT id, sender_id, receiver_id FROM direct_messages WHERE id = ?"
+      "SELECT id, sender_id, receiver_id, media_url FROM direct_messages WHERE id = ?"
     )
       .bind(messageId)
-      .first<{ id: number; sender_id: number; receiver_id: number }>();
+      .first<{ id: number; sender_id: number; receiver_id: number; media_url: string | null }>();
 
     if (!row) {
       return errorResponse("Mensagem não encontrada.", 404);
@@ -258,6 +261,9 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     }
 
     await env.DB.prepare("DELETE FROM direct_messages WHERE id = ?").bind(messageId).run();
+    await env.DB.prepare("DELETE FROM starred_messages WHERE kind = 'dm' AND message_id = ?").bind(messageId).run();
+    // O arquivo sai do bucket se nenhuma outra mensagem ou publicação o usa
+    context.waitUntil(releaseMedia(env, [row.media_url]));
     await notifyRoom(env, row.sender_id, row.receiver_id, {
       type: "delete",
       message_id: messageId,
