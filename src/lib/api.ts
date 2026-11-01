@@ -1,3 +1,4 @@
+import { optimizeImage } from './optimizeImage';
 import axios from 'axios';
 
 export interface User {
@@ -1008,7 +1009,9 @@ export const closeFriendsApi = {
 };
 
 export const uploadApi = {
-  upload: async (file: File, options?: UploadOptions): Promise<UploadResponse> => {
+  upload: async (original: File, options?: UploadOptions): Promise<UploadResponse> => {
+    // Fotos são reduzidas antes do envio (menos banda, menos armazenamento, entrega mais rápida)
+    const file = await optimizeImage(original);
     const token = authStorage.getToken();
     const formData = new FormData();
     formData.append('file', file);

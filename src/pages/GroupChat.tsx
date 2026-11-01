@@ -312,7 +312,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
 
   const handleFile = async (file: File) => {
     setError(null);
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
       setError('O arquivo passa de 10 MB.');
       return;
     }
