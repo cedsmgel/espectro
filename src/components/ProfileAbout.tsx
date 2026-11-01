@@ -31,7 +31,7 @@ export const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isSelf }) 
   if (rows.length === 0 && tags.length === 0 && links.length === 0) {
     if (!isSelf) return null;
     return (
-      <Link to="/settings/profile" className="bg-surface-container-lowest rounded-3xl p-4 sm:p-6 border border-outline-variant flex items-center gap-2 text-xs text-primary hover:underline">
+      <Link to="/settings/profile" className="border-t border-outline-variant pt-4 flex items-center gap-2 text-xs text-primary hover:underline">
         <span className="material-symbols-outlined text-[18px]">add_circle</span>
         Complete seu perfil: cidade, aniversário, interesses e links
       </Link>
@@ -39,11 +39,11 @@ export const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isSelf }) 
   }
 
   return (
-    <section className="bg-surface-container-lowest rounded-3xl p-4 sm:p-6 border border-outline-variant flex flex-col gap-4" aria-label="Sobre">
+    <section className="border-t border-outline-variant pt-4 flex flex-col gap-4" aria-label="Sobre">
       <h2 className="font-bold text-base text-on-surface">Sobre</h2>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
         {rows.map((def) => (
-          <div key={def.key} className="flex items-center gap-2.5 min-w-0">
+          <div key={def.key} className="flex items-center gap-2.5 min-w-0 pb-3 border-b border-outline-variant">
             <span className="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0">{def.icon}</span>
             <div className="min-w-0">
               <dt className="text-[11px] text-on-surface-variant">{def.label}</dt>
