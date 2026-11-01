@@ -3,6 +3,8 @@ import { canPost, getMembership, VISIBLE_IN_PRIVATE_SQL } from "../../_shared/co
 import { extractHashtags } from "../../_shared/hashtags";
 import { normalizeTag, syncPostHashtags } from "../../_shared/hashtags";
 import { notify } from "../../_shared/notifications";
+import { loadSignals } from "../../_shared/feedSignals";
+import { rankFeed, type Candidate } from "../../_shared/ranking";
 import type { PushEnv } from "../../_shared/push";
 
 export interface Env extends PushEnv {
@@ -127,7 +129,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         OR p.author_id IN (SELECT CASE WHEN f2.user_id = ?1 THEN f2.friend_id ELSE f2.user_id END FROM friendships f2 WHERE f2.status = 'accepted' AND (f2.user_id = ?1 OR f2.friend_id = ?1))
       )`.replace(/\?1/g, "?");
       params.push(authUser.id, authUser.id, authUser.id, authUser.id, authUser.id);
-    } else if (feed === "home" && authUser) {
+    } else if ((feed === "home" || feed === "foryou") && authUser) {
       // Feed Principal: exibe posts gerais (sem comunidade) E posts das comunidades em que o usuário participa
       query += ` AND (p.community_id IS NULL OR p.community_id IN (SELECT community_id FROM community_members WHERE user_id = ? AND status = 'active'))`;
       params.push(authUser.id);
@@ -181,6 +183,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const limitParam = Number(url.searchParams.get("limit"));
     const limit = Number.isInteger(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 50;
+
+    // Para Você: pega as 300 mais recentes que a pessoa pode ver e ordena pelo ranking (functions/_shared/ranking.ts)
+    if (feed === "foryou") {
+      query += ` ORDER BY p.id DESC LIMIT 300`;
+      const { results: pool } = await env.DB.prepare(query).bind(...params).all<Record<string, unknown>>();
+      const candidates = (pool || []) as unknown as Array<Candidate & Record<string, unknown>>;
+      const signals = await loadSignals(env.DB, authUser ? authUser.id : null, candidates);
+      const ranked = rankFeed(candidates, signals, Date.now(), limit);
+      return jsonResponse(ranked.map((r) => ({ ...r.post, why: r.why })));
+    }
+
     const order = sort === "hot" || sort === "top" ? "(p.upvotes - p.downvotes) DESC, p.id DESC" : "p.id DESC";
     query += ` ORDER BY ${order} LIMIT ${limit}`;
 
