@@ -377,7 +377,7 @@ export const ProfileSettings: React.FC = () => {
                         Biografia / Sobre Você
                       </label>
                       <span className="text-[10px] text-on-surface-variant">
-                        {bio.length}/200 caracteres
+                        {bio.length}/160 caracteres
                       </span>
                     </div>
                     <textarea
@@ -385,7 +385,7 @@ export const ProfileSettings: React.FC = () => {
                       onChange={(e) => setBio(e.target.value)}
                       placeholder="Conte um pouco sobre você, seus interesses e hobbies no Espectro..."
                       rows={3}
-                      maxLength={200}
+                      maxLength={160}
                       className="w-full px-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 text-on-surface text-xs placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary-container outline-none transition-all resize-none"
                     />
                   </div>

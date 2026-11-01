@@ -115,7 +115,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     const rawUsername = body.username ? String(body.username).trim() : auth.username;
     const nameField = textField(body.name, current.name, 50, "O nome");
-    const bioField = textField(body.bio, current.bio, 200, "A bio");
+    const bioField = textField(body.bio, current.bio, 160, "A bio");
     const musicField = textField(body.music, current.music, 200, "A música");
     const fieldError = nameField.error || bioField.error || musicField.error;
     if (fieldError) {
