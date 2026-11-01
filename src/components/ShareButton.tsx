@@ -5,10 +5,14 @@ interface ShareButtonProps {
   title: string;
   text?: string;
   variant?: 'icon' | 'pill';
+  // Redondo com borda, como os outros botões da linha de ações do perfil
+  bordered?: boolean;
+  // Ícone grande (avião de papel) para a linha de ações das publicações
+  large?: boolean;
 }
 
 // No celular abre a folha de compartilhar do sistema; no computador copia o link
-export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, variant = 'icon' }) => {
+export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, variant = 'icon', bordered = false, large = false }) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<number>();
 
@@ -56,11 +60,15 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, vari
     <button
       type="button"
       onClick={handleShare}
-      className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+      className={`rounded-full flex items-center justify-center hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer ${
+        bordered ? 'w-10 h-10 border border-outline-variant bg-surface-container-low text-on-surface' : large ? 'w-10 h-10' : 'w-9 h-9'
+      }`}
       title={copied ? 'Link copiado' : 'Compartilhar'}
       aria-label={copied ? 'Link copiado' : 'Compartilhar'}
     >
-      <span className={`material-symbols-outlined text-[19px] ${copied ? 'text-primary' : ''}`}>{copied ? 'check' : 'share'}</span>
+      <span className={`material-symbols-outlined ${large ? 'text-[28px]' : bordered ? 'text-[22px]' : 'text-[19px]'} ${copied ? 'text-primary' : ''}`}>
+        {copied ? 'check' : large ? 'send' : 'share'}
+      </span>
     </button>
   );
 };

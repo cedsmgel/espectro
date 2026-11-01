@@ -196,6 +196,14 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const score = upvotes - downvotes;
+  const hasMedia = Boolean(post.media_url);
+  // Legenda embaixo (como no Instagram): o texto da publicação; sem texto, o título vira legenda. Mídia nunca mostra título.
+  const captionBody = parseScrap(content || '').body.trim();
+  const caption = captionBody || title.trim();
+  const likers = post.liked_by || [];
+  const likedByMe = userVote === 'up';
+  const otherLikes = Math.max(0, upvotes - likers.length - (likedByMe ? 1 : 0));
+  const previews = !isDetail ? post.comment_preview || [] : [];
   const handle = post.author_name.toLowerCase().replace(/\s+/g, '_');
   const clampFeed = !isDetail && Boolean(content && content.trim().length > FEED_CLAMP_CHARS) && post.post_type !== 'scrap';
 
@@ -204,24 +212,24 @@ export const PostCard: React.FC<PostCardProps> = ({
       <article
         ref={cardRef}
         onClick={handleCardClick}
-        className={`bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant flex flex-col transition-all hover:shadow-md ${
-          !isDetail ? 'cursor-pointer hover:border-outline-variant/60' : ''
+        className={`bg-surface-container-lowest sm:rounded-2xl overflow-hidden sm:shadow-sm border-0 border-b sm:border border-outline-variant flex flex-col transition-all sm:hover:shadow-md ${
+          !isDetail ? 'cursor-pointer sm:hover:border-outline-variant/60' : ''
         } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
       >
         {/* Para Você: motivo de a publicação aparecer */}
         {post.why && !isDetail && (
-          <p className="px-4 sm:px-5 pt-3 text-[11px] font-semibold text-on-surface-variant flex items-center gap-1">
+          <p className="px-3 sm:px-5 pt-2 text-[11px] font-semibold text-on-surface-variant flex items-center gap-1">
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">info</span>
             {post.why}
           </p>
         )}
 
-        {/* 1. Cabeçalho: uma linha de identidade (nome, @usuário, horário) e a comunidade logo abaixo */}
-        <div className="px-4 sm:px-5 pt-3.5 sm:pt-4 pb-2 flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* 1. Cabeçalho: avatar e só o nome de usuário (o horário vai para baixo da publicação) */}
+        <div className="px-3 sm:px-5 pt-2.5 sm:pt-4 pb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
             <Link
               to={`/perfil/${encodeURIComponent(post.author_name)}`}
-              className="w-10 h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer overflow-hidden"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary-container text-on-primary font-bold flex items-center justify-center text-sm uppercase shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer overflow-hidden"
               title={`Ver perfil de @${post.author_name}`}
             >
               {post.author_avatar ? (
@@ -231,24 +239,13 @@ export const PostCard: React.FC<PostCardProps> = ({
               )}
             </Link>
 
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-baseline gap-1.5 min-w-0 text-sm">
-                <Link
-                  to={`/perfil/${encodeURIComponent(post.author_name)}`}
-                  className="font-semibold text-on-surface hover:underline truncate max-w-[60%] cursor-pointer"
-                >
-                  {post.author_name}
-                </Link>
-                <span className="text-on-surface-variant truncate text-xs">@{handle}</span>
-                <span className="text-on-surface-variant text-xs shrink-0" aria-hidden="true">·</span>
-                <time
-                  dateTime={post.created_at}
-                  title={new Date(post.created_at).toLocaleString('pt-BR')}
-                  className="text-on-surface-variant text-xs shrink-0 tabular-nums"
-                >
-                  {timeAgo(post.created_at)}
-                </time>
-              </div>
+            <div className="flex flex-col min-w-0 leading-tight">
+              <Link
+                to={`/perfil/${encodeURIComponent(post.author_name)}`}
+                className="text-sm font-semibold text-on-surface hover:underline truncate cursor-pointer"
+              >
+                {post.author_name}
+              </Link>
               {post.community_name && (
                 <Link
                   to={`/e/${post.community_slug || post.community_id}`}
@@ -364,8 +361,8 @@ export const PostCard: React.FC<PostCardProps> = ({
         </div>
 
         {/* 2. Conteúdo: título e texto; no feed o texto longo é recortado com "Ler mais" */}
-        {(Boolean(title && title.trim()) || Boolean(content && content.trim())) && (
-          <div className="px-4 sm:px-5 pb-3 flex flex-col gap-2 min-w-0">
+        {!hasMedia && (Boolean(title && title.trim()) || Boolean(content && content.trim())) && (
+          <div className="px-3 sm:px-5 pb-3 flex flex-col gap-2 min-w-0">
             {Boolean(title && title.trim()) && (
               <h3 className="text-[15px] sm:text-lg font-bold text-on-surface leading-snug break-words">
                 {title.trim()}
@@ -449,50 +446,22 @@ export const PostCard: React.FC<PostCardProps> = ({
           )
         )}
 
-        {/* 4. Ações: votos e comentários à esquerda; salvar e compartilhar à direita, todos com 40px de toque */}
-        <div className="px-3 sm:px-4 py-1.5 border-t border-outline-variant flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center h-9 rounded-full bg-surface-container-low border border-outline-variant">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleVoteClick('up');
-                }}
-                aria-label="Upvote"
-                aria-pressed={userVote === 'up'}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  userVote === 'up'
-                    ? 'text-olive bg-olive/15'
-                    : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">keyboard_arrow_up</span>
-              </button>
-              <span
-                className={`min-w-[2.5ch] px-0.5 text-center text-xs font-bold tabular-nums ${
-                  score > 0 ? (userVote === 'up' ? 'text-olive' : 'text-primary') : score < 0 ? 'text-error' : 'text-on-surface'
-                }`}
-              >
-                {score > 0 ? `+${score}` : score}
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleVoteClick('down');
-                }}
-                aria-label="Downvote"
-                aria-pressed={userVote === 'down'}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  userVote === 'down'
-                    ? 'text-error bg-error-container'
-                    : 'text-on-surface-variant hover:text-error hover:bg-surface-container'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">keyboard_arrow_down</span>
-              </button>
-            </div>
+        {/* 4. Ações no estilo de rede social: curtir, comentar, compartilhar e salvar, com ícones grandes */}
+        <div className="px-2 sm:px-3 pt-1.5 flex items-center justify-between gap-1">
+          <div className="flex items-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleVoteClick('up');
+              }}
+              aria-label="Curtir (upvote)"
+              aria-pressed={userVote === 'up'}
+              className={`h-10 pl-1.5 pr-2 rounded-full flex items-center gap-1.5 transition-colors cursor-pointer ${userVote === 'up' ? 'text-error' : 'text-on-surface hover:text-on-surface-variant'}`}
+            >
+              <span className="material-symbols-outlined text-[28px]" style={userVote === 'up' ? { fontVariationSettings: "'FILL' 1" } : undefined}>favorite</span>
+              <span className="text-sm font-semibold tabular-nums">{upvotes}</span>
+            </button>
 
             <button
               type="button"
@@ -500,37 +469,107 @@ export const PostCard: React.FC<PostCardProps> = ({
                 e.stopPropagation();
                 if (!isDetail) navigate(`/post/${post.id}`);
               }}
-              className="h-9 px-3 rounded-full flex items-center gap-1.5 text-xs font-medium text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              className="h-10 px-2 rounded-full flex items-center gap-1.5 text-on-surface hover:text-on-surface-variant transition-colors cursor-pointer"
               title="Ver discussão e comentários"
+              aria-label="Comentários"
             >
-              <span className="material-symbols-outlined text-[20px]">chat_bubble_outline</span>
-              <span className="tabular-nums">{commentsCount}</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-0.5 text-on-surface-variant">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSaved();
-              }}
-              className={`w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container transition-colors cursor-pointer ${
-                isSaved ? 'text-primary' : 'hover:text-on-surface'
-              }`}
-              title={isSaved ? 'Salvo' : 'Salvar publicação'}
-              aria-label={isSaved ? 'Remover dos salvos' : 'Salvar publicação'}
-              aria-pressed={isSaved}
-            >
-              <span className="material-symbols-outlined text-[20px]">{isSaved ? 'bookmark' : 'bookmark_border'}</span>
+              <span className="material-symbols-outlined text-[28px]">chat_bubble_outline</span>
+              <span className="text-sm font-semibold tabular-nums">{commentsCount}</span>
             </button>
 
             <ShareButton
+              large
               url={`${window.location.origin}/post/${post.id}`}
               title={post.title?.trim() || `Publicação de @${post.author_name}`}
               text={post.content ? parseScrap(post.content).body.slice(0, 120) : undefined}
             />
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleVoteClick('down');
+              }}
+              aria-label="Não curtir (downvote)"
+              aria-pressed={userVote === 'down'}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer ${userVote === 'down' ? 'text-error' : 'text-on-surface-variant hover:text-error'}`}
+            >
+              <span className="material-symbols-outlined text-[24px]" style={userVote === 'down' ? { fontVariationSettings: "'FILL' 1" } : undefined}>thumb_down</span>
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSaved();
+            }}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer ${isSaved ? 'text-primary' : 'text-on-surface hover:text-on-surface-variant'}`}
+            title={isSaved ? 'Salvo' : 'Salvar publicação'}
+            aria-label={isSaved ? 'Remover dos salvos' : 'Salvar publicação'}
+            aria-pressed={isSaved}
+          >
+            <span className="material-symbols-outlined text-[28px]" style={isSaved ? { fontVariationSettings: "'FILL' 1" } : undefined}>{isSaved ? 'bookmark' : 'bookmark_border'}</span>
+          </button>
+        </div>
+
+        {/* Quem curtiu (amigos primeiro), legenda, comentários em destaque e horário */}
+        <div className="px-3 sm:px-4 pt-0.5 pb-3 flex flex-col gap-1 text-sm text-on-surface min-w-0">
+          {likers.length > 0 ? (
+            <p>
+              Curtido por{' '}
+              <Link to={`/perfil/${encodeURIComponent(likers[0])}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:underline">{likers[0]}</Link>
+              {likers.length > 1 && otherLikes === 0 && (
+                <>
+                  {' '}e{' '}
+                  <Link to={`/perfil/${encodeURIComponent(likers[1])}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:underline">{likers[1]}</Link>
+                </>
+              )}
+              {likers.length > 1 && otherLikes > 0 && (
+                <>
+                  ,{' '}
+                  <Link to={`/perfil/${encodeURIComponent(likers[1])}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:underline">{likers[1]}</Link>
+                </>
+              )}
+              {otherLikes > 0 && (
+                <>
+                  {' '}e <span className="font-semibold">outras {otherLikes} {otherLikes === 1 ? 'pessoa' : 'pessoas'}</span>
+                </>
+              )}
+            </p>
+          ) : upvotes > 0 ? (
+            <p className="font-semibold">{upvotes} {upvotes === 1 ? 'curtida' : 'curtidas'}</p>
+          ) : null}
+
+          {hasMedia && caption && (
+            <p className={`break-words ${isDetail ? '' : 'line-clamp-2'}`}>
+              <Link to={`/perfil/${encodeURIComponent(post.author_name)}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:underline mr-1.5">{post.author_name}</Link>
+              <span className="whitespace-pre-wrap [&_p]:inline [&_div]:inline">{captionBody ? renderMarkdown(captionBody) : caption}</span>
+            </p>
+          )}
+
+          {!isDetail && commentsCount > 0 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/post/${post.id}`);
+              }}
+              className="self-start text-on-surface-variant hover:text-on-surface cursor-pointer"
+            >
+              {commentsCount === 1 ? 'Ver 1 comentário' : `Ver todos os ${commentsCount} comentários`}
+            </button>
+          )}
+          {previews.map((c) => (
+            <p key={c.username + c.content} className="break-words line-clamp-2">
+              <Link to={`/perfil/${encodeURIComponent(c.username)}`} onClick={(e) => e.stopPropagation()} className="font-semibold hover:underline mr-1.5">{c.username}</Link>
+              {c.content}
+            </p>
+          ))}
+
+          <time dateTime={post.created_at} title={new Date(post.created_at).toLocaleString('pt-BR')} className="text-[11px] uppercase tracking-wide text-on-surface-variant pt-0.5">
+            {timeAgo(post.created_at)}
+          </time>
         </div>
       </article>
 

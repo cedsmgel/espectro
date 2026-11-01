@@ -29,6 +29,9 @@ export interface Post {
   comments_count: number;
   // Para Você: por que esta publicação apareceu (ex.: "Você segue"); só vem no feed ranqueado
   why?: string | null;
+  // "Curtido por" e comentários em destaque (amigos de quem vê primeiro); só nas listas
+  liked_by?: string[];
+  comment_preview?: Array<{ username: string; content: string }>;
 }
 
 export interface Community {

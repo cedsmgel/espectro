@@ -555,6 +555,7 @@ export const ProfilePage: React.FC = () => {
                 {userProfile && !isLockedPrivate && (
                   <ShareButton
                     variant="icon"
+                    bordered
                     url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
                     title={`@${userProfile.username} no Espectro`}
                     text={userProfile.bio || undefined}

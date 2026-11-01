@@ -181,7 +181,7 @@ export const Feed: React.FC = () => {
 
       {/* 3. Coluna Central: Feed (Tarefa 3: flex-1 com div max-w-2xl mx-auto perfeitamente centralizada) */}
       <main className="flex-1 min-w-0 min-h-screen flex flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
-        <div className="w-full max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
+        <div className="w-full max-w-2xl mx-auto px-4 py-2 sm:py-4 flex flex-col gap-3 sm:gap-4">
           {/* Momentum: avatares flutuando direto no fundo, sem caixa */}
           <div className="-mx-3 sm:mx-0">
             <MomentumBar />
@@ -259,7 +259,7 @@ export const Feed: React.FC = () => {
               />
             )
           ) : (
-            <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-0 sm:gap-5 -mx-4 sm:mx-0">
               {filteredPosts.map((post) => (
                 <PostCard
                   key={post.id}

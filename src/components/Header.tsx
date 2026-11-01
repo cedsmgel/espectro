@@ -344,7 +344,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               className="md:hidden w-12 h-12 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
               title="Pesquisar"
             >
-              <span className="material-symbols-outlined text-[22px]">search</span>
+              <span className="material-symbols-outlined text-[28px]">search</span>
             </button>
             {user ? (
               <>
@@ -357,7 +357,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   className="hidden md:flex p-2 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Mensagens Diretas"
                 >
-                  <span className="material-symbols-outlined text-[22px]">chat_bubble</span>
+                  <span className="material-symbols-outlined text-[28px]">chat_bubble</span>
                   {unreadDms > 0 && (
                     <span className="absolute top-1 right-1 px-1.5 py-0.2 rounded-full bg-secondary-container text-on-secondary-container text-[10px] leading-tight font-bold">
                       {unreadDms}
@@ -372,7 +372,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Notificações"
                 >
-                  <span className="material-symbols-outlined text-[22px]">notifications</span>
+                  <span className="material-symbols-outlined text-[28px]">notifications</span>
                   {notificationCount > 0 && (
                     <span className="absolute top-1 right-1 px-1.5 py-0.2 rounded-full bg-error text-white text-[10px] leading-tight font-bold">
                       {notificationCount > 99 ? '99+' : notificationCount}

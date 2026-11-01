@@ -5,6 +5,7 @@ import { extractHashtags } from "../../_shared/hashtags";
 import { normalizeTag, syncPostHashtags } from "../../_shared/hashtags";
 import { notify } from "../../_shared/notifications";
 import { loadSignals } from "../../_shared/feedSignals";
+import { attachSocial } from "../../_shared/postSocial";
 import { rankFeed, type Candidate } from "../../_shared/ranking";
 import type { PushEnv } from "../../_shared/push";
 
@@ -192,7 +193,7 @@ const handleGet: PagesFunction<Env> = async (context) => {
       const candidates = (pool || []) as unknown as Array<Candidate & Record<string, unknown>>;
       const signals = await loadSignals(env.DB, authUser ? authUser.id : null, candidates);
       const ranked = rankFeed(candidates, signals, Date.now(), limit);
-      return jsonResponse(ranked.map((r) => ({ ...r.post, why: r.why })));
+      return jsonResponse(await attachSocial(env.DB, ranked.map((r) => ({ ...(r.post as { id: number }), why: r.why })), authUser ? authUser.id : null));
     }
 
     const order = sort === "hot" || sort === "top" ? "(p.upvotes - p.downvotes) DESC, p.id DESC" : "p.id DESC";
@@ -201,7 +202,7 @@ const handleGet: PagesFunction<Env> = async (context) => {
     const stmt = env.DB.prepare(query);
     const { results } = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
 
-    return jsonResponse(results || []);
+    return jsonResponse(await attachSocial(env.DB, (results || []) as unknown as Array<{ id: number }>, authUser ? authUser.id : null));
   } catch (err: unknown) {
     return serverError(err, "posts/index");
   }
