@@ -340,6 +340,8 @@ export const api = {
     feed?: string;
     saved?: boolean;
     tag?: string;
+    sort?: 'new' | 'hot' | 'top';
+    pinned?: boolean;
     author_name?: string;
     media?: 'video' | 'any';
     before_id?: number;
@@ -355,6 +357,8 @@ export const api = {
     if (filters?.feed) params.set('feed', filters.feed);
     if (filters?.saved) params.set('saved', '1');
     if (filters?.tag) params.set('tag', filters.tag);
+    if (filters?.sort && filters.sort !== 'new') params.set('sort', filters.sort);
+    if (filters?.pinned) params.set('pinned', '1');
     if (filters?.author_name) params.set('author_name', filters.author_name);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });

@@ -28,6 +28,10 @@ export const CommunityDetail: React.FC = () => {
   const [community, setCommunity] = useState<Community | null>(null);
   const [allCommunities, setAllCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pinned, setPinned] = useState<Post[]>([]);
+  const [sort, setSort] = useState<'new' | 'hot' | 'top'>('new');
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [members, setMembers] = useState<CommunityMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -129,6 +133,30 @@ export const CommunityDetail: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [slug]);
+
+  // Recarrega a lista quando muda a ordenação ou o filtro de hashtag
+  const communityId = community?.id;
+  const communityLocked = community?.locked;
+  useEffect(() => {
+    if (!communityId || communityLocked) return;
+    let cancelled = false;
+    setPostsLoading(true);
+    const filters = { community_id: communityId, sort, tag: tagFilter || undefined };
+    Promise.all([
+      postsApi.list(filters),
+      sort === 'new' && !tagFilter ? postsApi.list({ community_id: communityId, pinned: true }) : Promise.resolve([] as Post[]),
+    ])
+      .then(([list, pins]) => {
+        if (cancelled) return;
+        setPinned(pins.filter((p) => p.community_id === communityId));
+        setPosts(list.filter((p) => p.community_id === communityId));
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setPostsLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [communityId, communityLocked, sort, tagFilter]);
 
   // Carrega membros quando a aba "Membros" é selecionada
   useEffect(() => {
@@ -235,14 +263,27 @@ export const CommunityDetail: React.FC = () => {
     try {
       await communityModApi.act(community.id, 'remove_post', { post_id: postId, reason });
       setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setPinned((prev) => prev.filter((p) => p.id !== postId));
       showToast('Publicação removida pela moderação.');
     } catch (err: any) {
       alert(err.message || 'Não foi possível remover.');
     }
   };
 
+  const handlePin = async (post: Post, pin: boolean) => {
+    if (!community) return;
+    try {
+      await communityModApi.act(community.id, pin ? 'pin' : 'unpin', { post_id: post.id });
+      setPinned((prev) => (pin ? [...prev, post] : prev.filter((p) => p.id !== post.id)));
+      showToast(pin ? 'Publicação fixada no topo.' : 'Publicação desafixada.');
+    } catch (err: any) {
+      alert(err.message || 'Não foi possível fixar.');
+    }
+  };
+
   const handleDeletePost = (deletedId: number) => {
     setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+    setPinned((prev) => prev.filter((p) => p.id !== deletedId));
     showToast('Publicação excluída com sucesso.');
   };
 
@@ -252,7 +293,8 @@ export const CommunityDetail: React.FC = () => {
   };
 
   // Garante que apenas posts daquela comunidade (ID estrito) sejam exibidos
-  const communityFilteredPosts = posts.filter((p) => p.community_id === community?.id);
+  const pinnedIds = new Set(pinned.map((p) => p.id));
+  const communityFilteredPosts = [...pinned, ...posts.filter((p) => !pinnedIds.has(p.id))].filter((p) => p.community_id === community?.id);
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
@@ -531,6 +573,8 @@ export const CommunityDetail: React.FC = () => {
                         onPostCreated={handlePostCreated}
                         defaultCommunityId={community.id}
                         communities={allCommunities}
+                        communityTags={community.tags}
+                        requireTag={community.require_tag}
                       />
                     ) : (
                       myStatus !== 'banned' && (
@@ -541,6 +585,51 @@ export const CommunityDetail: React.FC = () => {
                         </div>
                       )
                     )}
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 overflow-x-auto">
+                        {([['new', 'Novos'], ['hot', 'Em alta'], ['top', 'Mais votados']] as const).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSort(value)}
+                            aria-pressed={sort === value}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer ${
+                              sort === value ? 'bg-primary-container text-on-primary' : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      {community.tags && community.tags.length > 0 && (
+                        <div className="flex items-center gap-2 overflow-x-auto">
+                          <button
+                            type="button"
+                            onClick={() => setTagFilter(null)}
+                            aria-pressed={tagFilter === null}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer border ${
+                              tagFilter === null ? 'border-on-surface text-on-surface' : 'border-outline-variant text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            Todas
+                          </button>
+                          {community.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                              aria-pressed={tagFilter === tag}
+                              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer border ${
+                                tagFilter === tag ? 'border-on-surface text-on-surface' : 'border-outline-variant text-on-surface-variant hover:text-on-surface'
+                              }`}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Posts exclusivos da comunidade (filtrados por community_id) */}
                     {communityFilteredPosts.length === 0 ? (
@@ -562,6 +651,22 @@ export const CommunityDetail: React.FC = () => {
                         {communityFilteredPosts.map((post) => (
                           <div key={post.id} className="flex flex-col gap-1">
                             <PostCard post={post} onDelete={handleDeletePost} onUpdate={handleUpdatePost} />
+                            {pinnedIds.has(post.id) && (
+                              <span className="self-start px-2 py-0.5 rounded-full bg-surface-container text-[10px] font-semibold text-on-surface-variant flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[12px]">push_pin</span>
+                                Fixada
+                              </span>
+                            )}
+                            {community.i_am_mod && sort === 'new' && !tagFilter && (
+                              <button
+                                type="button"
+                                onClick={() => handlePin(post, !pinnedIds.has(post.id))}
+                                className="self-end px-3 py-1 rounded-full bg-surface-container text-on-surface text-[11px] font-semibold cursor-pointer flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">push_pin</span>
+                                {pinnedIds.has(post.id) ? 'Desafixar' : 'Fixar'}
+                              </button>
+                            )}
                             {community.i_am_mod && post.author_id !== user?.id && (
                               <button
                                 type="button"

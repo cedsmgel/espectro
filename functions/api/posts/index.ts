@@ -151,16 +151,29 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       params.push(authUser.id);
     }
 
-    // Paginação: before_id traz os posts mais antigos que o último recebido
+    // pinned=1 (com community_id/slug): só as publicações fixadas da comunidade
+    const onlyPinned = url.searchParams.get("pinned") === "1";
+    if (onlyPinned) {
+      query += ` AND p.id IN (SELECT post_id FROM community_pins WHERE community_id = p.community_id)`;
+    }
+
+    // sort=new (padrão) | hot (últimos 7 dias, mais votados) | top (mais votados de todos os tempos)
+    const sort = url.searchParams.get("sort");
+    if (sort === "hot") query += ` AND p.created_at >= datetime('now', '-7 days')`;
+
+    // Paginação: before_id traz os posts mais antigos que o último recebido (só na ordem por data)
     const beforeId = Number(url.searchParams.get("before_id"));
+    if (!sort || sort === "new") {
     if (Number.isInteger(beforeId) && beforeId > 0) {
       query += ` AND p.id < ?`;
       params.push(beforeId);
     }
+    }
 
     const limitParam = Number(url.searchParams.get("limit"));
     const limit = Number.isInteger(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 50;
-    query += ` ORDER BY p.id DESC LIMIT ${limit}`;
+    const order = sort === "hot" || sort === "top" ? "(p.upvotes - p.downvotes) DESC, p.id DESC" : "p.id DESC";
+    query += ` ORDER BY ${order} LIMIT ${limit}`;
 
     const stmt = env.DB.prepare(query);
     const { results } = params.length > 0 ? await stmt.bind(...params).all() : await stmt.all();
