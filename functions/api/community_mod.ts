@@ -60,6 +60,21 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 };
 
+// Aceita só arquivos enviados ao próprio Espectro; guarda o caminho relativo (/api/media/...)
+function ownMediaPath(value: string, origin: string): string | null {
+  let path = value.trim();
+  if (/^https?:\/\//i.test(path)) {
+    try {
+      const u = new URL(path);
+      if (u.origin !== origin) return null;
+      path = u.pathname;
+    } catch {
+      return null;
+    }
+  }
+  return /^\/api\/media\/[\w\-./%]+$/.test(path) && !path.includes("..") ? path : null;
+}
+
 interface Body {
   community_id?: number;
   action?: string;
@@ -72,6 +87,9 @@ interface Body {
   description?: string;
   welcome_message?: string;
   require_tag?: boolean;
+  icon_color?: string;
+  icon_url?: string | null;
+  banner_url?: string | null;
   type?: string;
   tags?: unknown;
   rules?: unknown;
@@ -230,6 +248,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         sets.push("require_tag = ?");
         vals.push(body.require_tag ? 1 : 0);
         notes.push("exigir hashtag");
+      }
+      // Aparência: cor do tema e imagens (só arquivos enviados ao próprio Espectro)
+      if (body.icon_color !== undefined) {
+        if (typeof body.icon_color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(body.icon_color.trim())) return errorResponse("Cor inválida.", 400);
+        sets.push("icon_color = ?");
+        vals.push(body.icon_color.trim());
+        notes.push("cor");
+      }
+      for (const [field, label] of [["icon_url", "ícone"], ["banner_url", "banner"]] as const) {
+        const value = body[field];
+        if (value === undefined) continue;
+        const path = typeof value === "string" ? ownMediaPath(value, new URL(request.url).origin) : null;
+        if (value !== null && !path) {
+          return errorResponse("Imagem inválida. Envie o arquivo pelo Espectro.", 400);
+        }
+        sets.push(`${field} = ?`);
+        vals.push(path);
+        notes.push(label);
       }
       if (body.type !== undefined) {
         if (!iAmOwner) return errorResponse("Só quem criou a comunidade muda o tipo.", 403);

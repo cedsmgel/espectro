@@ -53,7 +53,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // 2. communities: por name ou slug
     const communitiesPromise = env.DB.prepare(`
-      SELECT id, name, slug, description, icon_color,
+      SELECT id, name, slug, description, icon_color, icon_url,
              (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = communities.id AND cm.status = 'active') AS members_count
       FROM communities
       WHERE type != 'private' AND (LOWER(name) LIKE ? ESCAPE '\\' OR (slug IS NOT NULL AND LOWER(slug) LIKE ? ESCAPE '\\'))

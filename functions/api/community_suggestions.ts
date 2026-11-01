@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
          WHERE status = 'accepted' AND (user_id = ?1 OR friend_id = ?1)
        ),
        candidates AS (
-         SELECT c.id, c.name, c.slug, c.description, c.icon_color,
+         SELECT c.id, c.name, c.slug, c.description, c.icon_color, c.icon_url,
            (SELECT COUNT(*) FROM community_members m WHERE m.community_id = c.id AND m.status = 'active') AS members_count,
            (SELECT COUNT(*) FROM community_members m
               WHERE m.community_id = c.id AND m.status = 'active' AND m.user_id IN (SELECT fid FROM my_friends)) AS friends_in,

@@ -32,7 +32,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const { results } = await env.DB.prepare(
-      `SELECT c.id, c.name, c.slug, c.description, c.icon_color, c.owner_id, c.created_at, c.type,
+      `SELECT c.id, c.name, c.slug, c.description, c.icon_color, c.icon_url, c.owner_id, c.created_at, c.type,
               u.username AS owner_name,
               (SELECT COUNT(1) FROM community_members m WHERE m.community_id = c.id AND m.status = 'active') AS members_count,
               EXISTS(SELECT 1 FROM community_members m WHERE m.community_id = c.id AND m.user_id = ?1 AND m.status = 'active') AS is_member

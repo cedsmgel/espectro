@@ -199,12 +199,16 @@ export const Communities: React.FC = () => {
                   >
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-base flex-shrink-0 shadow-xs"
-                          style={{ backgroundColor: comm.icon_color || '#404040' }}
-                        >
-                          {comm.name.charAt(0).toUpperCase()}
-                        </div>
+                        {comm.icon_url ? (
+                          <img src={comm.icon_url} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white text-base flex-shrink-0 shadow-xs"
+                            style={{ backgroundColor: comm.icon_color || '#404040' }}
+                          >
+                            {comm.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex flex-col min-w-0">
                           <Link
                             to={`/e/${comm.slug || comm.id}`}

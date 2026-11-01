@@ -360,7 +360,9 @@ export const CommunityDetail: React.FC = () => {
                   <div
                     className="h-36 sm:h-44 w-full relative p-4 flex items-end justify-between transition-all"
                     style={{
-                      background: community.icon_color
+                      background: community.banner_url
+                        ? `center / cover no-repeat url("${community.banner_url}")`
+                        : community.icon_color
                         ? `linear-gradient(135deg, ${community.icon_color}dd 0%, #1e1b4b 100%)`
                         : 'linear-gradient(135deg, #404040 0%, #18181b 50%, #09090b 100%)',
                     }}
@@ -376,12 +378,16 @@ export const CommunityDetail: React.FC = () => {
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12">
                       <div className="flex items-end gap-4">
                         <div className="w-24 h-24 rounded-2xl p-1 bg-surface-container-lowest shadow-md">
-                          <div
-                            className="w-full h-full rounded-xl flex items-center justify-center font-bold text-3xl text-white shadow-xs"
-                            style={{ backgroundColor: community.icon_color || '#404040' }}
-                          >
-                            {community.name.charAt(0).toUpperCase()}
-                          </div>
+                          {community.icon_url ? (
+                            <img src={community.icon_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                          ) : (
+                            <div
+                              className="w-full h-full rounded-xl flex items-center justify-center font-bold text-3xl text-white shadow-xs"
+                              style={{ backgroundColor: community.icon_color || '#404040' }}
+                            >
+                              {community.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col pb-1">
                           <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
