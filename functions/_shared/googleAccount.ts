@@ -1,5 +1,5 @@
 import { getJwtSecret, hashPassword, jsonResponse, errorResponse, signJWT } from "./auth";
-import { GoogleProfile, randomUrlToken, trustedEmail } from "./google";
+import { GoogleProfile, randomUrlToken, sha256Hex, trustedEmail } from "./google";
 import { completeLogin } from "./loginFlow";
 import { MfaEnv, mfaAvailable } from "./mfa";
 
@@ -66,4 +66,18 @@ export async function finishGoogleLogin(env: AccountEnv, request: Request, userI
   }
 
   return completeLogin(env, request, user, { mfa: false });
+}
+
+// Cria o pedido pendente de ligação (10 min): o Google já provou quem é, mas ligar a uma conta que já existe só
+// acontece depois de a pessoa confirmar a senha dessa conta (e o 2FA, se houver). Devolve o código do pedido.
+// Reusa oauth_states: code_verifier guarda o "sub" e nonce guarda o e-mail do Google.
+export async function createPendingLink(db: D1Database, profile: GoogleProfile): Promise<string> {
+  const linkToken = randomUrlToken(32);
+  await db.batch([
+    db.prepare("DELETE FROM oauth_states WHERE expires_at < CURRENT_TIMESTAMP"),
+    db
+      .prepare("INSERT INTO oauth_states (state_hash, code_verifier, nonce, mode, user_id, expires_at) VALUES (?, ?, ?, 'link_pending', NULL, datetime('now', '+10 minutes'))")
+      .bind(await sha256Hex(linkToken), profile.sub, profile.email),
+  ]);
+  return linkToken;
 }
