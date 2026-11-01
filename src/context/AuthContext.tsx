@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { authStorage, User } from '../lib/api';
+import { authStorage, googleApi, User } from '../lib/api';
 import { AUTH_CHANGED_EVENT, AUTH_REQUIRED_EVENT, AuthRequest, requestAuth } from '../lib/authEvents';
 import { AuthModal } from '../components/auth/AuthModal';
 
@@ -71,6 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [location.pathname, navigate]);
 
   const handleSuccess = useCallback(() => {
+    // Ligação do Google pedida pelo One Tap: a conta existente acabou de ser autenticada (senha e 2FA)
+    if (authRequest?.googleLinkToken) void googleApi.linkCredential(authRequest.googleLinkToken).catch(() => undefined);
     const target = authRequest?.redirectTo;
     setAuthRequest(null);
     sync();

@@ -8,6 +8,8 @@ export interface GoogleEnv extends Pick<EmailEnv, "APP_URL"> {
   GOOGLE_CLIENT_SECRET?: string;
   // Só para testes locais com um servidor falso; em produção fica vazio e vale o endereço do Google
   GOOGLE_TOKEN_URL?: string;
+  // Idem para as chaves públicas (JWKS) usadas na verificação da assinatura do One Tap
+  GOOGLE_JWKS_URL?: string;
 }
 
 export const googleEnabled = (env: GoogleEnv): boolean => Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
@@ -54,6 +56,8 @@ export interface GoogleProfile {
   email: string;
   emailVerified: boolean;
   name: string | null;
+  // Domínio Google Workspace, quando a conta pertence a um
+  hostedDomain: string | null;
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -86,16 +90,83 @@ export async function exchangeCode(env: GoogleEnv, code: string, verifier: strin
   const claims = body?.id_token ? decodeJwtPayload(body.id_token) : null;
   if (!claims) return null;
 
+  return profileFromClaims(env, claims, nonce);
+}
+
+// Confere emissor, público (aud), validade e, se pedido, o nonce; devolve o perfil ou null.
+// Para o One Tap o nonce é conferido pelo chamador (uso único no banco), então aqui vem como null.
+export function profileFromClaims(env: GoogleEnv, claims: Record<string, unknown>, nonce: string | null): GoogleProfile | null {
   const issuerOk = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
   const audienceOk = claims.aud === env.GOOGLE_CLIENT_ID;
-  const notExpired = typeof claims.exp === "number" && claims.exp > Math.floor(Date.now() / 1000);
-  if (!issuerOk || !audienceOk || !notExpired || claims.nonce !== nonce) return null;
-  if (typeof claims.sub !== "string" || typeof claims.email !== "string") return null;
+  const now = Math.floor(Date.now() / 1000);
+  const notExpired = typeof claims.exp === "number" && claims.exp > now;
+  const issuedSanely = typeof claims.iat !== "number" || claims.iat <= now + 300;
+  if (!issuerOk || !audienceOk || !notExpired || !issuedSanely) return null;
+  if (nonce !== null && claims.nonce !== nonce) return null;
+  if (typeof claims.sub !== "string" || !claims.sub || typeof claims.email !== "string") return null;
 
   return {
     sub: claims.sub,
     email: claims.email.toLowerCase(),
     emailVerified: claims.email_verified === true || claims.email_verified === "true",
     name: typeof claims.name === "string" ? claims.name : null,
+    hostedDomain: typeof claims.hd === "string" ? claims.hd : null,
   };
+}
+
+// O Google só é autoridade sobre o e-mail de @gmail.com e de contas Workspace (com "hd"). Para outros domínios,
+// o dono do endereço pode ter mudado mesmo com email_verified, então não o tratamos como confirmado.
+export const trustedEmail = (profile: GoogleProfile): boolean =>
+  profile.emailVerified && (profile.email.endsWith("@gmail.com") || Boolean(profile.hostedDomain));
+
+// ---- Verificação de assinatura (One Tap): a credencial chega do navegador, então NADA nela é confiável sem isto
+
+interface Jwk {
+  kid: string;
+  kty: string;
+  alg?: string;
+  n: string;
+  e: string;
+}
+
+let jwksCache: { keys: Jwk[]; expiresAt: number } | null = null;
+
+async function googleKeys(env: GoogleEnv, forceRefresh = false): Promise<Jwk[]> {
+  if (!forceRefresh && jwksCache && jwksCache.expiresAt > Date.now()) return jwksCache.keys;
+  const response = await fetch(env.GOOGLE_JWKS_URL || "https://www.googleapis.com/oauth2/v3/certs");
+  if (!response.ok) return jwksCache?.keys ?? [];
+  const body = (await response.json().catch(() => null)) as { keys?: Jwk[] } | null;
+  const keys = body?.keys ?? [];
+  // Respeita o Cache-Control do Google (as chaves giram); sem ele, 1 hora
+  const maxAge = Number(/max-age=(\d+)/.exec(response.headers.get("Cache-Control") || "")?.[1]) || 3600;
+  jwksCache = { keys, expiresAt: Date.now() + Math.min(maxAge, 86400) * 1000 };
+  return keys;
+}
+
+const base64UrlToBytes = (value: string) => Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+// Valida a assinatura RS256 da credencial com as chaves públicas do Google e devolve as claims (ainda sem checar aud/iss/exp)
+export async function verifyGoogleSignature(env: GoogleEnv, token: string): Promise<Record<string, unknown> | null> {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const header = JSON.parse(new TextDecoder().decode(base64UrlToBytes(parts[0]))) as { alg?: string; kid?: string };
+    if (header.alg !== "RS256" || !header.kid) return null;
+
+    let key = (await googleKeys(env)).find((k) => k.kid === header.kid);
+    // Chave desconhecida: o Google pode ter girado as chaves; tenta uma vez com a lista nova
+    if (!key) key = (await googleKeys(env, true)).find((k) => k.kid === header.kid);
+    if (!key || key.kty !== "RSA") return null;
+
+    const cryptoKey = await crypto.subtle.importKey("jwk", { kty: "RSA", n: key.n, e: key.e, alg: "RS256", ext: true }, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+    const valid = await crypto.subtle.verify(
+      "RSASSA-PKCS1-v1_5",
+      cryptoKey,
+      base64UrlToBytes(parts[2]),
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+    return valid ? decodeJwtPayload(token) : null;
+  } catch {
+    return null;
+  }
 }

@@ -23,3 +23,15 @@ npx wrangler pages secret put GOOGLE_CLIENT_SECRET --project-name espectro
 ```
 
 O novo valor vale na próxima publicação (merge em `main`).
+
+## Google One Tap (Google Identity Services)
+- Aparece só na página inicial para visitantes, com o modal de entrada fechado, no máximo uma vez por carregamento. Se a pessoa dispensa o widget, não voltamos a mostrar por 24 horas (o Google e o navegador ainda aplicam o próprio intervalo). Nunca entra sozinho ().
+- O botão  continua existindo.
+- Fluxo: o navegador pede um nonce de uso único (), o Google grava o nonce na credencial e ela volta para , onde o servidor confere a assinatura RS256 com as chaves públicas do Google (cache pelo Cache-Control), emissor, público, validade, data de emissão e o nonce (consumido na leitura).
+- Identidade: . E-mail de conta existente sem vínculo NÃO é ligado sozinho: o servidor devolve um pedido de ligação (10 min) e a ligação só acontece depois de a pessoa entrar na conta (senha e, se houver, 2FA).
+- O e-mail só é marcado como confirmado quando o Google é autoridade sobre ele (@gmail.com ou conta Workspace com ).
+
+### Configuração obrigatória no Google Cloud Console
+No cliente OAuth (APIs e serviços > Credenciais), em **Origens JavaScript autorizadas**, adicione:
+- 
+Sem isso o widget não abre (o console do navegador mostra ). O URI de redirecionamento do botão () continua como está. Ao usar domínio próprio, adicione também a origem dele.

@@ -1,7 +1,7 @@
-import { errorResponse, getJwtSecret, jsonResponse, rateLimit, serverError, signJWT } from "../../../_shared/auth";
+import { errorResponse, rateLimit, serverError } from "../../../_shared/auth";
 import { sha256Hex } from "../../../_shared/google";
-import { completeLogin } from "../../../_shared/loginFlow";
-import { MfaEnv, mfaAvailable } from "../../../_shared/mfa";
+import { finishGoogleLogin } from "../../../_shared/googleAccount";
+import { MfaEnv } from "../../../_shared/mfa";
 
 export interface Env extends MfaEnv {
   DB: D1Database;
@@ -24,21 +24,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       .first<{ user_id: number }>();
     if (!row) return errorResponse("O login com o Google expirou. Tente de novo.", 400);
 
-    const user = await env.DB.prepare("SELECT id, username, suspended_at, deletion_requested_at FROM users WHERE id = ?")
-      .bind(row.user_id)
-      .first<{ id: number; username: string; suspended_at: string | null; deletion_requested_at: string | null }>();
-    if (!user || user.suspended_at) return errorResponse("Não foi possível entrar.", 403);
-
-    // Quem ativou a verificação em duas etapas continua precisando dela, também ao entrar com o Google
-    if (mfaAvailable(env)) {
-      const mfa = await env.DB.prepare("SELECT 1 AS has_mfa FROM user_mfa WHERE user_id = ? AND enabled_at IS NOT NULL").bind(user.id).first();
-      if (mfa) {
-        const mfaToken = await signJWT({ id: user.id, username: user.username, purpose: "mfa", exp: Math.floor(Date.now() / 1000) + 300 }, getJwtSecret(env));
-        return jsonResponse({ mfa_required: true, mfa_token: mfaToken });
-      }
-    }
-
-    return completeLogin(env, request, user, { mfa: false });
+    return finishGoogleLogin(env, request, row.user_id);
   } catch (err: unknown) {
     return serverError(err, "google:exchange");
   }

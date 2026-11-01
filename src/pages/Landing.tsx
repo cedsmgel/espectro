@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useGoogleOneTap } from '../hooks/useGoogleOneTap';
 import { useSidebar } from '../context/SidebarContext';
 
 const AUTH_ERRORS: Record<string, string> = {
@@ -20,9 +21,12 @@ const PILLARS = [
 
 // Página inicial para visitantes: apresenta o Espectro e leva ao modal de entrada
 export const Landing: React.FC = () => {
-  const { openAuth } = useAuth();
+  const { openAuth, authRequest } = useAuth();
   const { setHideBottomNav } = useSidebar();
   const [params, setParams] = useSearchParams();
+
+  // One Tap só aparece aqui, com o modal de entrada fechado, para os dois nunca ficarem um sobre o outro
+  useGoogleOneTap(!authRequest);
 
   // Erro devolvido pelo login com o Google (?auth_error=...): abre o modal explicando o motivo
   useEffect(() => {

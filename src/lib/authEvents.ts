@@ -9,6 +9,8 @@ export interface AuthRequest {
   redirectTo?: string | null;
   // Abre direto no segundo passo do 2FA (ex.: depois de entrar com o Google)
   mfaToken?: string;
+  // Pedido pendente do One Tap: depois de entrar na conta existente, liga o Google a ela
+  googleLinkToken?: string;
 }
 
 export const AUTH_REQUIRED_EVENT = 'espectro:auth-required';
