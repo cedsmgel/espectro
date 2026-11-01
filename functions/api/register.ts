@@ -1,6 +1,8 @@
 import { hashPassword, jsonResponse, errorResponse, serverError, rateLimit } from "../_shared/auth";
+import { createEmailToken } from "../_shared/emailTokens";
+import { emailEnabled, EmailEnv, sendEmail, verifyEmailMessage } from "../_shared/email";
 
-export interface Env {
+export interface Env extends EmailEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -65,6 +67,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const newId = insertResult.meta.last_row_id;
+
+    // E-mail de confirmação em segundo plano: o cadastro nunca espera nem falha por causa dele
+    if (emailEnabled(env) || env.EMAIL_DEV_LOG === "1") {
+      context.waitUntil(
+        (async () => {
+          const token = await createEmailToken(env.DB, Number(newId), "verify_email");
+          const result = await sendEmail(env, { ...verifyEmailMessage(env, cleanEmail, token), idempotencyKey: `verify-${newId}-${token.slice(0, 16)}` });
+          if (!result.sent) console.error("Falha ao enviar confirmação de e-mail:", result.error);
+        })().catch(() => undefined)
+      );
+    }
     return jsonResponse(
       {
         id: newId,

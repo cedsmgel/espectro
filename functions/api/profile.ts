@@ -56,7 +56,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const user = await env.DB.prepare(
-      "SELECT id, username, email, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at FROM users WHERE id = ?"
+      "SELECT id, username, email, name, bio, avatar_url, cover_url, music, is_private, allow_scraps, created_at, email_verified_at FROM users WHERE id = ?"
     )
       .bind(auth.id)
       .first<any>();
@@ -65,9 +65,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return errorResponse("Conta de usuário não encontrada no banco de dados.", 404);
     }
 
+    const { email_verified_at, ...selfUser } = user;
     return jsonResponse({
       user: {
-        ...user,
+        ...selfUser,
+        email_verified: Boolean(email_verified_at),
         is_private: Boolean(user.is_private),
         allow_scraps: Boolean(user.allow_scraps ?? 1),
         is_friend: true,

@@ -850,6 +850,7 @@ export interface UserProfile {
   music?: string | null;
   is_private?: boolean;
   allow_scraps?: boolean;
+  email_verified?: boolean;
   is_friend?: boolean;
   is_self?: boolean;
   friendship_status?: string | null;
@@ -1017,6 +1018,29 @@ export interface AccountSession {
   created_at: string;
   last_seen_at: string;
 }
+
+// Recuperação de senha e confirmação de e-mail
+let emailEnabledCache: Promise<boolean> | null = null;
+export const authFlowApi = {
+  // O Espectro só mostra "Esqueci minha senha" quando o servidor consegue enviar e-mails
+  emailEnabled: (): Promise<boolean> => {
+    if (!emailEnabledCache) {
+      emailEnabledCache = fetch('/api/config')
+        .then((r) => (r.ok ? (r.json() as Promise<{ email_enabled?: boolean }>) : { email_enabled: false }))
+        .then((c: { email_enabled?: boolean }) => Boolean(c.email_enabled))
+        .catch(() => false);
+    }
+    return emailEnabledCache;
+  },
+  forgotPassword: (email: string) =>
+    apiRequest<{ ok: boolean }>('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (token: string, password: string) =>
+    apiRequest<{ changed: boolean }>('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+  verifyEmail: (token: string) =>
+    apiRequest<{ verified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
+  resendVerification: () =>
+    apiRequest<{ sent?: boolean; already_verified?: boolean }>('/api/auth/resend-verification', { method: 'POST' }),
+};
 
 export const accountSecurityApi = {
   listSessions: async () => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { AccountSession, accountSecurityApi, authStorage, ThisDevice } from '../lib/api';
+import { AccountSession, accountSecurityApi, authFlowApi, authStorage, profileApi, ThisDevice } from '../lib/api';
 
 const fieldClass = 'block w-full min-w-0 appearance-none px-0 py-2.5 bg-transparent border-0 border-b border-outline-variant outline-none text-sm text-on-surface focus:border-on-surface';
 const buttonClass = 'h-11 px-6 rounded-full bg-primary-container text-on-primary text-sm font-semibold cursor-pointer disabled:opacity-50';
@@ -60,6 +60,8 @@ export const SecurityCenter: React.FC = () => {
   const [sessionNotice, setSessionNotice] = useState<Notice>(null);
   const [sessions, setSessions] = useState<AccountSession[] | null>(null);
   const [thisDevice, setThisDevice] = useState<ThisDevice | null>(null);
+  const [emailState, setEmailState] = useState<{ email: string; verified: boolean; canSend: boolean } | null>(null);
+  const [emailNotice, setEmailNotice] = useState<Notice>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<Notice>(null);
 
@@ -72,6 +74,13 @@ export const SecurityCenter: React.FC = () => {
       })
       .catch(() => setSessions([]));
   };
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([profileApi.get(), authFlowApi.emailEnabled()])
+      .then(([profile, canSend]) => setEmailState({ email: profile.email || '', verified: Boolean(profile.email_verified), canSend }))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (user) loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,6 +135,38 @@ export const SecurityCenter: React.FC = () => {
 
   return (
     <div className="flex flex-col">
+      {emailState && (
+        <Block
+          title="E-mail da conta"
+          description="O e-mail confirmado é o que permite recuperar a senha se você a esquecer."
+        >
+          <div className="flex items-center gap-3 flex-wrap">
+            <p className="text-sm text-on-surface break-all">{emailState.email}</p>
+            <span className={`text-[11px] font-semibold uppercase tracking-wider ${emailState.verified ? 'text-on-surface-variant' : 'text-error'}`}>
+              {emailState.verified ? 'Confirmado' : 'Não confirmado'}
+            </span>
+          </div>
+          {!emailState.verified && emailState.canSend && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                className={outlineClass}
+                onClick={() => {
+                  setEmailNotice(null);
+                  authFlowApi
+                    .resendVerification()
+                    .then((r) => setEmailNotice({ kind: 'ok', text: r.already_verified ? 'Seu e-mail já está confirmado.' : 'Enviamos o link. Confira a caixa de entrada e o spam.' }))
+                    .catch((err: any) => setEmailNotice({ kind: 'error', text: err?.message || 'Não foi possível enviar agora.' }));
+                }}
+              >
+                Reenviar e-mail de confirmação
+              </button>
+              <NoticeLine notice={emailNotice} />
+            </div>
+          )}
+        </Block>
+      )}
+
   <Block title="Alterar senha" description="Ao trocar a senha, os outros dispositivos conectados são desconectados.">
     <form onSubmit={changePassword} className="flex flex-col gap-1">
       <label className="text-sm text-on-surface-variant" htmlFor="pw-current">Senha atual</label>

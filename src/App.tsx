@@ -22,6 +22,8 @@ const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
 const DeleteAccount = lazyNamed(() => import('./pages/DeleteAccount'), 'DeleteAccount');
+const ResetPassword = lazyNamed(() => import('./pages/ResetPassword'), 'ResetPassword');
+const VerifyEmail = lazyNamed(() => import('./pages/VerifyEmail'), 'VerifyEmail');
 const Home = lazyNamed(() => import('./pages/Home'), 'Home');
 const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
@@ -88,6 +90,8 @@ export const App: React.FC = () => {
           <Route path="/videos" element={<Navigate to="/shorts" replace />} />
           <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/login" element={<Login />} />
+          <Route path="/redefinir-senha" element={<ResetPassword />} />
+          <Route path="/confirmar-email" element={<VerifyEmail />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
           </Suspense>

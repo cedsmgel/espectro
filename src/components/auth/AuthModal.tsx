@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { authApi } from '../../lib/api';
+import { authApi, authFlowApi } from '../../lib/api';
 import { AuthRequest } from '../../lib/authEvents';
 
 interface AuthModalProps {
@@ -9,7 +9,7 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type Mode = 'login' | 'register';
+type Mode = 'login' | 'register' | 'forgot';
 
 const fieldClass =
   'w-full pl-10 pr-4 py-3 text-base bg-transparent border border-outline-variant rounded-2xl text-on-surface focus:outline-none focus:border-on-surface transition-colors';
@@ -26,9 +26,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canRecover, setCanRecover] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
+
+  useEffect(() => {
+    void authFlowApi.emailEnabled().then(setCanRecover);
+  }, []);
 
   // O pedido pode mudar o modo com o modal aberto (ex.: "Criar conta" clicado de novo)
   useEffect(() => {
@@ -86,11 +92,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const switchMode = (next: Mode) => {
     setMode(next);
     setError(null);
+    setForgotSent(false);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (mode === 'forgot') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Informe um e-mail válido.');
+      setLoading(true);
+      try {
+        await authFlowApi.forgotPassword(email.trim());
+        setForgotSent(true);
+      } catch (err: any) {
+        setError(err?.message || 'Não foi possível enviar agora. Tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     if (mode === 'register') {
       if (!/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) return setError('O usuário deve ter de 3 a 30 caracteres: letras, números e underline.');
@@ -114,7 +135,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   };
 
   const reason =
-    request.reason || (mode === 'register' ? 'Crie sua conta para participar do Espectro.' : 'Entre na sua conta para continuar.');
+    mode === 'forgot'
+      ? 'Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha.'
+      : request.reason || (mode === 'register' ? 'Crie sua conta para participar do Espectro.' : 'Entre na sua conta para continuar.');
 
   return createPortal(
     <div
@@ -150,13 +173,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             <span className="text-lg font-bold tracking-tight">Espectro</span>
           </div>
           <h2 id="auth-title" className="text-xl font-bold pt-2">
-            {mode === 'login' ? 'Entrar' : 'Criar conta'}
+            {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Recuperar senha'}
           </h2>
           <p id="auth-reason" className="text-sm text-on-surface-variant leading-relaxed">
             {reason}
           </p>
         </div>
 
+        {mode !== 'forgot' && (
         <div role="tablist" aria-label="Entrar ou criar conta" className="grid grid-cols-2 border-b border-outline-variant">
           {(
             [
@@ -178,6 +202,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             </button>
           ))}
         </div>
+        )}
 
         {error && (
           <div role="alert" className="p-3 rounded-2xl bg-error-container text-error text-sm flex items-start gap-2">
@@ -186,6 +211,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           </div>
         )}
 
+        {mode === 'forgot' ? (
+          forgotSent ? (
+            <div className="flex flex-col gap-4">
+              <p role="status" className="text-sm leading-relaxed">Se existir uma conta com esse e-mail, enviamos o link. Ele vale por 30 minutos. Confira também a caixa de spam.</p>
+              <button type="button" onClick={() => switchMode('login')} className="w-full h-12 rounded-full border border-outline-variant text-sm font-semibold cursor-pointer hover:bg-surface-container">Voltar para entrar</button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="auth-forgot-email" className="text-sm font-semibold">E-mail</label>
+                <div className="relative flex items-center">
+                  <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[18px]">mail</span>
+                  <input id="auth-forgot-email" type="email" autoComplete="email" autoCapitalize="none" value={email} onChange={(e) => setEmail(e.target.value)} required className={fieldClass} />
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">{loading ? 'Enviando...' : 'Enviar link'}</button>
+              <button type="button" onClick={() => switchMode('login')} className="text-sm text-on-surface-variant hover:text-on-surface cursor-pointer">Voltar</button>
+            </form>
+          )
+        ) : (
         <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
           {mode === 'login' ? (
             <div className="flex flex-col gap-1.5">
@@ -250,6 +295,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
               </button>
             </div>
             {mode === 'register' && <p className="text-xs text-on-surface-variant">Mínimo de 8 caracteres.</p>}
+            {mode === 'login' && canRecover && (
+              <button type="button" onClick={() => switchMode('forgot')} className="self-start text-sm text-on-surface-variant hover:text-on-surface hover:underline cursor-pointer">
+                Esqueci minha senha
+              </button>
+            )}
           </div>
 
           <button
@@ -260,13 +310,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
         </form>
+        )}
 
+        {mode !== 'forgot' && (
         <p className="text-center text-sm text-on-surface-variant">
           {mode === 'login' ? 'Ainda não tem conta? ' : 'Já tem conta? '}
           <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} className="font-semibold text-on-surface hover:underline cursor-pointer">
             {mode === 'login' ? 'Criar conta' : 'Entrar'}
           </button>
         </p>
+        )}
       </div>
     </div>,
     document.body
