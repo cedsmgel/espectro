@@ -54,6 +54,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       env.DB.prepare(
         "DELETE FROM friendships WHERE (user_id = ?1 AND friend_id = ?2) OR (user_id = ?2 AND friend_id = ?1)"
       ).bind(user.id, targetId),
+      env.DB.prepare(
+        "DELETE FROM follows WHERE (follower_id = ?1 AND following_id = ?2) OR (follower_id = ?2 AND following_id = ?1)"
+      ).bind(user.id, targetId),
     ]);
 
     return jsonResponse({ blocked: true, user: { id: target.id, username: target.username } }, 201);

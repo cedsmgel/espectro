@@ -487,6 +487,14 @@ export const commentsApi = {
     api.createComment({ post_id: postId, content, parent_id: parentId }),
 };
 
+// Seguir (mão única)
+export const followsApi = {
+  follow: (userId: number) =>
+    apiRequest<{ following: boolean; followers_count: number; following_count: number }>('/api/follows', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+  unfollow: (userId: number) =>
+    apiRequest<{ following: boolean; followers_count: number; following_count: number }>(`/api/follows?user_id=${userId}`, { method: 'DELETE' }),
+};
+
 export const friendsApi = {
   list: () => apiRequest<Friend[]>('/api/friendships', { method: 'GET' }),
   search: (query: string) =>
@@ -949,6 +957,9 @@ export interface UserProfile {
   friendship_status?: string | null;
   friendship_direction?: 'outgoing' | 'incoming' | null;
   friends_count?: number;
+  followers_count?: number;
+  following_count?: number;
+  i_follow?: boolean;
   blocked_by_me?: boolean;
   created_at?: string;
 }
@@ -1056,6 +1067,7 @@ export interface AccountSettings {
   is_private: boolean;
   allow_scraps: boolean;
   show_last_seen: boolean;
+  personalization: boolean;
 }
 
 export interface FriendPresence {

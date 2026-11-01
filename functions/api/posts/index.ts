@@ -118,6 +118,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     } else if (communitySlug) {
       query += ` AND (c.slug = ? OR CAST(c.id AS TEXT) = ?)`;
       params.push(communitySlug, communitySlug);
+    } else if (feed === "following") {
+      // Seguindo: minhas publicações, de quem eu sigo e de quem é meu amigo
+      if (!authUser) return errorResponse("Não autorizado.", 401);
+      query += ` AND (
+        p.author_id = ?1
+        OR p.author_id IN (SELECT following_id FROM follows WHERE follower_id = ?1)
+        OR p.author_id IN (SELECT CASE WHEN f2.user_id = ?1 THEN f2.friend_id ELSE f2.user_id END FROM friendships f2 WHERE f2.status = 'accepted' AND (f2.user_id = ?1 OR f2.friend_id = ?1))
+      )`.replace(/\?1/g, "?");
+      params.push(authUser.id, authUser.id, authUser.id, authUser.id, authUser.id);
     } else if (feed === "home" && authUser) {
       // Feed Principal: exibe posts gerais (sem comunidade) E posts das comunidades em que o usuário participa
       query += ` AND (p.community_id IS NULL OR p.community_id IN (SELECT community_id FROM community_members WHERE user_id = ? AND status = 'active'))`;

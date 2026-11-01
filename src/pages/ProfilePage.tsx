@@ -5,6 +5,7 @@ import {
   Community,
   blocksApi,
   friendsApi,
+  followsApi,
   Post,
   postsApi,
   UserProfile,
@@ -102,6 +103,25 @@ export const ProfilePage: React.FC = () => {
     loadUserData();
     loadUserPosts();
   }, [targetUsername]);
+
+  const [followBusy, setFollowBusy] = useState(false);
+  const handleToggleFollow = async () => {
+    if (!loggedUser) {
+      requestAuth({ mode: 'login', reason: 'Para seguir pessoas, entre ou crie uma conta.' });
+      return;
+    }
+    if (!userProfile) return;
+    setFollowBusy(true);
+    try {
+      const res = userProfile.i_follow ? await followsApi.unfollow(userProfile.id) : await followsApi.follow(userProfile.id);
+      setUserProfile((prev) => (prev ? { ...prev, i_follow: res.following, followers_count: res.followers_count } : null));
+    } catch (err: any) {
+      setFriendActionSuccess(err.message || 'Não foi possível seguir.');
+      setTimeout(() => setFriendActionSuccess(null), 4000);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   const handleAddFriend = async () => {
     if (!loggedUser) {
@@ -416,6 +436,12 @@ export const ProfilePage: React.FC = () => {
                         <strong className="text-primary">▲ {totalUpvotes}</strong>
                         <span>upvotes</span>
                       </div>
+                      {typeof userProfile?.followers_count === 'number' && (
+                        <div>
+                          <strong className="text-on-surface">{userProfile.followers_count}</strong>
+                          <span>{userProfile.followers_count === 1 ? 'seguidor' : 'seguidores'}</span>
+                        </div>
+                      )}
                       {typeof userProfile?.friends_count === 'number' && (
                         <Link
                           to={isSelf ? '/amigos' : `/perfil/${encodeURIComponent(usernameHandle)}/amigos`}
@@ -547,6 +573,21 @@ export const ProfilePage: React.FC = () => {
                       <span className="material-symbols-outlined text-[18px]">person_add</span>
                     )}
                     <span>{addingFriend ? 'Adicionando...' : 'Adicionar Amigo'}</span>
+                  </button>
+                )}
+
+                {!isSelf && userProfile && !userProfile.blocked_by_me && (!userProfile.is_private || userProfile.i_follow) && (
+                  <button
+                    type="button"
+                    onClick={handleToggleFollow}
+                    disabled={followBusy}
+                    className={`px-5 py-2.5 rounded-full font-semibold text-xs border flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
+                      userProfile.i_follow
+                        ? 'bg-surface-container-low text-on-surface border-outline-variant hover:bg-surface-container'
+                        : 'bg-on-surface text-surface border-on-surface hover:opacity-90'
+                    }`}
+                  >
+                    {userProfile.i_follow ? 'Seguindo' : 'Seguir'}
                   </button>
                 )}
 
