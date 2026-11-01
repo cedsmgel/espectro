@@ -189,6 +189,7 @@ function decodeJwtPayload(token: string): User | null {
 
 export const authStorage = {
   getToken(): string | null {
+    if (typeof localStorage === 'undefined') return null;
     return localStorage.getItem(TOKEN_KEY);
   },
   setToken(token: string) {
@@ -200,6 +201,7 @@ export const authStorage = {
     notifyAuthChanged();
   },
   getUser(): User | null {
+    if (typeof localStorage === 'undefined') return null;
     const raw = localStorage.getItem(USER_KEY);
     if (raw) {
       try {

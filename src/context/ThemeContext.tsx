@@ -29,7 +29,17 @@ const getInitialTheme = (): Theme => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  // Hidratando HTML do servidor: a primeira renderização precisa ser igual à dele (tema claro); o tema real entra em seguida
+  const hydrating = typeof window !== 'undefined' && (window as unknown as { __SSR_HYDRATE__?: boolean }).__SSR_HYDRATE__ === true;
+  const [theme, setThemeState] = useState<Theme>(() => (hydrating ? 'light' : getInitialTheme()));
+  const [synced, setSynced] = useState(!hydrating);
+
+  useEffect(() => {
+    if (!synced) {
+      setThemeState(getInitialTheme());
+      setSynced(true);
+    }
+  }, [synced]);
 
   const applyTheme = (t: Theme) => {
     const root = document.documentElement;
@@ -42,8 +52,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     // Aplica a classe no <html> imediatamente no mount
-    applyTheme(theme);
-  }, [theme]);
+    if (synced) applyTheme(theme);
+  }, [theme, synced]);
 
   // Listener para sincronizar caso o usuário mude o tema do sistema e não tenha preferência salva
   useEffect(() => {

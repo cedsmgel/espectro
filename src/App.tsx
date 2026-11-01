@@ -61,9 +61,14 @@ const PresenceHeartbeat: React.FC = () => {
   return null;
 };
 
-export const App: React.FC = () => {
+// Antes de hidratar o HTML do servidor, carrega o código da tela daquela rota (senão o Suspense mostraria o spinner no lugar do conteúdo)
+export async function preloadRoute(pathname: string): Promise<void> {
+  if (pathname === '/') await import('./pages/Home');
+}
+
+export const AppContent: React.FC = () => {
   return (
-    <BrowserRouter>
+    <>
       <ThemeProvider>
         <AuthProvider>
         <SidebarProvider>
@@ -117,8 +122,14 @@ export const App: React.FC = () => {
         </SidebarProvider>
         </AuthProvider>
       </ThemeProvider>
-    </BrowserRouter>
+    </>
   );
 };
+
+export const App: React.FC = () => (
+  <BrowserRouter>
+    <AppContent />
+  </BrowserRouter>
+);
 
 export default App;
