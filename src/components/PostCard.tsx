@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Post, postsApi, authStorage, adminApi } from '../lib/api';
+import { Post, postsApi, authStorage, adminApi, savedApi } from '../lib/api';
 import { ReportModal } from './chat/ReportModal';
 import { ShareButton } from './ShareButton';
 import { useIsAdmin } from '../hooks/useIsAdmin';
@@ -43,7 +43,12 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [upvotes, setUpvotes] = useState(post.upvotes);
   const [downvotes, setDownvotes] = useState(post.downvotes);
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(Boolean(post.saved));
+  const toggleSaved = () => {
+    const next = !isSaved;
+    setIsSaved(next);
+    (next ? savedApi.add(post.id) : savedApi.remove(post.id)).catch(() => setIsSaved(!next));
+  };
   const [commentsCount, setCommentsCount] = useState(post.comments_count);
 
   // Estados de edição e exclusão
@@ -489,7 +494,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsSaved((v) => !v);
+                toggleSaved();
               }}
               className={`w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container transition-colors cursor-pointer ${
                 isSaved ? 'text-primary' : 'hover:text-on-surface'

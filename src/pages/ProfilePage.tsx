@@ -616,6 +616,33 @@ export const ProfilePage: React.FC = () => {
             )}
 
             {/* 4. Mural de Publicações / Scraps Públicos */}
+            {userProfile && !isLockedPrivate && (
+              <nav aria-label="Seções do perfil" className="flex overflow-x-auto scrollbar-none border-b border-outline-variant -mt-2">
+                {[
+                  { id: 'sobre', label: 'Sobre', icon: 'info' },
+                  { id: 'amigos', label: 'Amigos', icon: 'group' },
+                  { id: 'fotos', label: 'Fotos', icon: 'photo_library' },
+                  { id: 'videos', label: 'Vídeos', icon: 'play_circle' },
+                  { id: 'comunidades', label: 'Comunidades', icon: 'forum' },
+                  ...(isSelf
+                    ? [
+                        { id: 'salvos', label: 'Salvos', icon: 'bookmark' },
+                        { id: 'atividade', label: 'Atividade', icon: 'history' },
+                      ]
+                    : []),
+                ].map((s) => (
+                  <Link
+                    key={s.id}
+                    to={`/perfil/${encodeURIComponent(userProfile.username)}/${s.id}`}
+                    className="h-12 px-4 shrink-0 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant hover:text-on-surface transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{s.icon}</span>
+                    {s.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+
             {userProfile && !isLockedPrivate && <ProfileAbout username={userProfile.username} isSelf={isSelf} />}
 
             {isLockedPrivate ? (
