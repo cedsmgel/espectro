@@ -1042,7 +1042,20 @@ export const profileSectionsApi = {
       { method: 'GET' }
     ),
   activity: () => apiRequest<MyActivity>('/api/activity', { method: 'GET' }),
+  follows: (username: string, type: 'followers' | 'following', q?: string) =>
+    apiRequest<{ locked: boolean; users: ProfileFollowUser[] }>(
+      `/api/profile_follows?username=${encodeURIComponent(username)}&type=${type}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+      { method: 'GET' }
+    ),
 };
+
+export interface ProfileFollowUser {
+  id: number;
+  username: string;
+  name: string | null;
+  avatar_url: string | null;
+  i_follow: boolean;
+}
 
 export const usersApi = {
   getByUsername: async (

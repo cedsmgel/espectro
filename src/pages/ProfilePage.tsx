@@ -276,7 +276,6 @@ export const ProfilePage: React.FC = () => {
   const usernameHandle = userProfile?.username || targetUsername || 'usuario';
   const fullName = userProfile?.name || null;
   const initialLetter = (fullName || usernameHandle).charAt(0).toUpperCase();
-  const totalUpvotes = posts.reduce((acc, p) => acc + (p.upvotes || 0), 0);
   const memberSince = userProfile?.created_at
     ? new Date(userProfile.created_at.replace(' ', 'T') + 'Z').toLocaleDateString('pt-BR', {
         month: 'long',
@@ -327,32 +326,25 @@ export const ProfilePage: React.FC = () => {
       >
         <main className="w-full bg-surface pt-4 pb-24 md:pb-8">
           <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 flex flex-col gap-6 sm:gap-8">
-            {/* Capa do perfil */}
-            {userProfile?.cover_url && !isLockedPrivate && (
-              <div className="-mb-2 h-32 sm:h-52 rounded-3xl overflow-hidden border border-outline-variant bg-surface-container-low">
-                <img src={userProfile.cover_url} alt="" className="w-full h-full object-cover" />
-              </div>
-            )}
-
             {/* 1. Header do Perfil Público com Dados Reais */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-5 sm:gap-6 pb-5 border-b border-outline-variant">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 min-w-0">
+              <div className="flex flex-row items-start sm:items-center gap-4 sm:gap-6 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
                     <img
                       src={userProfile.avatar_url}
                       alt={usernameHandle}
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-surface-container-low"
+                      className="w-[84px] h-[84px] sm:w-24 sm:h-24 rounded-full object-cover shadow-md ring-4 ring-surface-container-low"
                     />
                   ) : (
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-3xl sm:text-4xl uppercase shadow-md ring-4 ring-surface-container-low">
+                    <div className="w-[84px] h-[84px] sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-3xl sm:text-4xl uppercase shadow-md ring-4 ring-surface-container-low">
                       {initialLetter}
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="order-1 flex items-center gap-2 flex-wrap">
                     {fullName ? (
                       <div>
                         <h1 className="text-xl sm:text-2xl font-bold text-on-surface truncate">
@@ -368,7 +360,7 @@ export const ProfilePage: React.FC = () => {
                       </h1>
                     )}
 
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
+                    <span className="hidden sm:inline text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">
                       {memberSince ? `Membro desde ${memberSince}` : 'Membro do Espectro'}
                     </span>
 
@@ -388,6 +380,7 @@ export const ProfilePage: React.FC = () => {
                   </div>
 
                   {/* Biografia Real */}
+                  <div className="order-3">
                   {userProfile?.bio ? (
                     <p className="text-xs text-on-surface mt-2 max-w-xl whitespace-pre-line leading-relaxed">
                       {userProfile.bio}
@@ -406,8 +399,10 @@ export const ProfilePage: React.FC = () => {
                     </p>
                   )}
 
+                  </div>
+
                   {userProfile && !isLockedPrivate && (
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="order-4 mt-3 flex items-center gap-2">
                       <ShareButton
                         variant="pill"
                         url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
@@ -419,6 +414,8 @@ export const ProfilePage: React.FC = () => {
                         buttonClassName="h-10 w-10 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
                         items={[
                           { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
+                          { key: 'amigos', label: 'Amigos', icon: 'group', onSelect: () => navigate(isSelf ? '/amigos' : `/perfil/${encodeURIComponent(userProfile.username)}/amigos`) },
+                          { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
                           { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
                           { key: 'atividade', label: 'Atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/atividade`) },
                         ]}
@@ -427,41 +424,27 @@ export const ProfilePage: React.FC = () => {
                   )}
 
                   {!isLockedPrivate && (
-                    <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:gap-x-8 gap-y-2 mt-4 py-4 border-y border-outline-variant text-xs sm:text-sm text-on-surface-variant text-center sm:text-left [&>*]:flex [&>*]:flex-col [&>*]:items-center sm:[&>*]:items-start [&_strong]:text-xl sm:[&_strong]:text-2xl [&_strong]:leading-tight [&_strong]:font-bold">
+                    <div className="order-2 grid grid-cols-3 sm:flex sm:flex-wrap sm:gap-x-10 gap-y-2 mt-2 sm:mt-4 sm:py-4 sm:border-y sm:border-outline-variant text-xs sm:text-sm text-on-surface-variant text-center sm:text-left [&>*]:flex [&>*]:flex-col [&>*]:items-center sm:[&>*]:items-start [&_strong]:text-xl sm:[&_strong]:text-2xl [&_strong]:leading-tight [&_strong]:font-bold">
                       <div>
                         <strong className="text-on-surface">{posts.length}</strong>
-                        <span>{posts.length === 1 ? 'publicação' : 'publicações'}</span>
+                        <span>{posts.length === 1 ? 'post' : 'posts'}</span>
                       </div>
-                      <div>
-                        <strong className="text-primary">▲ {totalUpvotes}</strong>
-                        <span>upvotes</span>
-                      </div>
-                      {typeof userProfile?.followers_count === 'number' && (
-                        <div>
-                          <strong className="text-on-surface">{userProfile.followers_count}</strong>
-                          <span>{userProfile.followers_count === 1 ? 'seguidor' : 'seguidores'}</span>
-                        </div>
-                      )}
-                      {typeof userProfile?.friends_count === 'number' && (
-                        <Link
-                          to={isSelf ? '/amigos' : `/perfil/${encodeURIComponent(usernameHandle)}/amigos`}
-                          className="hover:opacity-70 transition-opacity"
-                          aria-label={`Ver amigos: ${userProfile.friends_count}`}
-                        >
-                          <strong className="text-on-surface">{userProfile.friends_count}</strong>
-                          <span>{userProfile.friends_count === 1 ? 'amigo' : 'amigos'}</span>
-                        </Link>
-                      )}
-                      {(communities.length > 0 || isSelf) && (
-                        <Link
-                          to={isSelf ? '/comunidades' : `/perfil/${encodeURIComponent(usernameHandle)}/comunidades`}
-                          className="hover:opacity-70 transition-opacity"
-                          aria-label={`Ver comunidades: ${communities.length}`}
-                        >
-                          <strong className="text-on-surface">{communities.length}</strong>
-                          <span>{communities.length === 1 ? 'comunidade' : 'comunidades'}</span>
-                        </Link>
-                      )}
+                      <Link
+                        to={`/perfil/${encodeURIComponent(usernameHandle)}/seguidores`}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label={`Ver seguidores: ${userProfile?.followers_count ?? 0}`}
+                      >
+                        <strong className="text-on-surface">{userProfile?.followers_count ?? 0}</strong>
+                        <span>{userProfile?.followers_count === 1 ? 'seguidor' : 'seguidores'}</span>
+                      </Link>
+                      <Link
+                        to={`/perfil/${encodeURIComponent(usernameHandle)}/seguindo`}
+                        className="hover:opacity-70 transition-opacity"
+                        aria-label={`Ver quem segue: ${userProfile?.following_count ?? 0}`}
+                      >
+                        <strong className="text-on-surface">{userProfile?.following_count ?? 0}</strong>
+                        <span>seguindo</span>
+                      </Link>
                     </div>
                   )}
                 </div>
