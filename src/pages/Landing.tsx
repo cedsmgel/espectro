@@ -1,7 +1,16 @@
 import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSidebar } from '../context/SidebarContext';
+
+const AUTH_ERRORS: Record<string, string> = {
+  google_cancelled: 'Você cancelou o login com o Google.',
+  google_failed: 'Não foi possível entrar com o Google. Tente de novo.',
+  google_unavailable: 'Entrar com o Google não está disponível agora.',
+  google_email_unverified: 'O Google informou que este e-mail ainda não foi confirmado.',
+  email_in_use: 'Já existe uma conta do Espectro com o e-mail desse Google. Entre com a senha e ligue o Google em Segurança.',
+  suspended: 'Esta conta está suspensa.',
+};
 
 const PILLARS = [
   { icon: 'group', title: 'Pessoas', text: 'Encontre amigos, acompanhe perfis e mantenha conversas diretas e em grupo.' },
@@ -13,6 +22,18 @@ const PILLARS = [
 export const Landing: React.FC = () => {
   const { openAuth } = useAuth();
   const { setHideBottomNav } = useSidebar();
+  const [params, setParams] = useSearchParams();
+
+  // Erro devolvido pelo login com o Google (?auth_error=...): abre o modal explicando o motivo
+  useEffect(() => {
+    const code = params.get('auth_error');
+    if (!code) return;
+    openAuth({ mode: 'login', reason: AUTH_ERRORS[code] || 'Não foi possível entrar. Tente de novo.' });
+    const next = new URLSearchParams(params);
+    next.delete('auth_error');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A apresentação não mostra a navegação do app
   useEffect(() => {

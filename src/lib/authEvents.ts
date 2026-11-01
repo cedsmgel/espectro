@@ -7,6 +7,8 @@ export interface AuthRequest {
   reason?: string;
   // Para onde ir depois de entrar; sem valor, fica na página atual (ou vai ao feed se estiver em /login)
   redirectTo?: string | null;
+  // Abre direto no segundo passo do 2FA (ex.: depois de entrar com o Google)
+  mfaToken?: string;
 }
 
 export const AUTH_REQUIRED_EVENT = 'espectro:auth-required';

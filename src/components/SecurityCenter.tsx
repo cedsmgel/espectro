@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { TwoFactorSettings } from './TwoFactorSettings';
 import { useStepUp } from './StepUpDialog';
-import { AccountSession, accountSecurityApi, authFlowApi, authStorage, profileApi, ThisDevice } from '../lib/api';
+import { AccountSession, accountSecurityApi, authFlowApi, authStorage, googleApi, profileApi, ThisDevice } from '../lib/api';
 
 const fieldClass = 'block w-full min-w-0 appearance-none px-0 py-2.5 bg-transparent border-0 border-b border-outline-variant outline-none text-sm text-on-surface focus:border-on-surface';
 const buttonClass = 'h-11 px-6 rounded-full bg-primary-container text-on-primary text-sm font-semibold cursor-pointer disabled:opacity-50';
@@ -64,6 +64,9 @@ export const SecurityCenter: React.FC = () => {
   const [sessions, setSessions] = useState<AccountSession[] | null>(null);
   const [thisDevice, setThisDevice] = useState<ThisDevice | null>(null);
   const [emailState, setEmailState] = useState<{ email: string; verified: boolean; canSend: boolean } | null>(null);
+  const [hasPassword, setHasPassword] = useState(true);
+  const [google, setGoogle] = useState<{ available: boolean; linked: boolean; email: string | null } | null>(null);
+  const [googleNotice, setGoogleNotice] = useState<Notice>(null);
   const [emailNotice, setEmailNotice] = useState<Notice>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNotice, setExportNotice] = useState<Notice>(null);
@@ -80,8 +83,19 @@ export const SecurityCenter: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     Promise.all([profileApi.get(), authFlowApi.emailEnabled()])
-      .then(([profile, canSend]) => setEmailState({ email: profile.email || '', verified: Boolean(profile.email_verified), canSend }))
+      .then(([profile, canSend]) => {
+        setEmailState({ email: profile.email || '', verified: Boolean(profile.email_verified), canSend });
+        setHasPassword(profile.has_password !== false);
+      })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    googleApi.status().then(setGoogle).catch(() => {});
+    const result = new URLSearchParams(window.location.search).get('google');
+    if (result === 'linked') setGoogleNotice({ kind: 'ok', text: 'Conta do Google ligada.' });
+    if (result === 'in_use') setGoogleNotice({ kind: 'error', text: 'Essa conta do Google já está ligada a outra conta do Espectro.' });
   }, []);
 
   useEffect(() => {
@@ -170,12 +184,63 @@ export const SecurityCenter: React.FC = () => {
         </Block>
       )}
 
+  {google?.available && (
+    <Block
+      title="Conta do Google"
+      description="Ligue o Google para entrar com um toque. Se você ativou a verificação em duas etapas, ela continua valendo."
+    >
+      <div className="flex items-center gap-3 flex-wrap">
+        {google.linked ? (
+          <>
+            <p className="text-sm text-on-surface break-all">Ligada{google.email ? `: ${google.email}` : ''}</p>
+            <button
+              type="button"
+              className={outlineClass}
+              onClick={() => {
+                setGoogleNotice(null);
+                void stepUp(() => googleApi.unlink())
+                  .then(() => googleApi.status().then(setGoogle))
+                  .catch((err: any) => setGoogleNotice({ kind: 'error', text: err?.message || 'Não foi possível desligar.' }));
+              }}
+            >
+              Desligar
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className={outlineClass}
+            onClick={() => {
+              setGoogleNotice(null);
+              googleApi
+                .start('link')
+                .then((url) => {
+                  window.location.href = url;
+                })
+                .catch((err: any) => setGoogleNotice({ kind: 'error', text: err?.message || 'Não foi possível abrir o Google.' }));
+            }}
+          >
+            Ligar conta do Google
+          </button>
+        )}
+        <NoticeLine notice={googleNotice} />
+      </div>
+    </Block>
+  )}
+
   <TwoFactorSettings />
 
-  <Block title="Alterar senha" description="Ao trocar a senha, os outros dispositivos conectados são desconectados.">
+  <Block
+    title={hasPassword ? 'Alterar senha' : 'Definir senha'}
+    description={hasPassword ? 'Ao trocar a senha, os outros dispositivos conectados são desconectados.' : 'Sua conta entra pelo Google e ainda não tem senha. Defina uma para poder entrar também por e-mail.'}
+  >
     <form onSubmit={changePassword} className="flex flex-col gap-1">
-      <label className="text-sm text-on-surface-variant" htmlFor="pw-current">Senha atual</label>
-      <input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={fieldClass} required />
+      {hasPassword && (
+        <>
+          <label className="text-sm text-on-surface-variant" htmlFor="pw-current">Senha atual</label>
+          <input id="pw-current" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={fieldClass} required />
+        </>
+      )}
       <label className="text-sm text-on-surface-variant mt-3" htmlFor="pw-next">Nova senha (mínimo de 8 caracteres)</label>
       <input id="pw-next" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={fieldClass} required minLength={8} maxLength={128} />
       <label className="text-sm text-on-surface-variant mt-3" htmlFor="pw-confirm">Repita a nova senha</label>
