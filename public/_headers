@@ -60,3 +60,9 @@
 
 /melhores-amigos
   X-Robots-Tag: noindex, nofollow
+
+/atividade
+  X-Robots-Tag: noindex, nofollow
+
+/atividade/*
+  X-Robots-Tag: noindex, nofollow
