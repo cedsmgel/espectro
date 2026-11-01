@@ -21,7 +21,6 @@ import { ChatMenu } from '../components/chat/ChatMenu';
 import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
-import { ProfileAbout } from '../components/ProfileAbout';
 import { ProfileDiscover } from '../components/ProfileDiscover';
 
 export const ProfilePage: React.FC = () => {
@@ -387,36 +386,54 @@ export const ProfilePage: React.FC = () => {
                   )}
 
                   {userProfile && !isLockedPrivate && (
-                    <div className="mt-3">
+                    <div className="mt-3 flex items-center gap-2">
                       <ShareButton
                         variant="pill"
                         url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
                         title={`@${userProfile.username} no Espectro`}
                         text={userProfile.bio || undefined}
                       />
+                      <ChatMenu
+                        title="Mais do perfil"
+                        buttonClassName="h-10 w-10 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
+                        items={[
+                          { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
+                          { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
+                          { key: 'atividade', label: 'Atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/atividade`) },
+                        ]}
+                      />
                     </div>
                   )}
 
                   {!isLockedPrivate && (
-                    <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:gap-x-6 gap-y-2 mt-4 py-3 border-y border-outline-variant text-[11px] sm:text-xs text-on-surface-variant text-center sm:text-left [&>div]:flex [&>div]:flex-col [&>div]:items-center sm:[&>div]:block">
+                    <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:gap-x-8 gap-y-2 mt-4 py-4 border-y border-outline-variant text-xs sm:text-sm text-on-surface-variant text-center sm:text-left [&>*]:flex [&>*]:flex-col [&>*]:items-center sm:[&>*]:items-start [&_strong]:text-xl sm:[&_strong]:text-2xl [&_strong]:leading-tight [&_strong]:font-bold">
                       <div>
-                        <strong className="text-on-surface font-bold">{posts.length}</strong>{' '}
-                        {posts.length === 1 ? 'publicação' : 'publicações'}
+                        <strong className="text-on-surface">{posts.length}</strong>
+                        <span>{posts.length === 1 ? 'publicação' : 'publicações'}</span>
                       </div>
                       <div>
-                        <strong className="text-primary font-bold">▲ {totalUpvotes}</strong> upvotes recebidos
+                        <strong className="text-primary">▲ {totalUpvotes}</strong>
+                        <span>upvotes</span>
                       </div>
                       {typeof userProfile?.friends_count === 'number' && (
-                        <div>
-                          <strong className="text-on-surface font-bold">{userProfile.friends_count}</strong>{' '}
-                          {userProfile.friends_count === 1 ? 'amigo' : 'amigos'}
-                        </div>
+                        <Link
+                          to={isSelf ? '/amigos' : `/perfil/${encodeURIComponent(usernameHandle)}/amigos`}
+                          className="hover:opacity-70 transition-opacity"
+                          aria-label={`Ver amigos: ${userProfile.friends_count}`}
+                        >
+                          <strong className="text-on-surface">{userProfile.friends_count}</strong>
+                          <span>{userProfile.friends_count === 1 ? 'amigo' : 'amigos'}</span>
+                        </Link>
                       )}
-                      {communities.length > 0 && (
-                        <div>
-                          <strong className="text-secondary font-bold">{communities.length}</strong>{' '}
-                          {communities.length === 1 ? 'comunidade' : 'comunidades'}
-                        </div>
+                      {(communities.length > 0 || isSelf) && (
+                        <Link
+                          to={isSelf ? '/comunidades' : `/perfil/${encodeURIComponent(usernameHandle)}/comunidades`}
+                          className="hover:opacity-70 transition-opacity"
+                          aria-label={`Ver comunidades: ${communities.length}`}
+                        >
+                          <strong className="text-on-surface">{communities.length}</strong>
+                          <span>{communities.length === 1 ? 'comunidade' : 'comunidades'}</span>
+                        </Link>
                       )}
                     </div>
                   )}
@@ -580,34 +597,6 @@ export const ProfilePage: React.FC = () => {
             {userProfile && !isLockedPrivate && <ProfileDiscover isSelf={isSelf} username={usernameHandle} communities={communities} />}
 
             {/* 4. Mural de Publicações / Scraps Públicos */}
-            {userProfile && !isLockedPrivate && (
-              <nav aria-label="Seções do perfil" className="flex overflow-x-auto scrollbar-none border-b border-outline-variant -mt-2">
-                {[
-                  { id: 'sobre', label: 'Sobre', icon: 'info' },
-                  { id: 'amigos', label: 'Amigos', icon: 'group' },
-                  { id: 'fotos', label: 'Fotos', icon: 'photo_library' },
-                  { id: 'videos', label: 'Vídeos', icon: 'play_circle' },
-                  { id: 'comunidades', label: 'Comunidades', icon: 'forum' },
-                  ...(isSelf
-                    ? [
-                        { id: 'salvos', label: 'Salvos', icon: 'bookmark' },
-                        { id: 'atividade', label: 'Atividade', icon: 'history' },
-                      ]
-                    : []),
-                ].map((s) => (
-                  <Link
-                    key={s.id}
-                    to={`/perfil/${encodeURIComponent(userProfile.username)}/${s.id}`}
-                    className="h-12 px-4 shrink-0 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant hover:text-on-surface transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">{s.icon}</span>
-                    {s.label}
-                  </Link>
-                ))}
-              </nav>
-            )}
-
-            {userProfile && !isLockedPrivate && <ProfileAbout username={userProfile.username} isSelf={isSelf} />}
 
             {isLockedPrivate ? (
               <div className="p-12 rounded-3xl bg-surface-container-lowest border border-outline-variant flex flex-col items-center text-center gap-4 shadow-sm animate-in fade-in">

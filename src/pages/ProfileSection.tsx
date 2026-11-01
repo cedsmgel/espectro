@@ -14,8 +14,6 @@ export type ProfileSectionId = 'amigos' | 'sobre' | 'fotos' | 'videos' | 'comuni
 const SECTIONS: { id: ProfileSectionId; label: string; icon: string; ownerOnly?: boolean }[] = [
   { id: 'sobre', label: 'Sobre', icon: 'info' },
   { id: 'amigos', label: 'Amigos', icon: 'group' },
-  { id: 'fotos', label: 'Fotos', icon: 'photo_library' },
-  { id: 'videos', label: 'Vídeos', icon: 'play_circle' },
   { id: 'comunidades', label: 'Comunidades', icon: 'forum' },
   { id: 'salvos', label: 'Salvos', icon: 'bookmark', ownerOnly: true },
   { id: 'atividade', label: 'Atividade', icon: 'history', ownerOnly: true },
