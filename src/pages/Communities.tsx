@@ -18,6 +18,8 @@ export const Communities: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [search, setSearch] = useState('');
+  const [tab, setTab] = useState<'minhas' | 'descobrir'>('descobrir');
+  const [tabChosen, setTabChosen] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
   const loadCommunities = async () => {
@@ -26,6 +28,8 @@ export const Communities: React.FC = () => {
     try {
       const data = await communitiesApi.list();
       setCommunities(data);
+      // Quem já participa de alguma comunidade abre direto em "Minhas"
+      if (!tabChosen && data.some((c) => c.is_member)) setTab('minhas');
       setHasError(false);
     } catch (err) {
       console.error('Erro ao carregar comunidades:', err);
@@ -43,11 +47,14 @@ export const Communities: React.FC = () => {
     setCommunities((prev) => [created, ...prev]);
   };
 
-  const filtered = communities.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  const myCount = communities.filter((c) => c.is_member).length;
+  const filtered = communities
+    .filter((c) => tab === 'descobrir' || c.is_member)
+    .filter(
+      (c) =>
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.description?.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
@@ -105,8 +112,36 @@ export const Communities: React.FC = () => {
               />
             </div>
 
-            {/* Recomendadas para a pessoa logada (some durante a busca) */}
-            {user && !search.trim() && <CommunitySuggestions onJoined={loadCommunities} />}
+            {user && (
+              <div role="tablist" aria-label="Comunidades" className="flex border-b border-outline-variant">
+                {(
+                  [
+                    { id: 'minhas', label: 'Minhas', count: myCount },
+                    { id: 'descobrir', label: 'Descobrir', count: null },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === t.id}
+                    onClick={() => {
+                      setTab(t.id);
+                      setTabChosen(true);
+                    }}
+                    className={`flex-1 h-12 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider border-b-2 -mb-px cursor-pointer transition-colors ${
+                      tab === t.id ? 'border-on-surface text-on-surface' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {t.label}
+                    {t.count !== null && <span className="tabular-nums text-on-surface-variant">{t.count}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Recomendadas para a pessoa logada (só em Descobrir e fora da busca) */}
+            {user && tab === 'descobrir' && !search.trim() && <CommunitySuggestions onJoined={loadCommunities} />}
 
             {/* Lista de Comunidades */}
             {loading ? (
@@ -137,9 +172,11 @@ export const Communities: React.FC = () => {
             ) : filtered.length === 0 ? (
               <EmptyState
                 icon="groups"
-                title="Nenhuma comunidade encontrada"
+                title={tab === 'minhas' && !search ? 'Você ainda não participa de nenhuma comunidade' : 'Nenhuma comunidade encontrada'}
                 description={
-                  search
+                  tab === 'minhas' && !search
+                    ? 'Abra a aba Descobrir e entre em círculos do seu interesse.'
+                    : search
                     ? `Nenhuma comunidade com o termo "${search}". Que tal criar uma agora mesmo?`
                     : 'Nenhuma comunidade foi criada ainda. Dê o primeiro passo e crie um novo círculo!'
                 }

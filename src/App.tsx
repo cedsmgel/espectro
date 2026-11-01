@@ -20,6 +20,7 @@ const Shorts = lazyNamed(() => import('./pages/Shorts'), 'Shorts');
 const Admin = lazyNamed(() => import('./pages/Admin'), 'Admin');
 const Notifications = lazyNamed(() => import('./pages/Notifications'), 'Notifications');
 const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
+const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
@@ -71,6 +72,7 @@ export const App: React.FC = () => {
           <Route path="/comunidade/:slug" element={<CommunityDetail />} />
           <Route path="/comunidades/:slug" element={<CommunityDetail />} />
           <Route path="/comunidades" element={<Communities />} />
+          <Route path="/amigos" element={<Friends />} />
           <Route path="/notificacoes" element={<Notifications />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/mensagens" element={<DirectMessages />} />

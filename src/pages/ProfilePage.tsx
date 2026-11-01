@@ -22,6 +22,7 @@ import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
 import { ProfileAbout } from '../components/ProfileAbout';
+import { ProfileDiscover } from '../components/ProfileDiscover';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -314,8 +315,8 @@ export const ProfilePage: React.FC = () => {
             )}
 
             {/* 1. Header do Perfil Público com Dados Reais */}
-            <div className="bg-surface-container-lowest rounded-3xl p-4 sm:p-8 shadow-sm border border-outline-variant flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
-              <div className="flex items-center gap-5 min-w-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-5 sm:gap-6 pb-5 border-b border-outline-variant">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5 min-w-0">
                 <div className="relative shrink-0">
                   {userProfile?.avatar_url ? (
                     <img
@@ -397,7 +398,7 @@ export const ProfilePage: React.FC = () => {
                   )}
 
                   {!isLockedPrivate && (
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-on-surface-variant">
+                    <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:gap-x-6 gap-y-2 mt-4 py-3 border-y border-outline-variant text-[11px] sm:text-xs text-on-surface-variant text-center sm:text-left [&>div]:flex [&>div]:flex-col [&>div]:items-center sm:[&>div]:block">
                       <div>
                         <strong className="text-on-surface font-bold">{posts.length}</strong>{' '}
                         {posts.length === 1 ? 'publicação' : 'publicações'}
@@ -575,45 +576,8 @@ export const ProfilePage: React.FC = () => {
               </div>
             )}
 
-            {/* 3. Comunidades que ele participa */}
-            {communities.length > 0 && !isLockedPrivate && (
-              <div className="bg-surface-container-lowest rounded-3xl p-6 shadow-sm border border-outline-variant flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-secondary text-[22px]">groups</span>
-                    <h2 className="font-bold text-base text-on-surface">Comunidades de @{usernameHandle}</h2>
-                  </div>
-                  <span className="text-xs text-on-surface-variant font-medium">
-                    {communities.length} {communities.length === 1 ? 'comunidade' : 'comunidades'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {communities.map((c) => (
-                    <Link
-                      key={c.id}
-                      to={`/c/${c.slug || c.id}`}
-                      className="p-3 rounded-2xl bg-surface-container-low hover:bg-surface-container transition-all border border-outline-variant flex items-center gap-3 group cursor-pointer"
-                    >
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0 group-hover:scale-105 transition-transform"
-                        style={{ backgroundColor: c.icon_color || '#404040' }}
-                      >
-                        {c.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors truncate">
-                          c/{c.name}
-                        </span>
-                        <span className="text-[10px] text-on-surface-variant truncate">
-                          {c.description || `${c.members_count || 1} membros`}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* 3. Sugestões de amigos (no próprio perfil) e comunidades */}
+            {userProfile && !isLockedPrivate && <ProfileDiscover isSelf={isSelf} username={usernameHandle} communities={communities} />}
 
             {/* 4. Mural de Publicações / Scraps Públicos */}
             {userProfile && !isLockedPrivate && (
