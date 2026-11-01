@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { requestAuth } from '../lib/authEvents';
 import { communitiesApi, postsApi, Community, Post, CreatePostData, authStorage } from '../lib/api';
 import { useSidebar } from '../context/SidebarContext';
 import { Header } from '../components/Header';
@@ -150,7 +151,7 @@ export const CommunityDetail: React.FC = () => {
   // Função: Entrar na Comunidade (Insere na tabela community_members do D1)
   const handleToggleJoin = async () => {
     if (!user) {
-      alert('Você precisa estar logado para entrar na comunidade.');
+      requestAuth({ mode: 'login', reason: 'Para participar de comunidades, entre ou crie uma conta.' });
       return;
     }
 

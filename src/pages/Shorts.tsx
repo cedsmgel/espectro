@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { requestAuth } from '../lib/authEvents';
 import { SidebarNav } from '../components/SidebarNav';
 import { ShareButton } from '../components/ShareButton';
 import { api, authStorage, Post } from '../lib/api';
@@ -342,7 +343,7 @@ export const Shorts: React.FC = () => {
   const handleVote = useCallback(
     (post: Post) => {
       if (!authStorage.getToken()) {
-        navigate('/login');
+        requestAuth({ mode: 'login', reason: 'Para curtir, entre ou crie uma conta.' });
         return;
       }
       if (voted[post.id]) return;

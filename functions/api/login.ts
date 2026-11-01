@@ -39,7 +39,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Busca usuário no banco D1
     const user = await env.DB.prepare(
-      "SELECT id, username, password_hash, suspended_at, suspended_reason, deletion_requested_at FROM users WHERE username = ? COLLATE NOCASE"
+      `SELECT id, username, password_hash, suspended_at, suspended_reason, deletion_requested_at FROM users WHERE ${cleanUsername.includes("@") ? "email" : "username"} = ? COLLATE NOCASE`
     )
       .bind(cleanUsername)
       .first<{ id: number; username: string; password_hash: string; suspended_at: string | null; suspended_reason: string | null; deletion_requested_at: string | null }>();

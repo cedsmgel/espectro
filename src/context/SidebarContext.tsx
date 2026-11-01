@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
+import { requestAuth } from '../lib/authEvents';
+import { authStorage } from '../lib/api';
 
 interface SidebarContextType {
   isExpanded: boolean;
@@ -31,7 +33,14 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsExpanded((prev) => !prev);
   };
 
-  const openCreatePostModal = () => setIsCreatePostOpen(true);
+  // Criar publicação exige conta: visitante recebe o modal de entrada (a API também valida o token)
+  const openCreatePostModal = () => {
+    if (!authStorage.isAuthenticated()) {
+      requestAuth({ mode: 'login', reason: 'Para criar uma publicação, entre ou crie uma conta.' });
+      return;
+    }
+    setIsCreatePostOpen(true);
+  };
   const closeCreatePostModal = () => setIsCreatePostOpen(false);
 
   return (

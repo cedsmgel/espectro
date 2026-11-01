@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { requestAuth } from '../lib/authEvents';
 import { useNavigate } from 'react-router-dom';
 import { authStorage, friendsApi, Friend } from '../lib/api';
 import { EmptyState } from './EmptyState';
@@ -248,7 +249,7 @@ export const ContactsDrawer: React.FC<ContactsDrawerProps> = ({ isOpen, onClose 
               type="button"
               onClick={() => {
                 onClose();
-                navigate('/login');
+                requestAuth({ mode: 'login', reason: 'Para conversar, entre ou crie uma conta.' });
               }}
               className="mt-2 px-5 py-2 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary shadow-xs cursor-pointer"
             >

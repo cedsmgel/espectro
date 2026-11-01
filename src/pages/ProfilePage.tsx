@@ -22,6 +22,7 @@ import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
 import { ProfileDiscover } from '../components/ProfileDiscover';
+import { requestAuth } from '../lib/authEvents';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleAddFriend = async () => {
     if (!loggedUser) {
-      navigate('/login');
+      requestAuth({ mode: 'login', reason: 'Para adicionar amigos, entre ou crie uma conta.' });
       return;
     }
     if (!userProfile) return;
