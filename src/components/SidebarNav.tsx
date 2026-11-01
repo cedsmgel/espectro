@@ -50,6 +50,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
       active: isActive('/comunidades'),
     },
     {
+      to: '/amigos',
+      title: 'Amigos',
+      icon: 'group',
+      active: isActive('/amigos'),
+    },
+    {
       to: '/shorts',
       title: 'Shorts',
       icon: 'play_circle',
