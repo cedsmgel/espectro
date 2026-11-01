@@ -571,7 +571,7 @@ export const ProfilePage: React.FC = () => {
                       { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
                       { key: 'melhores', label: 'Melhores amigos', icon: 'star', hidden: !isSelf, onSelect: () => navigate('/melhores-amigos') },
                       { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
-                      { key: 'atividade', label: 'Sua atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/atividade`) },
+                      { key: 'atividade', label: 'Sua atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate('/atividade') },
                       { key: 'report', label: 'Denunciar', icon: 'flag', danger: true, hidden: isSelf || !loggedUser, onSelect: () => setShowReport(true) },
                       userProfile.blocked_by_me
                         ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', hidden: isSelf || !loggedUser, onSelect: handleUnblock }

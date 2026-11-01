@@ -1051,6 +1051,33 @@ export interface MyActivity {
   votes: Array<{ post_id: number; vote: number; post_title: string | null; post_content: string }>;
 }
 
+export interface ActivitySummary {
+  votes: number;
+  comments: number;
+  saved: number;
+  posts: number;
+  archived: number;
+  moments_active: number;
+  following: number;
+  followers: number;
+  friends: number;
+  close_friends: number;
+  blocked: number;
+  communities: number;
+  reads_30d: number;
+  personalization: boolean;
+}
+
+// Painel "Sua atividade" (só do dono)
+export const activityApi = {
+  summary: () => apiRequest<ActivitySummary>('/api/activity?view=summary', { method: 'GET' }),
+  list: <T,>(view: 'votes' | 'comments' | 'archived', before?: number) =>
+    apiRequest<{ items: T[]; has_more: boolean }>(`/api/activity?view=${view}${before ? `&before=${before}` : ''}`, { method: 'GET' }),
+  reads: () =>
+    apiRequest<{ views_7d: number; views_30d: number; opens: number; events: number; ms_7d: number; personalization: boolean }>('/api/activity?view=reads', { method: 'GET' }),
+  clearReads: () => apiRequest<{ deleted: number }>('/api/activity?what=reads', { method: 'DELETE' }),
+};
+
 export const profileSectionsApi = {
   friends: (username: string, q?: string) =>
     apiRequest<{ locked: boolean; friends: ProfileFriend[] }>(

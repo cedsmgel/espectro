@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { authStorage, Community, followsApi, MyActivity, Post, postsApi, ProfileFollowUser, ProfileFriend, profileSectionsApi, UserProfile, usersApi } from '../lib/api';
+import { authStorage, Community, followsApi, Post, postsApi, ProfileFollowUser, ProfileFriend, profileSectionsApi, UserProfile, usersApi } from '../lib/api';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { PostCard } from '../components/PostCard';
@@ -200,50 +200,6 @@ const PostsSection: React.FC<{ load: () => Promise<Post[]>; empty: string; grid?
   );
 };
 
-const ActivitySection: React.FC = () => {
-  const [activity, setActivity] = useState<MyActivity | null>(null);
-  useEffect(() => {
-    profileSectionsApi.activity().then(setActivity).catch(() => setActivity({ comments: [], votes: [] }));
-  }, []);
-  if (!activity) return <Empty text="Carregando..." />;
-  const preview = (title: string | null, content: string) => (title || content || '').slice(0, 80);
-  if (activity.comments.length === 0 && activity.votes.length === 0) return <Empty text="Sua atividade aparece aqui." />;
-  return (
-    <div className="flex flex-col gap-8">
-      {activity.comments.length > 0 && (
-        <section>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant pb-2 border-b border-outline-variant">Comentários</h2>
-          <ul>
-            {activity.comments.map((c) => (
-              <li key={c.id} className="border-b border-outline-variant">
-                <Link to={`/post/${c.post_id}`} className="block py-3 hover:bg-surface-container-low/60 transition-colors">
-                  <p className="text-sm text-on-surface line-clamp-2">{c.content}</p>
-                  <p className="text-xs text-on-surface-variant mt-1 truncate">em "{preview(c.post_title, c.post_content)}"</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {activity.votes.length > 0 && (
-        <section>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant pb-2 border-b border-outline-variant">Votos</h2>
-          <ul>
-            {activity.votes.map((v) => (
-              <li key={v.post_id} className="border-b border-outline-variant">
-                <Link to={`/post/${v.post_id}`} className="flex items-center gap-3 py-3 hover:bg-surface-container-low/60 transition-colors">
-                  <span className="material-symbols-outlined text-[20px] text-on-surface-variant">{v.vote > 0 ? 'arrow_upward' : 'arrow_downward'}</span>
-                  <span className="text-sm text-on-surface truncate">{preview(v.post_title, v.post_content)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </div>
-  );
-};
-
 // Subpáginas do perfil: Sobre, Amigos, Fotos, Vídeos, Comunidades e, só para o dono, Salvos e Atividade
 export const ProfileSection: React.FC = () => {
   const { username: paramUsername, section } = useParams<{ username?: string; section: string }>();
@@ -318,7 +274,7 @@ export const ProfileSection: React.FC = () => {
       case 'salvos':
         return <PostsSection empty="Você ainda não salvou nenhuma publicação." load={() => postsApi.list({ saved: true, limit: 50 })} />;
       case 'atividade':
-        return <ActivitySection />;
+        return <Navigate to="/atividade" replace />;
     }
   };
 
