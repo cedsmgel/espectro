@@ -164,14 +164,14 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({ onOpenCreateModal }) => 
             {/* Botão de Pesquisa Integrado */}
             <button
               type="button"
-              onClick={() => setShowSearch((prev) => !prev)}
+              onClick={() => navigate('/explorar')}
               aria-label="Pesquisar"
               className={`flex items-center rounded-xl transition-all duration-200 group relative cursor-pointer ${
                 isExpanded
                   ? 'w-full h-11 px-3.5 justify-start gap-3.5 md:w-11 md:h-11 md:px-0 md:justify-center'
                   : 'w-11 h-11 justify-center'
               } ${
-                showSearch
+                location.pathname === '/explorar'
                   ? 'bg-surface-container text-on-surface font-semibold'
                   : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
               }`}
