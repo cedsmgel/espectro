@@ -383,7 +383,7 @@ export const ProfilePage: React.FC = () => {
                   )}
 
                   {!isLockedPrivate && (
-                    <div className="flex items-center gap-4 mt-3 text-xs text-on-surface-variant">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-on-surface-variant">
                       <div>
                         <strong className="text-on-surface font-bold">{posts.length}</strong>{' '}
                         {posts.length === 1 ? 'publicação' : 'publicações'}

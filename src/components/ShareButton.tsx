@@ -56,7 +56,7 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, vari
     <button
       type="button"
       onClick={handleShare}
-      className="p-1.5 rounded-full hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+      className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
       title={copied ? 'Link copiado' : 'Compartilhar'}
       aria-label={copied ? 'Link copiado' : 'Compartilhar'}
     >
