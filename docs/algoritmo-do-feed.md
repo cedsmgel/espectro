@@ -19,6 +19,14 @@ Regras simples e explicáveis, sem modelo treinado. Código em `functions/_share
 
 Todas as constantes estão em `WEIGHTS` e podem ser ajustadas com dados reais.
 
+## Eventos usados
+
+O app registra **uma linha por visualização** (`view`, com o tempo na tela em ms, quando a publicação fica pelo menos 1 s com metade visível) e uma por abertura (`open`). Os tipos antigos `impression` e `dwell` continuam aceitos. `view` conta como aparição (para "já vista") e como tempo na tela (para afinidade). Cada publicação gera no máximo 2 visualizações por sessão. O histórico pode ser consultado e apagado em **Sua atividade → Publicações vistas**.
+
+## Em cada card
+
+Além do motivo, a lista de publicações traz `liked_by` (até 2 pessoas que votaram positivo) e `comment_preview` (até 2 comentários), com os amigos de quem vê na frente (`functions/_shared/postSocial.ts`).
+
 ## Transparência
 
 A resposta traz o campo `why` e o card mostra o motivo ("Você segue", "Seu amigo", "Da comunidade e/x", "Você costuma ler @x", "Parecido com o que você lê (#x)", "Em alta").

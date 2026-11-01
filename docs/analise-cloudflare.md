@@ -1,5 +1,7 @@
 # Análise da Cloudflare no Espectro: o que usamos, o que falta e o que adicionar
 
+> **Status (nov 2026):** a Fase A foi concluída (pulso único, menos escritas no D1, cache de leituras públicas, cabeçalhos de segurança, cron no Worker do chat, Turnstile e Web Analytics ligados). Faltam as fases B (domínio próprio), C (plano pago) e D (produto). Visão geral atual: `docs/arquitetura-e-recursos.md`.
+
 Levantamento de 1 nov 2026. Fontes: configuração do repositório, comandos `wrangler` na conta, medições em `espectro.pages.dev` e a documentação da Cloudflare (limites e preços lidos no dia). Onde não consegui confirmar algo, está marcado **(a confirmar)**.
 
 ## 1. O que usamos hoje
