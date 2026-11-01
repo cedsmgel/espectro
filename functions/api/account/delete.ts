@@ -1,8 +1,9 @@
 import { getAuthUser, getJwtSecret, jsonResponse, errorResponse, rateLimit, serverError, verifyPassword } from "../../_shared/auth";
 import { DELETION_GRACE_DAYS } from "../../_shared/accountPurge";
+import { MfaEnv, requireRecentMfa } from "../../_shared/mfa";
 import { forgetSuspension } from "../../_shared/suspension";
 
-export interface Env {
+export interface Env extends MfaEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -26,6 +27,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
     const auth = await getAuthUser(request, getJwtSecret(env));
     if (!auth) return errorResponse("Não autorizado.", 401);
+
+    const stepUp = await requireRecentMfa(env, auth);
+    if (stepUp) return stepUp;
 
     const limited = await rateLimit(env.DB, request, "account-delete", 5, 3600, auth.id);
     if (limited) return limited;

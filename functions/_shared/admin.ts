@@ -1,4 +1,5 @@
 import { getAuthUser, getJwtSecret, errorResponse, UserPayload } from "./auth";
+import { mfaAvailable, mfaState } from "./mfa";
 import { forgetSuspension } from "./suspension";
 
 export interface AdminEnv {
@@ -6,6 +7,7 @@ export interface AdminEnv {
   JWT_SECRET: string;
   MEDIA_BUCKET?: R2Bucket;
   BUCKET?: R2Bucket;
+  TOTP_ENC_KEY?: string;
 }
 
 // Garante que quem chama é administrador. Consulta o banco: o token sozinho não dá poder de admin.
@@ -17,6 +19,14 @@ export async function requireAdmin(request: Request, env: AdminEnv): Promise<Use
     .bind(user.id)
     .first<{ is_admin: number }>();
   if (!row?.is_admin) return errorResponse("Acesso restrito a administradores.", 403);
+
+  // Moderação exige verificação em duas etapas ativa (quando o servidor a oferece)
+  if (mfaAvailable(env) && !(await mfaState(env.DB, user.id)).enabled) {
+    return new Response(
+      JSON.stringify({ error: "A moderação exige a verificação em duas etapas. Ative-a em Configurações > Segurança.", mfa_setup_required: true }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
   return user;
 }
 

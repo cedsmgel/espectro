@@ -189,7 +189,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // 7. Se o username mudou, gera novo JWT para manter a sessão sincronizada
     let newToken: string | undefined;
     if (rawUsername.toLowerCase() !== auth.username.toLowerCase()) {
-      newToken = await signJWT({ id: auth.id, username: rawUsername }, secret);
+      newToken = await signJWT({ id: auth.id, username: rawUsername, sid: auth.sid, mfa_at: auth.mfa_at }, secret);
     }
 
     return jsonResponse({

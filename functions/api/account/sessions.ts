@@ -1,8 +1,9 @@
 import { getAuthUser, getJwtSecret, jsonResponse, errorResponse, rateLimit, serverError, signJWT } from "../../_shared/auth";
 import { clientInfo, createSession, forgetSession, maskIp } from "../../_shared/session";
+import { MfaEnv, requireRecentMfa } from "../../_shared/mfa";
 import { forgetSuspension } from "../../_shared/suspension";
 
-export interface Env {
+export interface Env extends MfaEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -20,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     let token: string | undefined;
     if (!sid) {
       sid = (await createSession(env.DB, request, auth.id)).sid;
-      token = await signJWT({ id: auth.id, username: auth.username, sid }, secret);
+      token = await signJWT({ id: auth.id, username: auth.username, sid, mfa_at: auth.mfa_at }, secret);
     }
 
     const info = clientInfo(request);
@@ -75,6 +76,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       forgetSession(id);
       return jsonResponse({ revoked: true });
     }
+
+    // Sair de todos os aparelhos é uma ação sensível
+    const stepUp = await requireRecentMfa(env, auth);
+    if (stepUp) return stepUp;
 
     const now = Math.floor(Date.now() / 1000);
     await env.DB.batch([

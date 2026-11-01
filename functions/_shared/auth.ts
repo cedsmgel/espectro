@@ -6,6 +6,10 @@ export interface UserPayload {
   exp?: number;
   iat?: number;
   sid?: string;
+  // Última vez (segundos) em que o segundo fator foi verificado nesta sessão
+  mfa_at?: number;
+  // Token de uso restrito (ex.: "mfa" = primeiro passo do login); nunca vale como sessão
+  purpose?: string;
 }
 
 // Segredo do JWT: sem fallback. Falha se não estiver configurado ou for fraco.
@@ -196,7 +200,8 @@ export async function getAuthUser(request: Request, secret: string): Promise<Use
     return null;
   }
   const token = authHeader.substring(7).trim();
-  return verifyJWT(token, secret);
+  const payload = await verifyJWT(token, secret);
+  return payload && !payload.purpose ? payload : null;
 }
 
 // Verifica se dois usuários têm amizade aceita (em qualquer direção)

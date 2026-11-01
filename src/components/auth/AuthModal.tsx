@@ -9,7 +9,7 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type Mode = 'login' | 'register' | 'forgot';
+type Mode = 'login' | 'register' | 'forgot' | 'mfa';
 
 const fieldClass =
   'w-full pl-10 pr-4 py-3 text-base bg-transparent border border-outline-variant rounded-2xl text-on-surface focus:outline-none focus:border-on-surface transition-colors';
@@ -28,6 +28,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const [error, setError] = useState<string | null>(null);
   const [canRecover, setCanRecover] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [useRecovery, setUseRecovery] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
   loadingRef.current = loading;
@@ -99,6 +102,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
     e.preventDefault();
     setError(null);
 
+    if (mode === 'mfa') {
+      if (!mfaToken) return;
+      setLoading(true);
+      try {
+        await authApi.loginMfa(mfaToken, useRecovery ? { recovery_code: mfaCode.trim() } : { code: mfaCode.replace(/\s+/g, '') });
+        onSuccess();
+      } catch (err: any) {
+        const message: string = err?.message || 'Não foi possível verificar.';
+        // O token do primeiro passo dura 5 minutos: se acabou, volta a pedir a senha
+        if (/expirou/i.test(message)) {
+          setMfaToken(null);
+          setMfaCode('');
+          setMode('login');
+        }
+        setError(message);
+        setLoading(false);
+      }
+      return;
+    }
+
     if (mode === 'forgot') {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Informe um e-mail válido.');
       setLoading(true);
@@ -122,7 +145,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
     setLoading(true);
     try {
       if (mode === 'login') {
-        await authApi.login({ username: identifier.trim(), password });
+        const res = await authApi.login({ username: identifier.trim(), password });
+        if ('mfa_required' in res) {
+          setMfaToken(res.mfa_token);
+          setMfaCode('');
+          setUseRecovery(false);
+          setMode('mfa');
+          setLoading(false);
+          setPassword('');
+          return;
+        }
       } else {
         await authApi.register({ username: username.trim(), email: email.trim(), password });
         await authApi.login({ username: username.trim(), password });
@@ -135,7 +167,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   };
 
   const reason =
-    mode === 'forgot'
+    mode === 'mfa'
+      ? useRecovery
+        ? 'Digite um dos seus códigos de recuperação. Cada código vale uma única vez.'
+        : 'Digite o código de 6 dígitos do seu aplicativo autenticador.'
+      : mode === 'forgot'
       ? 'Informe o e-mail da sua conta e enviaremos um link para criar uma nova senha.'
       : request.reason || (mode === 'register' ? 'Crie sua conta para participar do Espectro.' : 'Entre na sua conta para continuar.');
 
@@ -173,14 +209,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             <span className="text-lg font-bold tracking-tight">Espectro</span>
           </div>
           <h2 id="auth-title" className="text-xl font-bold pt-2">
-            {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : 'Recuperar senha'}
+            {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : mode === 'forgot' ? 'Recuperar senha' : 'Verificação em duas etapas'}
           </h2>
           <p id="auth-reason" className="text-sm text-on-surface-variant leading-relaxed">
             {reason}
           </p>
         </div>
 
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && mode !== 'mfa' && (
         <div role="tablist" aria-label="Entrar ou criar conta" className="grid grid-cols-2 border-b border-outline-variant">
           {(
             [
@@ -211,7 +247,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           </div>
         )}
 
-        {mode === 'forgot' ? (
+        {mode === 'mfa' ? (
+          <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="auth-mfa" className="text-sm font-semibold">{useRecovery ? 'Código de recuperação' : 'Código do aplicativo'}</label>
+              <input
+                id="auth-mfa"
+                type="text"
+                inputMode={useRecovery ? 'text' : 'numeric'}
+                autoComplete="one-time-code"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                maxLength={useRecovery ? 14 : 7}
+                required
+                className="w-full px-4 py-3 text-base tracking-widest bg-transparent border border-outline-variant rounded-2xl text-on-surface focus:outline-none focus:border-on-surface transition-colors"
+              />
+            </div>
+            <button type="submit" disabled={loading || !mfaCode.trim()} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">
+              {loading ? 'Verificando...' : 'Verificar e entrar'}
+            </button>
+            <button type="button" onClick={() => { setUseRecovery((v) => !v); setMfaCode(''); setError(null); }} className="text-sm text-on-surface-variant hover:text-on-surface hover:underline cursor-pointer self-start">
+              {useRecovery ? 'Usar o código do aplicativo' : 'Usar um código de recuperação'}
+            </button>
+            <button type="button" onClick={() => switchMode('login')} className="text-sm text-on-surface-variant hover:text-on-surface cursor-pointer self-start">
+              Voltar
+            </button>
+          </form>
+        ) : mode === 'forgot' ? (
           forgotSent ? (
             <div className="flex flex-col gap-4">
               <p role="status" className="text-sm leading-relaxed">Se existir uma conta com esse e-mail, enviamos o link. Ele vale por 30 minutos. Confira também a caixa de spam.</p>
@@ -312,7 +376,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
         </form>
         )}
 
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && mode !== 'mfa' && (
         <p className="text-center text-sm text-on-surface-variant">
           {mode === 'login' ? 'Ainda não tem conta? ' : 'Já tem conta? '}
           <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} className="font-semibold text-on-surface hover:underline cursor-pointer">

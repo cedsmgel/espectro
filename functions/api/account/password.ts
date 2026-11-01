@@ -1,8 +1,9 @@
 import { getAuthUser, getJwtSecret, hashPassword, jsonResponse, errorResponse, rateLimit, serverError, signJWT, verifyPassword } from "../../_shared/auth";
 import { forgetSession } from "../../_shared/session";
+import { MfaEnv, requireRecentMfa } from "../../_shared/mfa";
 import { forgetSuspension } from "../../_shared/suspension";
 
-export interface Env {
+export interface Env extends MfaEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -14,6 +15,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const secret = getJwtSecret(env);
     const auth = await getAuthUser(request, secret);
     if (!auth) return errorResponse("Não autorizado.", 401);
+
+    const stepUp = await requireRecentMfa(env, auth);
+    if (stepUp) return stepUp;
 
     const limited = await rateLimit(env.DB, request, "account-password", 6, 3600, auth.id);
     if (limited) return limited;
@@ -40,7 +44,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     forgetSession();
 
     // Novo token para este aparelho continuar logado; os demais precisam entrar de novo
-    const token = await signJWT({ id: auth.id, username: user.username, sid: auth.sid }, secret);
+    const token = await signJWT({ id: auth.id, username: user.username, sid: auth.sid, mfa_at: auth.mfa_at }, secret);
     return jsonResponse({ changed: true, token });
   } catch (err: unknown) {
     return serverError(err, "account:password");

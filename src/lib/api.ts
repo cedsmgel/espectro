@@ -131,6 +131,10 @@ export interface CreatePostData {
 
 import { currentPath, notifyAuthChanged, requestAuth } from './authEvents';
 
+export type LoginResult =
+  | { mfa_required: true; mfa_token: string }
+  | { token: string; user: User; deletion_canceled?: boolean };
+
 const TOKEN_KEY = 'espectro_token';
 const USER_KEY = 'espectro_user';
 
@@ -247,7 +251,10 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
       authStorage.clear();
       window.location.href = '/login';
     }
-    throw new Error(data?.error || `Erro ${response.status}: falha na operação`);
+    const failure = new Error(data?.error || `Erro ${response.status}: falha na operação`) as Error & { mfaRequired?: boolean };
+    // 403 com mfa_required: a ação exige uma verificação recente do segundo fator
+    failure.mfaRequired = Boolean(data?.mfa_required);
+    throw failure;
   }
 
   return data as T;
@@ -261,10 +268,27 @@ export const api = {
     });
   },
 
-  async login(params: { username: string; password: string }) {
-    const res = await apiRequest<{ token: string; user: User; deletion_canceled?: boolean }>('/api/login', {
+  // Com verificação em duas etapas, a senha só abre o segundo passo (mfa_required) e nenhuma sessão é criada
+  async login(params: { username: string; password: string }): Promise<LoginResult> {
+    const res = await apiRequest<LoginResult>('/api/login', {
       method: 'POST',
       body: JSON.stringify(params),
+    });
+    if ('mfa_required' in res) return res;
+    if (res.deletion_canceled) {
+      try {
+        sessionStorage.setItem('espectro_notice', 'Que bom ter você de volta! A exclusão da sua conta foi cancelada.');
+      } catch {}
+    }
+    authStorage.setToken(res.token);
+    authStorage.setUser(res.user);
+    return res;
+  },
+
+  async loginMfa(mfaToken: string, factor: { code?: string; recovery_code?: string }) {
+    const res = await apiRequest<{ token: string; user: User; deletion_canceled?: boolean }>('/api/login/mfa', {
+      method: 'POST',
+      body: JSON.stringify({ mfa_token: mfaToken, ...factor }),
     });
     if (res.deletion_canceled) {
       try {
@@ -1023,6 +1047,11 @@ export interface AccountSession {
 let emailEnabledCache: Promise<boolean> | null = null;
 export const authFlowApi = {
   // O Espectro só mostra "Esqueci minha senha" quando o servidor consegue enviar e-mails
+  mfaEnabled: (): Promise<boolean> =>
+    fetch('/api/config')
+      .then((r) => (r.ok ? (r.json() as Promise<{ mfa_enabled?: boolean }>) : { mfa_enabled: false }))
+      .then((c) => Boolean(c.mfa_enabled))
+      .catch(() => false),
   emailEnabled: (): Promise<boolean> => {
     if (!emailEnabledCache) {
       emailEnabledCache = fetch('/api/config')
@@ -1040,6 +1069,35 @@ export const authFlowApi = {
     apiRequest<{ verified: boolean }>('/api/auth/verify-email', { method: 'POST', body: JSON.stringify({ token }) }),
   resendVerification: () =>
     apiRequest<{ sent?: boolean; already_verified?: boolean }>('/api/auth/resend-verification', { method: 'POST' }),
+};
+
+export interface MfaStatus {
+  available: boolean;
+  enabled: boolean;
+  recovery_codes_left: number;
+}
+
+export const mfaApi = {
+  status: () => apiRequest<MfaStatus>('/api/account/mfa/status', { method: 'GET' }),
+  setup: (password: string) =>
+    apiRequest<{ secret: string; otpauth_uri: string }>('/api/account/mfa/setup', { method: 'POST', body: JSON.stringify({ password }) }),
+  enable: async (code: string) => {
+    const res = await apiRequest<{ enabled: boolean; recovery_codes: string[]; token: string }>('/api/account/mfa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    authStorage.setToken(res.token);
+    return res.recovery_codes;
+  },
+  disable: (password: string, factor: { code?: string; recovery_code?: string }) =>
+    apiRequest<{ enabled: boolean }>('/api/account/mfa/disable', { method: 'POST', body: JSON.stringify({ password, ...factor }) }),
+  regenerateCodes: async (password: string, code: string) =>
+    (await apiRequest<{ recovery_codes: string[] }>('/api/account/mfa/recovery-codes', { method: 'POST', body: JSON.stringify({ password, code }) })).recovery_codes,
+  // Prova o segundo fator de novo (ações sensíveis); o token novo guarda a verificação recente
+  reauth: async (factor: { code?: string; recovery_code?: string }) => {
+    const res = await apiRequest<{ token: string }>('/api/account/mfa/reauth', { method: 'POST', body: JSON.stringify(factor) });
+    authStorage.setToken(res.token);
+  },
 };
 
 export const accountSecurityApi = {

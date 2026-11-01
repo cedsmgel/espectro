@@ -1,6 +1,7 @@
 import { getAuthUser, getJwtSecret, errorResponse, rateLimit, serverError } from "../../_shared/auth";
+import { MfaEnv, requireRecentMfa } from "../../_shared/mfa";
 
-export interface Env {
+export interface Env extends MfaEnv {
   DB: D1Database;
   JWT_SECRET: string;
 }
@@ -11,6 +12,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const { request, env } = context;
     const auth = await getAuthUser(request, getJwtSecret(env));
     if (!auth) return errorResponse("Não autorizado.", 401);
+
+    const stepUp = await requireRecentMfa(env, auth);
+    if (stepUp) return stepUp;
 
     const limited = await rateLimit(env.DB, request, "account-export", 3, 3600, auth.id);
     if (limited) return limited;
