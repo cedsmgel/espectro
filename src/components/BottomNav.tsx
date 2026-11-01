@@ -24,17 +24,16 @@ export const BottomNav: React.FC = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 w-full z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant md:hidden pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-      <div className="flex items-center justify-between h-16 px-1 max-w-md mx-auto">
+      <div className="flex items-center justify-between h-14 px-1 max-w-md mx-auto">
         {/* 1. Início */}
         <Link
           to="/"
           aria-label="Ir para Início"
           className={`${ITEM_CLASS} ${tone(pathname === '/' && !search.includes('trending'))}`}
         >
-          <span className="material-symbols-outlined text-[24px]" style={fill(pathname === '/')}>
+          <span className="material-symbols-outlined text-[30px]" style={fill(pathname === '/')}>
             home
           </span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Início</span>
         </Link>
 
         {/* 2. Pesquisa: abre a mesma busca do cabeçalho */}
@@ -44,8 +43,7 @@ export const BottomNav: React.FC = () => {
           onClick={() => window.dispatchEvent(new Event('espectro:open-mobile-search'))}
           className={`${ITEM_CLASS} ${tone(false)}`}
         >
-          <span className="material-symbols-outlined text-[24px]">search</span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Pesquisar</span>
+          <span className="material-symbols-outlined text-[30px]">search</span>
         </button>
 
         {/* 3. Botão Central de Criar (+) */}
@@ -62,10 +60,9 @@ export const BottomNav: React.FC = () => {
 
         {/* 4. Mensagens */}
         <Link to="/mensagens" aria-label="Ir para Mensagens" className={`${ITEM_CLASS} ${tone(isMessages)}`}>
-          <span className="material-symbols-outlined text-[24px]" style={fill(isMessages)}>
+          <span className="material-symbols-outlined text-[30px]" style={fill(isMessages)}>
             chat_bubble
           </span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Mensagens</span>
           {unreadDms > 0 && (
             <span className="absolute top-1 right-2.5 px-1.5 py-0.2 rounded-full bg-secondary-container text-on-secondary-container text-[10px] leading-tight font-bold ring-2 ring-surface-container-lowest">
               {unreadDms}
@@ -75,10 +72,9 @@ export const BottomNav: React.FC = () => {
 
         {/* 5. Perfil */}
         <Link to="/perfil" aria-label="Ir para Perfil" className={`${ITEM_CLASS} ${tone(isProfile)}`}>
-          <span className="material-symbols-outlined text-[24px]" style={fill(isProfile)}>
+          <span className="material-symbols-outlined text-[30px]" style={fill(isProfile)}>
             account_circle
           </span>
-          <span className="text-[11px] mt-0.5 tracking-tight">Perfil</span>
         </Link>
       </div>
     </nav>
