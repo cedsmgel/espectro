@@ -4,7 +4,7 @@ import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals';
 const ROUTES: Array<[RegExp, string]> = [
   [/^\/post\/[^/]+/, '/post/:id'],
   [/^\/(u|perfil|profile)\/[^/]+/, '/perfil/:username'],
-  [/^\/(c|e|comunidade|comunidades)\/[^/]+/, '/c/:slug'],
+  [/^\/(c|e|comunidade|comunidades)\/[^/]+/, '/e/:slug'],
   [/^\/grupos\/[^/]+/, '/grupos/:id'],
   [/^\/(settings|configuracoes)\//, '/configuracoes'],
 ];

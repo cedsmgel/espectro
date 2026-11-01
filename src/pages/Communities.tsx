@@ -73,7 +73,7 @@ export const Communities: React.FC = () => {
             <div className="bg-surface-container-lowest rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm border border-outline-variant">
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
-                  <span>c/Comunidades</span>
+                  <span>e/Comunidades</span>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-medium">
                     Catálogo Oficial
                   </span>
@@ -207,10 +207,10 @@ export const Communities: React.FC = () => {
                         </div>
                         <div className="flex flex-col min-w-0">
                           <Link
-                            to={`/c/${comm.slug || comm.id}`}
+                            to={`/e/${comm.slug || comm.id}`}
                             className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors truncate"
                           >
-                            c/{comm.name}
+                            e/{comm.name}
                           </Link>
                           <span className="text-[11px] text-on-surface-variant">
                             {comm.members_count} {comm.members_count === 1 ? 'membro' : 'membros'}
@@ -228,7 +228,7 @@ export const Communities: React.FC = () => {
                         Desde 2026
                       </span>
                       <Link
-                        to={`/c/${comm.slug || comm.id}`}
+                        to={`/e/${comm.slug || comm.id}`}
                         className="px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-colors flex items-center gap-1 shadow-xs"
                       >
                         <span>Visitar</span>

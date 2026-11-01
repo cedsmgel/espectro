@@ -122,13 +122,13 @@ export const ProfileDiscover: React.FC<ProfileDiscoverProps> = ({ isSelf, userna
           : communities.map((c) => (
               <Link
                 key={c.id}
-                to={`/c/${c.slug || c.id}`}
+                to={`/e/${c.slug || c.id}`}
                 className="w-36 shrink-0 border border-outline-variant rounded-2xl p-3 flex flex-col items-center text-center gap-2 hover:bg-surface-container-low/60 transition-colors"
               >
                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold text-xl" style={{ backgroundColor: c.icon_color || '#404040' }}>
                   {initialOf(c.name)}
                 </div>
-                <span className="text-xs font-semibold text-on-surface truncate w-full">c/{c.name}</span>
+                <span className="text-xs font-semibold text-on-surface truncate w-full">e/{c.name}</span>
                 <span className="text-[11px] text-on-surface-variant">
                   {c.members_count || 1} {(c.members_count || 1) === 1 ? 'membro' : 'membros'}
                 </span>

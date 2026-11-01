@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from './context/SidebarContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { CreatePostModal } from './components/CreatePostModal';
@@ -31,6 +31,12 @@ const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'Profil
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
 const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
+
+// Endereços antigos de comunidade (/c/nome, /comunidade/nome...) levam ao oficial: /e/nome
+const RedirectToCommunity: React.FC = () => {
+  const { slug } = useParams<{ slug: string }>();
+  return <Navigate to={`/e/${encodeURIComponent(slug || '')}`} replace />;
+};
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-dvh flex items-center justify-center" role="status" aria-label="Carregando">
@@ -78,9 +84,9 @@ export const App: React.FC = () => {
           <Route path="/configuracoes/excluir-conta" element={<RequireAuth><DeleteAccount /></RequireAuth>} />
           <Route path="/configuracoes/conta" element={<AccountSettings />} />
           <Route path="/e/:slug" element={<CommunityDetail />} />
-          <Route path="/c/:slug" element={<CommunityDetail />} />
-          <Route path="/comunidade/:slug" element={<CommunityDetail />} />
-          <Route path="/comunidades/:slug" element={<CommunityDetail />} />
+          <Route path="/c/:slug" element={<RedirectToCommunity />} />
+          <Route path="/comunidade/:slug" element={<RedirectToCommunity />} />
+          <Route path="/comunidades/:slug" element={<RedirectToCommunity />} />
           <Route path="/comunidades" element={<Communities />} />
           <Route path="/amigos" element={<RequireAuth><Friends /></RequireAuth>} />
           <Route path="/notificacoes" element={<RequireAuth><Notifications /></RequireAuth>} />

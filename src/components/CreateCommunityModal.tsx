@@ -80,7 +80,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
       onClose();
 
       // Redireciona para /c/:slug da nova comunidade
-      navigate(`/c/${created.slug || created.id}`);
+      navigate(`/e/${created.slug || created.id}`);
     } catch (err: any) {
       setError(err.message || 'Erro ao criar comunidade.');
     } finally {
@@ -142,7 +142,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               <span className="material-symbols-outlined text-[14px] text-primary">link</span>
               <span>URL da comunidade:</span>
               <span className="font-mono font-semibold text-primary">
-                /c/{slugPreview}
+                /e/{slugPreview}
               </span>
             </div>
           </div>
@@ -228,7 +228,7 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
               className="px-2.5 py-1 rounded-full text-[11px] font-semibold text-white shadow-xs"
               style={{ backgroundColor: selectedColor }}
             >
-              c/{slugPreview}
+              e/{slugPreview}
             </span>
           </div>
 

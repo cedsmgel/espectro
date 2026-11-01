@@ -300,7 +300,7 @@ export const CommunityDetail: React.FC = () => {
                   >
                     <span className="text-[11px] font-semibold text-white/90 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
                       <span className="material-symbols-outlined text-[14px]">tag</span>
-                      <span>Espaço Oficial c/{community.slug || community.id}</span>
+                      <span>Espaço Oficial e/{community.slug || community.id}</span>
                     </span>
                   </div>
 
@@ -318,7 +318,7 @@ export const CommunityDetail: React.FC = () => {
                         </div>
                         <div className="flex flex-col pb-1">
                           <h1 className="text-xl sm:text-2xl font-bold text-on-surface flex items-center gap-2">
-                            <span>c/{community.name}</span>
+                            <span>e/{community.name}</span>
                             <span className="material-symbols-outlined text-primary text-[20px]">
                               verified
                             </span>

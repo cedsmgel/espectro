@@ -551,7 +551,7 @@ export const Notifications: React.FC = () => {
                         {communities.slice(0, 4).map((c) => (
                           <Link
                             key={c.id}
-                            to={`/c/${c.slug || c.id}`}
+                            to={`/e/${c.slug || c.id}`}
                             className="flex items-center justify-between p-2 rounded-xl hover:bg-surface-container transition-colors group"
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -562,7 +562,7 @@ export const Notifications: React.FC = () => {
                                 {c.name.charAt(0).toUpperCase()}
                               </div>
                               <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
-                                c/{c.name}
+                                e/{c.name}
                               </span>
                             </div>
                             <span className="text-[11px] text-on-surface-variant">{c.members_count} mem.</span>

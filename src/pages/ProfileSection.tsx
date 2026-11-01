@@ -213,7 +213,7 @@ export const ProfileSection: React.FC = () => {
           <ul>
             {communities.map((c) => (
               <li key={c.id} className="border-b border-outline-variant">
-                <Link to={`/c/${c.slug || c.id}`} className="flex items-center gap-3 py-3 hover:bg-surface-container-low/60 transition-colors">
+                <Link to={`/e/${c.slug || c.id}`} className="flex items-center gap-3 py-3 hover:bg-surface-container-low/60 transition-colors">
                   <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0" style={{ backgroundColor: c.icon_color || '#404040' }}>
                     {initialOf(c.name)}
                   </div>

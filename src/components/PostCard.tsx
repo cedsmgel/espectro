@@ -237,10 +237,10 @@ export const PostCard: React.FC<PostCardProps> = ({
               </div>
               {post.community_name && (
                 <Link
-                  to={`/c/${post.community_slug || post.community_id}`}
+                  to={`/e/${post.community_slug || post.community_id}`}
                   className="text-xs font-semibold text-primary hover:underline truncate"
                 >
-                  c/{post.community_name}
+                  e/{post.community_name}
                 </Link>
               )}
             </div>
