@@ -313,6 +313,7 @@ export const api = {
     post_type?: string;
     feed?: string;
     saved?: boolean;
+    tag?: string;
     author_name?: string;
     media?: 'video' | 'any';
     before_id?: number;
@@ -327,6 +328,7 @@ export const api = {
     if (filters?.post_type) params.set('post_type', filters.post_type);
     if (filters?.feed) params.set('feed', filters.feed);
     if (filters?.saved) params.set('saved', '1');
+    if (filters?.tag) params.set('tag', filters.tag);
     if (filters?.author_name) params.set('author_name', filters.author_name);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return apiRequest<Post[]>(`/api/posts${qs}`, { method: 'GET' });
@@ -923,6 +925,12 @@ export const searchApi = {
   search: async (query: string): Promise<SearchResults> => {
     return apiRequest<SearchResults>(`/api/search?q=${encodeURIComponent(query)}`);
   },
+};
+
+export const hashtagsApi = {
+  trending: (limit = 10) => apiRequest<Array<{ tag: string; posts: number }>>(`/api/hashtags?trending=1&limit=${limit}`, { method: 'GET' }),
+  suggest: (prefix: string) => apiRequest<Array<{ tag: string; posts: number }>>(`/api/hashtags?q=${encodeURIComponent(prefix)}`, { method: 'GET' }),
+  info: (tag: string) => apiRequest<{ tag: string; posts: number }>(`/api/hashtags?tag=${encodeURIComponent(tag)}`, { method: 'GET' }),
 };
 
 export const savedApi = {

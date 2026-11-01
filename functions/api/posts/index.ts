@@ -1,4 +1,5 @@
 import { getAuthUser, jsonResponse, errorResponse, getJwtSecret, sanitizeMediaUrl, serverError, rateLimit } from "../../_shared/auth";
+import { normalizeTag, syncPostHashtags } from "../../_shared/hashtags";
 import { notify } from "../../_shared/notifications";
 import type { PushEnv } from "../../_shared/push";
 
@@ -128,6 +129,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       query += ` AND p.media_type = 'video' AND p.media_url IS NOT NULL AND p.media_url != ''`;
     } else if (mediaFilter === "any") {
       query += ` AND p.media_url IS NOT NULL AND p.media_url != ''`;
+    }
+
+    // tag=nome: só publicações com essa hashtag
+    const tagFilter = url.searchParams.get("tag");
+    if (tagFilter) {
+      query += ` AND p.id IN (SELECT ph.post_id FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id WHERE h.tag = ?)`;
+      params.push(normalizeTag(tagFilter.replace(/^#/, "")));
     }
 
     // saved=1: só as publicações que eu salvei (exige login)
@@ -336,6 +344,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
 
     const newId = insertResult.meta.last_row_id;
+    // Hashtags do título e do texto (falha aqui não impede a publicação)
+    await syncPostHashtags(env.DB, Number(newId), cleanTitle, cleanContent).catch(() => undefined);
 
     const createdPost = await env.DB.prepare(
       `SELECT 

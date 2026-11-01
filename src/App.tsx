@@ -25,6 +25,7 @@ const DeleteAccount = lazyNamed(() => import('./pages/DeleteAccount'), 'DeleteAc
 const ResetPassword = lazyNamed(() => import('./pages/ResetPassword'), 'ResetPassword');
 const VerifyEmail = lazyNamed(() => import('./pages/VerifyEmail'), 'VerifyEmail');
 const GoogleCallback = lazyNamed(() => import('./pages/GoogleCallback'), 'GoogleCallback');
+const HashtagPage = lazyNamed(() => import('./pages/HashtagPage'), 'HashtagPage');
 const Home = lazyNamed(() => import('./pages/Home'), 'Home');
 const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
@@ -88,6 +89,8 @@ export const App: React.FC = () => {
           <Route path="/comunidade/:slug" element={<RedirectToCommunity />} />
           <Route path="/comunidades/:slug" element={<RedirectToCommunity />} />
           <Route path="/comunidades" element={<Communities />} />
+          <Route path="/tag/:tag" element={<HashtagPage />} />
+          <Route path="/hashtag/:tag" element={<HashtagPage />} />
           <Route path="/amigos" element={<RequireAuth><Friends /></RequireAuth>} />
           <Route path="/notificacoes" element={<RequireAuth><Notifications /></RequireAuth>} />
           <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />

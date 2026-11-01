@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { hashtagsApi } from '../lib/api';
+import { hashtagAtCursor } from '../lib/hashtags';
 import { useDropzone } from 'react-dropzone';
 import { ImageCropperModal } from './ImageCropperModal';
 import { authStorage, Community, CreatePostData, uploadApi } from '../lib/api';
@@ -47,6 +49,32 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [title, setTitle] = useState('');
   const [scrapStyle, setScrapStyle] = useState<ScrapStyle>(DEFAULT_SCRAP_STYLE);
   const [content, setContent] = useState('');
+  // Sugestões de hashtag enquanto a pessoa digita #palavra
+  const [tagSuggestions, setTagSuggestions] = useState<Array<{ tag: string; posts: number }>>([]);
+  const tagTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleContentChange = (value: string, cursor: number) => {
+    setContent(value);
+    if (tagTimerRef.current) clearTimeout(tagTimerRef.current);
+    const word = hashtagAtCursor(value, cursor);
+    if (!word) {
+      setTagSuggestions([]);
+      return;
+    }
+    tagTimerRef.current = setTimeout(() => {
+      hashtagsApi.suggest(word).then(setTagSuggestions).catch(() => setTagSuggestions([]));
+    }, 200);
+  };
+  const applyTag = (tag: string) => {
+    const ta = textareaRef.current;
+    const cursor = ta?.selectionStart ?? content.length;
+    const replaced = content.slice(0, cursor).replace(/#([\p{L}\p{N}_]{1,50})$/u, `#${tag} `);
+    setContent(replaced + content.slice(cursor));
+    setTagSuggestions([]);
+    setTimeout(() => {
+      ta?.focus();
+      ta?.setSelectionRange(replaced.length, replaced.length);
+    }, 0);
+  };
   const [communityId, setCommunityId] = useState<number | ''>(defaultCommunityId || '');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
@@ -699,7 +727,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                   id="composer-textarea"
                   ref={textareaRef}
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
                 maxLength={POST_CONTENT_MAX}
                   placeholder="Escreva seu scrap nostálgico aqui..."
                   rows={6}
@@ -714,12 +742,31 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 id="composer-textarea"
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => handleContentChange(e.target.value, e.target.selectionStart)}
                 maxLength={POST_CONTENT_MAX}
                 placeholder="O que você gostaria de discutir ou compartilhar hoje?"
                 rows={6}
                 className="w-full min-h-[160px] bg-transparent text-on-surface text-sm sm:text-base placeholder:text-on-surface-variant/40 focus:outline-none resize-none leading-relaxed"
               />
+            )}
+
+            {tagSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2" role="listbox" aria-label="Sugestões de hashtag">
+                {tagSuggestions.map((t) => (
+                  <button
+                    key={t.tag}
+                    type="button"
+                    role="option"
+                    aria-selected="false"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => applyTag(t.tag)}
+                    className="h-8 px-3 rounded-full border border-outline-variant text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:border-on-surface cursor-pointer"
+                  >
+                    #{t.tag}
+                    {t.posts > 0 && <span className="ml-1.5 font-normal">{t.posts}</span>}
+                  </button>
+                ))}
+              </div>
             )}
 
           </div>

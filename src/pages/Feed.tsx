@@ -11,6 +11,7 @@ import { ErrorState } from '../components/ErrorState';
 import { CreateCommunityModal } from '../components/CreateCommunityModal';
 import { MomentumBar } from '../components/moments/MomentumBar';
 import { FeedPreferences } from '../components/FeedPreferences';
+import { TrendingHashtags } from '../components/TrendingHashtags';
 import { useFeedPrefs } from '../hooks/useFeedPrefs';
 
 export const Feed: React.FC = () => {
@@ -221,6 +222,8 @@ export const Feed: React.FC = () => {
             </div>
             <FeedPreferences prefs={prefs} isCustom={isCustom} onChange={updatePrefs} onReset={resetPrefs} />
           </div>
+
+          {activeTab === 'trending' && <TrendingHashtags />}
 
           {/* Feed de Publicações com Skeletons, ErrorState e EmptyState */}
           {loading ? (
