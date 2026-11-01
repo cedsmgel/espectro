@@ -14,6 +14,7 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
 
 // Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
+const Explore = lazyNamed(() => import('./pages/Explore'), 'Explore');
 const Communities = lazyNamed(() => import('./pages/Communities'), 'Communities');
 const CommunityDetail = lazyNamed(() => import('./pages/CommunityDetail'), 'CommunityDetail');
 const DirectMessages = lazyNamed(() => import('./pages/DirectMessages'), 'DirectMessages');
@@ -89,6 +90,7 @@ export const App: React.FC = () => {
           <Route path="/comunidade/:slug" element={<RedirectToCommunity />} />
           <Route path="/comunidades/:slug" element={<RedirectToCommunity />} />
           <Route path="/comunidades" element={<Communities />} />
+          <Route path="/explorar" element={<Explore />} />
           <Route path="/tag/:tag" element={<HashtagPage />} />
           <Route path="/hashtag/:tag" element={<HashtagPage />} />
           <Route path="/amigos" element={<RequireAuth><Friends /></RequireAuth>} />
