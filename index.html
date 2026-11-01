@@ -12,20 +12,8 @@
     <meta property="og:description" content="Comunidades, hashtags, scraps e chat em uma rede social feita para conversar." />
     <meta property="og:image" content="/icons/icon-512.png" />
     <meta name="twitter:card" content="summary" />
-    <!-- Anti-FOUC Theme Script (executa antes da renderização) -->
-    <script>
-      (function() {
-        try {
-          var stored = localStorage.getItem('espectro-theme');
-          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (stored === 'dark' || (!stored && systemDark)) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
-        } catch (e) {}
-      })();
-    </script>
+    <!-- Tema e sessão antes da primeira pintura (script externo: a CSP não permite scripts inline) -->
+    <script src="/boot.js"></script>
     <!-- Google Fonts: Inter & Material Symbols Outlined -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

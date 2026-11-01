@@ -9,14 +9,9 @@ const dist = process.env.DIST_DIR || 'dist';
 const template = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
 const { render } = await import(pathToFileURL(path.resolve('dist-ssr/entry-server.js')).href);
 
-// Quem já está logado não deve ver a landing piscar antes do app montar: o script marca a sessão antes da pintura
-const SESSION_GUARD = `    <script>try{if(localStorage.getItem('espectro_token'))document.documentElement.classList.add('has-session')}catch(e){}</script>
-    <style>html.has-session #root[data-ssr]>*{visibility:hidden}</style>
-`;
-
 function page(html) {
   if (!template.includes('<div id="root"></div>')) throw new Error('index.html sem <div id="root"></div>');
-  return template.replace('</head>', SESSION_GUARD + '  </head>').replace('<div id="root"></div>', `<div id="root" data-ssr="1">${html}</div>`);
+  return template.replace('<div id="root"></div>', `<div id="root" data-ssr="1">${html}</div>`);
 }
 
 try {
