@@ -763,6 +763,10 @@ export interface AdminVitals {
 
 export const adminApi = {
   me: () => apiRequest<{ is_admin: boolean }>('/api/admin/me'),
+  support: (status: 'open' | 'closed') =>
+    apiRequest<{ messages: AdminSupportMessage[]; open_count: number }>(`/api/admin/support?status=${status}`),
+  setSupportStatus: (id: number, status: 'open' | 'closed') =>
+    apiRequest<{ ok: boolean }>('/api/admin/support', { method: 'POST', body: JSON.stringify({ id, status }) }),
   reports: (status: 'open' | 'closed', beforeId?: number) =>
     apiRequest<{ reports: AdminReport[]; has_more: boolean; open_count: number }>(
       `/api/admin/reports?status=${status}${beforeId ? `&before_id=${beforeId}` : ''}`
@@ -1234,6 +1238,21 @@ export const presenceApi = {
   ping: () => apiRequest<{ ok: boolean }>('/api/presence', { method: 'POST' }),
   get: (friendId: number) => apiRequest<FriendPresence>(`/api/presence?friend_id=${friendId}`, { method: 'GET' }),
 };
+
+export const supportApi = {
+  send: (body: { topic: string; message: string; contact_email?: string }) =>
+    apiRequest<{ sent: boolean }>('/api/support', { method: 'POST', body: JSON.stringify(body) }),
+};
+
+export interface AdminSupportMessage {
+  id: number;
+  topic: string;
+  message: string;
+  contact_email: string | null;
+  status: 'open' | 'closed';
+  created_at: string;
+  username: string | null;
+}
 
 export const accountApi = {
   getSettings: async (): Promise<AccountSettings> => {

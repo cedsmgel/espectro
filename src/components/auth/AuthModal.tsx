@@ -505,6 +505,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           >
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
+          {mode === 'register' && (
+            <p className="text-xs text-on-surface-variant text-center">
+              Ao criar a conta, você concorda com os{' '}
+              <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Termos de uso</a> e a{' '}
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Política de Privacidade</a>.
+            </p>
+          )}
         </form>
         </>
         )}

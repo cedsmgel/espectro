@@ -109,7 +109,9 @@ export const MenuPage: React.FC = () => {
         {
           title: 'Informações de suporte',
           entries: [
-            { to: '/suporte', icon: 'help', label: 'Ajuda e suporte', hint: 'Perguntas frequentes e como denunciar' },
+            { to: '/suporte', icon: 'help', label: 'Ajuda e suporte', hint: 'Perguntas frequentes e contato' },
+            { to: '/termos', icon: 'gavel', label: 'Termos de uso' },
+            { to: '/privacidade', icon: 'policy', label: 'Política de Privacidade' },
             ...(isAdmin ? [{ to: '/admin', icon: 'gavel', label: 'Moderação' }] : []),
           ],
         },
@@ -122,7 +124,14 @@ export const MenuPage: React.FC = () => {
         },
       ]
     : [
-        { title: 'Informações de suporte', entries: [{ to: '/suporte', icon: 'help', label: 'Ajuda e suporte' }] },
+        {
+          title: 'Informações de suporte',
+          entries: [
+            { to: '/suporte', icon: 'help', label: 'Ajuda e suporte' },
+            { to: '/termos', icon: 'gavel', label: 'Termos de uso' },
+            { to: '/privacidade', icon: 'policy', label: 'Política de Privacidade' },
+          ],
+        },
         { title: 'Entrada e saída da conta', entries: [{ to: '/login', icon: 'login', label: 'Entrar ou criar conta' }] },
       ];
 

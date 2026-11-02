@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { EmptyState } from '../components/EmptyState';
-import { adminApi, AdminReport, AdminUser, authStorage } from '../lib/api';
+import { adminApi, AdminReport, AdminSupportMessage, AdminUser, authStorage } from '../lib/api';
 import { useIsAdmin } from '../hooks/useIsAdmin';
 import { PerformanceTab } from '../components/admin/PerformanceTab';
 
@@ -398,10 +398,74 @@ const UsersTab: React.FC = () => {
   );
 };
 
+const TOPIC_LABELS: Record<string, string> = {
+  duvida: 'Dúvida',
+  problema: 'Problema',
+  dados: 'Meus dados (LGPD)',
+  direitos_autorais: 'Direitos autorais',
+  outro: 'Outro',
+};
+
+const SupportTab: React.FC = () => {
+  const [status, setStatus] = useState<'open' | 'closed'>('open');
+  const [items, setItems] = useState<AdminSupportMessage[] | null>(null);
+
+  useEffect(() => {
+    setItems(null);
+    adminApi.support(status).then((res) => setItems(res.messages)).catch(() => setItems([]));
+  }, [status]);
+
+  const toggle = async (item: AdminSupportMessage) => {
+    await adminApi.setSupportStatus(item.id, item.status === 'open' ? 'closed' : 'open');
+    setItems((prev) => (prev ? prev.filter((i) => i.id !== item.id) : prev));
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-2">
+        {(['open', 'closed'] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatus(s)}
+            className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${status === s ? 'bg-primary-container text-on-primary' : 'bg-surface-container text-on-surface-variant'}`}
+          >
+            {s === 'open' ? 'Abertas' : 'Atendidas'}
+          </button>
+        ))}
+      </div>
+      {items === null ? (
+        <p className="text-xs text-on-surface-variant">Carregando...</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs text-on-surface-variant">Nenhuma mensagem.</p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {items.map((item) => (
+            <li key={item.id} className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Badge tone={item.topic === 'direitos_autorais' || item.topic === 'dados' ? 'error' : 'primary'}>{TOPIC_LABELS[item.topic] || item.topic}</Badge>
+                <span className="text-[11px] text-on-surface-variant">{formatDate(item.created_at)}</span>
+              </div>
+              <p className="text-xs whitespace-pre-wrap break-words">{item.message}</p>
+              <p className="text-[11px] text-on-surface-variant">
+                {item.username ? `@${item.username}` : 'Sem conta'}
+                {item.contact_email ? ` · ${item.contact_email}` : ''}
+              </p>
+              <button type="button" onClick={() => void toggle(item)} className="self-start px-3 py-1.5 rounded-full text-[11px] font-semibold bg-surface-container hover:bg-surface-container-high cursor-pointer">
+                {item.status === 'open' ? 'Marcar como atendida' : 'Reabrir'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 export const Admin: React.FC = () => {
   const user = authStorage.getUser();
   const isAdmin = useIsAdmin();
-  const [tab, setTab] = useState<'reports' | 'users' | 'performance'>('reports');
+  const [tab, setTab] = useState<'reports' | 'users' | 'support' | 'performance'>('reports');
   const [openCount, setOpenCount] = useState<number | null>(null);
 
   // onCount recebe o total de abertas ou -1 quando uma é resolvida
@@ -474,6 +538,15 @@ export const Admin: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={() => setTab('support')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
+              tab === 'support' ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            Suporte
+          </button>
+          <button
+            type="button"
             onClick={() => setTab('performance')}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-colors ${
               tab === 'performance' ? 'bg-primary-container text-on-primary' : 'text-on-surface-variant hover:text-on-surface'
@@ -483,7 +556,7 @@ export const Admin: React.FC = () => {
           </button>
         </div>
 
-        {tab === 'reports' ? <ReportsTab onCount={handleCount} /> : tab === 'users' ? <UsersTab /> : <PerformanceTab />}
+        {tab === 'reports' ? <ReportsTab onCount={handleCount} /> : tab === 'users' ? <UsersTab /> : tab === 'support' ? <SupportTab /> : <PerformanceTab />}
       </div>
     </main>
   );
