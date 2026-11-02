@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+import { APP_URL } from '../categorias';
+---
+
+<Base titulo="Contato" descricao="Como falar com o suporte do Espectro.">
+  <div class="article">
+    <h1>Contato</h1>
+    <div class="prose">
+      <p>
+        Por enquanto, o contato com o suporte é feito pelo formulário dentro do Espectro. Ele atende dúvidas, problemas, pedidos sobre seus dados (LGPD) e avisos
+        de direitos autorais. Respondemos em até 15 dias.
+      </p>
+      <p><a href={`${APP_URL}/suporte/contato`}>Abrir o formulário de suporte</a></p>
+      <p class="callout">Um formulário nesta página, para quem não consegue entrar na conta, será adicionado em breve.</p>
+    </div>
+  </div>
+</Base>

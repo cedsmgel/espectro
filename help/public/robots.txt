@@ -1,0 +1,3 @@
+# Central em preparacao: nao indexar ate o lancamento (trocar por Allow: / e remover o noindex de Base.astro)
+User-agent: *
+Disallow: /

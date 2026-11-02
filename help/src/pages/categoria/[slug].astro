@@ -1,0 +1,38 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { categorias } from '../../categorias';
+
+export function getStaticPaths() {
+  return categorias.map((categoria) => ({ params: { slug: categoria.slug }, props: { categoria } }));
+}
+
+const { categoria } = Astro.props;
+const todos = await getCollection('artigos');
+const artigos = todos.filter((a) => a.data.categoria === categoria.slug).sort((a, b) => a.data.ordem - b.data.ordem || a.data.titulo.localeCompare(b.data.titulo, 'pt-BR'));
+---
+
+<Base titulo={categoria.nome} descricao={categoria.resumo}>
+  <nav class="crumbs" aria-label="Você está em">
+    <a href="/">Ajuda</a> › <span>{categoria.nome}</span>
+  </nav>
+  <h1 class="page-title">{categoria.nome}</h1>
+  <p class="lead">{categoria.resumo}</p>
+
+  {
+    artigos.length > 0 ? (
+      <ul class="list">
+        {artigos.map((a) => (
+          <li>
+            <a href={`/artigos/${a.id}`}>
+              <strong>{a.data.titulo}</strong>
+              <span>{a.data.resumo}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty">Os artigos desta categoria estão a caminho. Enquanto isso, <a href="/contato">fale com a gente</a>.</p>
+    )
+  }
+</Base>
