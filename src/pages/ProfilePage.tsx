@@ -19,6 +19,7 @@ import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { ChatMenu, type ChatMenuItem } from '../components/chat/ChatMenu';
+import { MomentCreator } from '../components/moments/MomentCreator';
 import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
@@ -105,6 +106,7 @@ export const ProfilePage: React.FC = () => {
   }, [targetUsername]);
 
   const [followBusy, setFollowBusy] = useState(false);
+  const [creatingMoment, setCreatingMoment] = useState(false);
   const handleToggleFollow = async () => {
     if (!loggedUser) {
       requestAuth({ mode: 'login', reason: 'Para seguir pessoas, entre ou crie uma conta.' });
@@ -329,6 +331,17 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
+      {creatingMoment && (
+        <MomentCreator
+          onClose={() => setCreatingMoment(false)}
+          onPublished={() => {
+            setCreatingMoment(false);
+            setFriendActionSuccess('Momentum publicado.');
+            setTimeout(() => setFriendActionSuccess(null), 4000);
+          }}
+        />
+      )}
+
       {/* Toast Feedback */}
       {friendActionSuccess && (
         <div className="fixed bottom-6 right-6 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -358,6 +371,18 @@ export const ProfilePage: React.FC = () => {
                     <div className="w-[84px] h-[84px] sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-primary to-secondary text-on-primary flex items-center justify-center font-bold text-3xl sm:text-4xl uppercase shadow-md ring-4 ring-surface-container-low">
                       {initialLetter}
                     </div>
+                  )}
+                  {/* No próprio perfil, o + na foto cria um Momentum */}
+                  {isSelf && (
+                    <button
+                      type="button"
+                      onClick={() => setCreatingMoment(true)}
+                      aria-label="Criar Momentum"
+                      title="Criar Momentum"
+                      className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-base font-bold ring-2 ring-surface cursor-pointer hover:bg-primary transition-colors"
+                    >
+                      +
+                    </button>
                   )}
                 </div>
 

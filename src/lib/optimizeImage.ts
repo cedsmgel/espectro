@@ -1,4 +1,5 @@
 import Compressor from 'compressorjs';
+import { readMediaPrefs } from './mediaPrefs';
 
 // Lado maior e qualidade das fotos enviadas (o chat mostra ~240 px; o feed, no máximo ~700 px)
 const MAX_SIDE = 1600;
@@ -15,7 +16,7 @@ const EXT_BY_TYPE: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 
 // Reduz a foto antes do envio. GIF, imagens pequenas e qualquer falha devolvem o arquivo original.
 // Devolve também o nome com a extensão certa, porque o servidor confere o tipo pela extensão.
 export function optimizeImage(file: File): Promise<File> {
-  if (!COMPRESSIBLE.has(file.type) || file.size < SKIP_BELOW_BYTES) return Promise.resolve(file);
+  if (!COMPRESSIBLE.has(file.type) || file.size < SKIP_BELOW_BYTES || readMediaPrefs().uploadQuality === 'original') return Promise.resolve(file);
 
   return new Promise((resolve) => {
     new Compressor(file, {
