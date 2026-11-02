@@ -408,7 +408,7 @@ export const ProfilePage: React.FC = () => {
                     </span>
 
                     {userProfile?.is_friend && !isSelf && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-semibold flex items-center gap-1 border border-emerald-500/20">
+                      <span className="hidden sm:flex text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-semibold items-center gap-1 border border-emerald-500/20">
                         <span className="material-symbols-outlined text-[13px]">how_to_reg</span>
                         <span>Amigos</span>
                       </span>
@@ -528,7 +528,7 @@ export const ProfilePage: React.FC = () => {
                       }
                       title="Desfazer amizade"
                       aria-label="Desfazer amizade"
-                      className="w-10 h-10 shrink-0 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer disabled:opacity-50"
+                      className="hidden sm:flex w-10 h-10 shrink-0 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant items-center justify-center cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">person_remove</span>
                     </button>
