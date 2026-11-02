@@ -11,6 +11,8 @@ export interface AuthRequest {
   mfaToken?: string;
   // Pedido pendente do One Tap: depois de entrar na conta existente, liga o Google a ela
   googleLinkToken?: string;
+  // Primeiro acesso com o Google: a conta só é criada depois da declaração de idade e do aceite dos termos
+  googleSignupToken?: string;
   // E-mail do Google que será ligado (mostrado na tela de confirmar a senha)
   googleEmail?: string;
 }

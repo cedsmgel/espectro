@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { authApi, authFlowApi, googleApi } from '../../lib/api';
+import { authApi, authFlowApi, authStorage, googleApi } from '../../lib/api';
 import { currentPath } from '../../lib/authEvents';
 import { TurnstileWidget } from './TurnstileWidget';
 import { AuthRequest } from '../../lib/authEvents';
@@ -11,7 +11,7 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type Mode = 'login' | 'register' | 'forgot' | 'mfa' | 'link';
+type Mode = 'login' | 'register' | 'forgot' | 'mfa' | 'link' | 'gsignup';
 
 const fieldClass =
   'w-full pl-10 pr-4 py-3 text-base bg-transparent border border-outline-variant rounded-2xl text-on-surface focus:outline-none focus:border-on-surface transition-colors';
@@ -20,7 +20,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 
 // Login e cadastro em um modal único. Usa as mesmas chamadas e validações do restante do app (authApi).
 export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSuccess }) => {
-  const [mode, setMode] = useState<Mode>(request.mfaToken ? 'mfa' : request.googleLinkToken ? 'link' : request.mode === 'register' ? 'register' : 'login');
+  const [mode, setMode] = useState<Mode>(request.mfaToken ? 'mfa' : request.googleSignupToken ? 'gsignup' : request.googleLinkToken ? 'link' : request.mode === 'register' ? 'register' : 'login');
   const [identifier, setIdentifier] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState(request.googleEmail || '');
@@ -67,8 +67,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   // O pedido pode mudar o modo com o modal aberto (ex.: "Criar conta" clicado de novo)
   useEffect(() => {
     // Pedidos que já abrem num passo específico (código do 2FA, confirmar senha para ligar o Google) não voltam ao login
-    if (request.mode && !request.mfaToken && !request.googleLinkToken) setMode(request.mode);
-  }, [request.mode, request.mfaToken, request.googleLinkToken]);
+    if (request.mode && !request.mfaToken && !request.googleLinkToken && !request.googleSignupToken) setMode(request.mode);
+  }, [request.mode, request.mfaToken, request.googleLinkToken, request.googleSignupToken]);
 
   // Aviso deixado por logout forçado (conta suspensa, todos os dispositivos...)
   useEffect(() => {
@@ -138,6 +138,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const submitInner = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (mode === 'gsignup') {
+      if (!request.googleSignupToken) return;
+      if (!ageConfirmed) return setError('Confirme que você tem 13 anos ou mais e aceita os termos para criar a conta.');
+      setLoading(true);
+      try {
+        const res = await googleApi.signup(request.googleSignupToken, true);
+        if ('mfa_required' in res) {
+          setMfaToken(res.mfa_token);
+          setMfaCode('');
+          setMode('mfa');
+          setLoading(false);
+          return;
+        }
+        authStorage.setToken(res.token);
+        authStorage.setUser(res.user);
+        onSuccess();
+      } catch (err: any) {
+        setError(err?.message || 'Não foi possível criar a conta.');
+        setLoading(false);
+      }
+      return;
+    }
 
     if (mode === 'link') {
       setLoading(true);
@@ -233,7 +256,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const tsWaiting = tsNeeded && !tsToken;
 
   const reason =
-    mode === 'link'
+    mode === 'gsignup'
+      ? `Falta pouco: vamos criar sua conta com ${request.googleEmail || 'o seu e-mail do Google'}.`
+      : mode === 'link'
       ? `O Google identificou ${request.googleEmail || 'seu e-mail'}, que já tem conta no Espectro. Digite a senha dessa conta para ligar o Google a ela.`
       : mode === 'mfa'
       ? useRecovery
@@ -277,14 +302,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             <span className="text-lg font-bold tracking-tight">Espectro</span>
           </div>
           <h2 id="auth-title" className="text-xl font-bold pt-2">
-            {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : mode === 'forgot' ? 'Recuperar senha' : mode === 'link' ? 'Confirme sua senha' : 'Verificação em duas etapas'}
+            {mode === 'login' ? 'Entrar' : mode === 'register' ? 'Criar conta' : mode === 'forgot' ? 'Recuperar senha' : mode === 'link' ? 'Confirme sua senha' : mode === 'gsignup' ? 'Criar conta com o Google' : 'Verificação em duas etapas'}
           </h2>
           <p id="auth-reason" className="text-sm text-on-surface-variant leading-relaxed">
             {reason}
           </p>
         </div>
 
-        {mode !== 'forgot' && mode !== 'mfa' && mode !== 'link' && (
+        {mode !== 'forgot' && mode !== 'mfa' && mode !== 'link' && mode !== 'gsignup' && (
         <div role="tablist" aria-label="Entrar ou criar conta" className="grid grid-cols-2 border-b border-outline-variant">
           {(
             [
@@ -315,7 +340,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           </div>
         )}
 
-        {mode === 'link' ? (
+        {mode === 'gsignup' ? (
+          <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
+            <label className="flex items-start gap-2.5 text-sm text-on-surface-variant cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--color-primary,#2563eb)]"
+              />
+              <span>
+                Tenho 13 anos ou mais e concordo com os{' '}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Termos de uso</a> e a{' '}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Política de Privacidade</a>.
+              </span>
+            </label>
+            <button type="submit" disabled={loading} className="w-full h-12 rounded-full bg-primary-container text-on-primary font-semibold text-sm hover:bg-primary transition-colors disabled:opacity-60 cursor-pointer">
+              {loading ? 'Criando...' : 'Criar conta'}
+            </button>
+            <button type="button" onClick={onClose} className="text-sm text-on-surface-variant hover:text-on-surface cursor-pointer self-start">
+              Cancelar
+            </button>
+          </form>
+        ) : mode === 'link' ? (
           <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="auth-link-email" className="text-sm font-semibold">Conta</label>
@@ -526,7 +573,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
         </>
         )}
 
-        {mode !== 'forgot' && mode !== 'mfa' && mode !== 'link' && (
+        {mode !== 'forgot' && mode !== 'mfa' && mode !== 'link' && mode !== 'gsignup' && (
         <p className="text-center text-sm text-on-surface-variant">
           {mode === 'login' ? 'Ainda não tem conta? ' : 'Já tem conta? '}
           <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} className="font-semibold text-on-surface hover:underline cursor-pointer">

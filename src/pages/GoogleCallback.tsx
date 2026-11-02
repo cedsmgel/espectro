@@ -17,6 +17,7 @@ export const GoogleCallback: React.FC = () => {
     const code = params.get('code');
     const linkToken = params.get('link');
     const linkEmail = params.get('email');
+    const signupToken = params.get('signup');
     let next = '/';
     try {
       next = sessionStorage.getItem('espectro_google_next') || '/';
@@ -29,6 +30,13 @@ export const GoogleCallback: React.FC = () => {
     if (linkToken) {
       navigate(next, { replace: true });
       requestAuth({ mode: 'login', googleLinkToken: linkToken, googleEmail: linkEmail || undefined, redirectTo: next });
+      return;
+    }
+
+    // Primeiro acesso com o Google: pede a declaração de idade mínima e o aceite dos termos antes de criar a conta
+    if (signupToken) {
+      navigate(next, { replace: true });
+      requestAuth({ mode: 'register', googleSignupToken: signupToken, googleEmail: linkEmail || undefined, redirectTo: next });
       return;
     }
 
