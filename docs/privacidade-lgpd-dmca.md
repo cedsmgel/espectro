@@ -85,3 +85,40 @@ IP completo, país, região, cidade, fuso, ASN, navegador, sistema e tipo de apa
 - **Retenção:** 90 dias (limpeza ocasional dentro do próprio endpoint de eventos).
 - **Exclusão da conta:** os eventos e os vínculos de seguir saem junto na exclusão definitiva.
 - **Seguir:** relação de mão única; perfis privados não podem ser seguidos (só amizade) e bloquear desfaz o seguir nos dois sentidos.
+
+## 5. Revisão jurídica das páginas públicas (novembro de 2026)
+
+Revisão dos Termos de Uso e da Política de Privacidade (`src/pages/LegalPages.tsx`) contra as fontes abaixo. **Continua sendo estudo de apoio, não parecer jurídico:** a publicação final precisa de revisão por advogado(a) inscrito(a) na OAB.
+
+### Fontes consultadas
+- Lei nº 13.709/2018 (LGPD): https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm
+- Lei nº 12.965/2014 (Marco Civil da Internet): https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2014/lei/l12965.htm
+- Lei nº 15.211/2025 (ECA Digital): https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2025/lei/l15211.htm
+- STF, Tema 987 (RE 1.037.396/SP), artigo 19 do Marco Civil: https://noticias.stf.jus.br/postsnoticias/stf-define-parametros-para-responsabilizacao-de-plataformas-por-conteudos-de-terceiros
+- Análise do Tema 987 (Mattos Filho): https://www.mattosfilho.com.br/unico/responsabilizacao-provedores-internet/
+- Vigência do ECA Digital (17/03/2026) e Decreto nº 12.880/2026: https://olhardigital.com.br/2026/03/17/internet-e-redes-sociais/eca-digital-entra-em-vigor-nesta-terca-saiba-o-que-muda-na-internet-brasileira/ e https://convergenciadigital.com.br/governo/com-decreto-do-eca-digital-anpd-vai-baixar-regras-especificas-para-verificacao-etaria/
+
+Os textos das leis foram lidos nas páginas do Planalto (resumidos por ferramenta de leitura); os artigos citados abaixo devem ser conferidos no texto oficial antes da publicação. Itens do Decreto nº 12.880/2026 e das normas da ANPD vieram de reportagens, não do texto oficial.
+
+### O que foi ajustado nos textos
+| Tema | Norma | Ajuste |
+| --- | --- | --- |
+| Informações ao titular (finalidade, forma, duração, controlador, compartilhamento, direitos) | LGPD arts. 6º, VI, e 9º | Política reescrita com tabela de dados, finalidade e base legal por tratamento |
+| Bases legais | LGPD art. 7º, I, II, V, VI e IX | Cada tratamento passou a indicar a base (contrato, obrigação legal, legítimo interesse, consentimento) |
+| Direitos do titular e prazo | LGPD arts. 18 e 19, II (15 dias) e art. 18, § 1º (petição à ANPD) | Direitos listados e canal de exercício descritos |
+| Conservação | LGPD arts. 15 e 16; Marco Civil art. 15 (registros de acesso por 6 meses) | Prazos explícitos por categoria de dado |
+| Transferência internacional | LGPD art. 33 | Nova seção: operadores fora do Brasil (Cloudflare, Giphy, Google) |
+| Incidentes | LGPD art. 48 | Compromisso de comunicar ANPD e titulares |
+| Mensagens privadas | Marco Civil art. 10 | Termos informam que o acesso ocorre só nas hipóteses legais ou por denúncia de participante |
+| Conteúdo de terceiros | Marco Civil arts. 19 e 21; Tema 987 do STF | Termos citam ordem judicial, notificação de conteúdo íntimo e o regime do Tema 987 sem prometer prazos |
+| Crianças e adolescentes | LGPD art. 14; ECA Digital arts. 24 e 29 | Seção própria e cláusula de suspensão por indício de idade abaixo do mínimo |
+
+### Pendências que exigem decisão ou dado seu
+1. **Idade mínima e ECA Digital (crítico).** A Lei nº 15.211/2025 está em vigor desde 17/03/2026. O art. 24 prevê que contas de crianças e adolescentes **até 16 anos** devem estar **vinculadas a um responsável**, o art. 9º, § 1º, veda a **autodeclaração** como verificação de idade para conteúdo impróprio a menores de 18, e o Decreto nº 12.880/2026 distingue "aferição" de "verificação" de idade. O Espectro hoje aceita **13 anos por autodeclaração e sem vínculo parental**. Isso é incompatível com o art. 24 para a faixa de 13 a 16 anos. Opções: (a) elevar o mínimo para 17/18 anos (e planejar verificação de idade), (b) implementar vínculo com conta de responsável e ferramentas de supervisão (arts. 17 e 18), ou (c) obter parecer jurídico sobre se o serviço está no escopo do art. 1º (produto direcionado ou de acesso provável por crianças e adolescentes).
+2. **Controlador e encarregado.** A LGPD exige divulgar a identidade e o contato do controlador (art. 9º, III) e do encarregado (art. 41, § 1º). Preencher `CONTROLLER` e `DPO` em `src/lib/legal.ts` (nome, CNPJ/CPF, endereço, e-mail). Enquanto vazios, as páginas indicam o formulário de suporte.
+3. **Representante legal no País.** O ECA Digital (art. 40) exige que o fornecedor mantenha representante legal no Brasil.
+4. **Aviso e recurso ao autor da remoção.** O art. 30 do ECA Digital prevê notificação ao autor do conteúdo removido, com motivação, recurso e prazos. O Espectro ainda não avisa o autor nem oferece recurso.
+5. **Retorno ao denunciante e fila de direitos autorais.** Hoje a denúncia não gera retorno e o aviso de direitos autorais cai na fila de suporte, sem prazos nem contranotificação estruturados.
+6. **Consentimento destacado.** O Marco Civil (art. 7º, IX) pede consentimento expresso e destacado para coleta e tratamento de dados. A caixa do cadastro cobre Termos e idade; avaliar um destaque separado para a personalização do feed.
+7. **Menores de 18: perfil privado por padrão** (ECA Digital art. 7º) depende de saber a idade, hoje não coletada.
+8. **Relatórios semestrais** (art. 31) só se aplicam acima de 1 milhão de usuários menores registrados.
