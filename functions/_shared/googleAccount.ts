@@ -21,11 +21,15 @@ async function freeUsername(db: D1Database, email: string): Promise<string> {
   return `${base}${Date.now() % 100000}`;
 }
 
-export type ResolvedGoogleAccount = { kind: "ok"; userId: number; created: boolean } | { kind: "email_in_use" };
+export type ResolvedGoogleAccount =
+  | { kind: "ok"; userId: number; created: boolean }
+  | { kind: "email_in_use" }
+  // Conta nova: antes de criar, a pessoa declara a idade mínima e aceita os termos
+  | { kind: "signup_required" };
 
 // Acha a conta ligada a este "sub" do Google ou cria uma nova. Um e-mail que já pertence a uma conta do Espectro
 // NUNCA é ligado sozinho: quem só digitou o e-mail no cadastro não provou ser dono dele.
-export async function resolveGoogleAccount(db: D1Database, profile: GoogleProfile): Promise<ResolvedGoogleAccount> {
+export async function resolveGoogleAccount(db: D1Database, profile: GoogleProfile, options: { ageConfirmed?: boolean } = {}): Promise<ResolvedGoogleAccount> {
   const identity = await db
     .prepare("SELECT user_id FROM oauth_identities WHERE provider = 'google' AND subject = ?")
     .bind(profile.sub)
@@ -34,20 +38,34 @@ export async function resolveGoogleAccount(db: D1Database, profile: GoogleProfil
 
   const existing = await db.prepare("SELECT id FROM users WHERE email = ? COLLATE NOCASE").bind(profile.email).first();
   if (existing) return { kind: "email_in_use" };
+  if (!options.ageConfirmed) return { kind: "signup_required" };
 
   const username = await freeUsername(db, profile.email);
   const unusablePassword = await hashPassword(randomUrlToken(32));
   // E-mail só entra como confirmado quando o Google é autoridade sobre ele (@gmail.com ou Workspace)
   const created = await db
     .prepare(
-      `INSERT INTO users (username, email, password_hash, has_password, name, email_verified_at)
-       VALUES (?, ?, ?, 0, ?, ${trustedEmail(profile) ? "CURRENT_TIMESTAMP" : "NULL"})`
+      `INSERT INTO users (username, email, password_hash, has_password, name, email_verified_at, terms_accepted_at)
+       VALUES (?, ?, ?, 0, ?, ${trustedEmail(profile) ? "CURRENT_TIMESTAMP" : "NULL"}, CURRENT_TIMESTAMP)`
     )
     .bind(username, profile.email, unusablePassword, profile.name ? profile.name.slice(0, 50) : null)
     .run();
   const userId = Number(created.meta.last_row_id);
   await db.prepare("INSERT INTO oauth_identities (user_id, provider, subject, email) VALUES (?, 'google', ?, ?)").bind(userId, profile.sub, profile.email).run();
   return { kind: "ok", userId, created: true };
+}
+
+// Pedido pendente de cadastro (10 min): o Google já provou quem é, mas a conta só nasce depois da declaração de
+// idade mínima e do aceite dos termos. Reusa oauth_states: code_verifier guarda o "sub" e nonce guarda o perfil.
+export async function createPendingSignup(db: D1Database, profile: GoogleProfile): Promise<string> {
+  const token = randomUrlToken(32);
+  await db.batch([
+    db.prepare("DELETE FROM oauth_states WHERE expires_at < CURRENT_TIMESTAMP"),
+    db
+      .prepare("INSERT INTO oauth_states (state_hash, code_verifier, nonce, mode, user_id, expires_at) VALUES (?, ?, ?, 'signup_pending', NULL, datetime('now', '+10 minutes'))")
+      .bind(await sha256Hex(token), profile.sub, JSON.stringify(profile)),
+  ]);
+  return token;
 }
 
 // Último passo comum: conta suspensa não entra e quem tem 2FA ainda precisa do segundo passo

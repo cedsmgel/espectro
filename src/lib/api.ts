@@ -1351,7 +1351,9 @@ export const googleApi = {
   // One Tap: nonce de uso único que o Google grava na credencial, e a credencial que volta para validação no servidor
   oneTapNonce: () => apiRequest<{ nonce: string }>('/api/auth/google/onetap-nonce', { method: 'POST' }),
   oneTap: (credential: string) =>
-    apiRequest<LoginResult | { link_required: true; link_token: string; email: string }>('/api/auth/google/onetap', { method: 'POST', body: JSON.stringify({ credential }) }),
+    apiRequest<LoginResult | { link_required: true; link_token: string; email: string } | { signup_required: true; signup_token: string; email: string }>('/api/auth/google/onetap', { method: 'POST', body: JSON.stringify({ credential }) }),
+  signup: (signupToken: string, ageConfirmed: boolean) =>
+    apiRequest<LoginResult>('/api/auth/google/signup', { method: 'POST', body: JSON.stringify({ signup_token: signupToken, age_confirmed: ageConfirmed }) }),
   linkCredential: (linkToken: string) =>
     apiRequest<{ linked: boolean }>('/api/account/google-link', { method: 'POST', body: JSON.stringify({ link_token: linkToken }) }),
   status: () => apiRequest<{ available: boolean; linked: boolean; email: string | null; has_password: boolean }>('/api/account/google', { method: 'GET' }),

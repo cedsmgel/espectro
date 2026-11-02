@@ -1,6 +1,6 @@
 import { appUrl } from "../../../_shared/email";
 import { exchangeCode, GoogleEnv, googleEnabled, randomUrlToken, sha256Hex } from "../../../_shared/google";
-import { createPendingLink, resolveGoogleAccount } from "../../../_shared/googleAccount";
+import { createPendingLink, createPendingSignup, resolveGoogleAccount } from "../../../_shared/googleAccount";
 
 export interface Env extends GoogleEnv {
   DB: D1Database;
@@ -52,6 +52,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     if (account.kind === "email_in_use") {
       const linkToken = await createPendingLink(env.DB, profile);
       return go(`/entrar/google?link=${encodeURIComponent(linkToken)}&email=${encodeURIComponent(profile.email)}`);
+    }
+    // Conta nova: pede a declaração de idade mínima e o aceite dos termos antes de criar
+    if (account.kind === "signup_required") {
+      const signupToken = await createPendingSignup(env.DB, profile);
+      return go(`/entrar/google?signup=${encodeURIComponent(signupToken)}&email=${encodeURIComponent(profile.email)}`);
     }
     const userId = account.userId;
 

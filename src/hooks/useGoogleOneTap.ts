@@ -90,6 +90,11 @@ async function handleCredential(credential: string): Promise<void> {
       requestAuth({ mode: 'login', mfaToken: res.mfa_token, reason: 'Sua conta usa verificação em duas etapas.' });
       return;
     }
+    if ('signup_required' in res) {
+      // Primeira vez com o Google: a conta só nasce depois da declaração de idade e do aceite dos termos
+      requestAuth({ mode: 'register', googleSignupToken: res.signup_token, googleEmail: res.email });
+      return;
+    }
     if ('link_required' in res) {
       // Já existe uma conta com o e-mail deste Google: nada é ligado sem a pessoa provar que é dona dela
       requestAuth({ mode: 'login', googleLinkToken: res.link_token, googleEmail: res.email });

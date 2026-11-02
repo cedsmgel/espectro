@@ -1,6 +1,6 @@
 import { errorResponse, jsonResponse, rateLimit, serverError } from "../../../_shared/auth";
 import { GoogleEnv, googleEnabled, profileFromClaims, sha256Hex, verifyGoogleSignature } from "../../../_shared/google";
-import { createPendingLink, finishGoogleLogin, resolveGoogleAccount } from "../../../_shared/googleAccount";
+import { createPendingLink, createPendingSignup, finishGoogleLogin, resolveGoogleAccount } from "../../../_shared/googleAccount";
 import { MfaEnv } from "../../../_shared/mfa";
 
 export interface Env extends GoogleEnv, MfaEnv {
@@ -41,6 +41,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // Já existe conta com este e-mail e sem vínculo com este Google: exige entrar na conta antes de ligar
     if (account.kind === "email_in_use") {
       return jsonResponse({ link_required: true, link_token: await createPendingLink(env.DB, profile), email: profile.email });
+    }
+
+    // Conta nova: o cliente pede a declaração de idade mínima e o aceite dos termos antes de criar
+    if (account.kind === "signup_required") {
+      return jsonResponse({ signup_required: true, signup_token: await createPendingSignup(env.DB, profile), email: profile.email });
     }
 
     return finishGoogleLogin(env, request, account.userId);
