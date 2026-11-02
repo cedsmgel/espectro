@@ -51,7 +51,7 @@ import { visibleInterval } from '../lib/visibleInterval';
 import { ChatLibraryModal } from '../components/chat/ChatLibraryModal';
 import { StarredModal } from '../components/chat/StarredModal';
 import { DisappearingModal, disappearLabel } from '../components/chat/DisappearingModal';
-import { InviteJoinModal } from '../components/chat/GroupModals';
+import { InviteJoinModal, ShareGroupModal } from '../components/chat/GroupModals';
 import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
 import { ThumbImg } from '../components/ThumbImg';
 import { PosterVideo } from '../components/PosterVideo';
@@ -224,6 +224,9 @@ export const DirectMessages: React.FC = () => {
   const [convSearch, setConvSearch] = useState('');
   const [activeSettings, setActiveSettings] = useState<ConversationSettings | null>(null);
   const [extraModal, setExtraModal] = useState<null | 'library' | 'starred' | 'disappear'>(null);
+  // Submenu dos grupos na lista: qual grupo está com biblioteca ou compartilhamento aberto
+  const [libraryGroup, setLibraryGroup] = useState<GroupSummary | null>(null);
+  const [shareGroup, setShareGroup] = useState<GroupSummary | null>(null);
   const [disappearSeconds, setDisappearSeconds] = useState(0);
   const [starredIds, setStarredIds] = useState<Set<number>>(new Set());
   const [openedOnce, setOpenedOnce] = useState<Set<number>>(new Set());
@@ -889,6 +892,29 @@ export const DirectMessages: React.FC = () => {
     }
   };
 
+  const toggleGroupPref = async (g: GroupSummary, pref: 'pinned' | 'archived') => {
+    const value = !g[pref];
+    setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, [pref]: value } : x)));
+    try {
+      await groupsApi.setPrefs(g.id, { [pref]: value });
+      if (pref === 'archived') setToastMessage(value ? 'Grupo arquivado.' : 'Grupo desarquivado.');
+    } catch {
+      setGroups((prev) => prev.map((x) => (x.id === g.id ? { ...x, [pref]: !value } : x)));
+      setToastMessage('Não foi possível atualizar o grupo.');
+    }
+  };
+
+  const leaveGroupFromList = async (g: GroupSummary) => {
+    if (!window.confirm(`Sair do grupo "${g.name}"? Você deixará de ver as mensagens novas.`)) return;
+    try {
+      await groupsApi.manage(g.id, { action: 'leave' });
+      setGroups((prev) => prev.filter((x) => x.id !== g.id));
+      if (activeGroupId === g.id) navigate('/mensagens');
+    } catch {
+      setToastMessage('Não foi possível sair do grupo.');
+    }
+  };
+
   const toggleArchive = async (c: Friend) => {
     const archived = !conversations[c.friend_id]?.archived;
     try {
@@ -975,10 +1001,10 @@ export const DirectMessages: React.FC = () => {
       return a.username.localeCompare(b.username);
     });
 
-  // Grupos entram na lista como qualquer conversa: ordem pela última atividade, sem fixar no topo
-  const visibleGroups = showArchived
-    ? []
-    : groups.filter((g) => !searchConv.trim() || g.name.toLowerCase().includes(searchConv.trim().toLowerCase()));
+  // Grupos entram na lista como qualquer conversa: fixados no topo, depois pela última atividade
+  const visibleGroups = groups
+    .filter((g) => !!g.archived === showArchived)
+    .filter((g) => !searchConv.trim() || g.name.toLowerCase().includes(searchConv.trim().toLowerCase()));
   const activityTime = (value?: string | null) => {
     if (!value) return 0;
     const t = Date.parse(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
@@ -991,7 +1017,7 @@ export const DirectMessages: React.FC = () => {
       pinned: conversations[c.friend_id]?.pinned ? 1 : 0,
       time: activityTime(conversations[c.friend_id]?.last_created_at),
     })),
-    ...visibleGroups.map((g) => ({ key: `g-${g.id}`, pinned: 0, time: activityTime(g.last_created_at) })),
+    ...visibleGroups.map((g) => ({ key: `g-${g.id}`, pinned: g.pinned ? 1 : 0, time: activityTime(g.last_created_at) })),
   ]
     .sort((a, b) => b.pinned - a.pinned || b.time - a.time)
     .forEach((item, index) => listOrder.set(item.key, index + 1));
@@ -1645,6 +1671,8 @@ export const DirectMessages: React.FC = () => {
           scope={activeFriend ? { kind: 'dm', id: activeFriend.friend_id, name: `@${activeFriend.username}` } : undefined}
         />
       )}
+      {libraryGroup && <ChatLibraryModal onClose={() => setLibraryGroup(null)} scope={{ kind: 'group', id: libraryGroup.id, name: libraryGroup.name }} />}
+      {shareGroup && <ShareGroupModal groupId={shareGroup.id} groupName={shareGroup.name} isAdmin={shareGroup.role === 'admin'} onClose={() => setShareGroup(null)} />}
       {extraModal === 'starred' && (
         <StarredModal
           onClose={() => setExtraModal(null)}
@@ -1781,7 +1809,7 @@ export const DirectMessages: React.FC = () => {
 
                 {/* Lista de Conversas / Amigos */}
                 <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-2">
-                  {(showArchived || Object.values(conversations).some((c) => c.archived)) && (
+                  {(showArchived || Object.values(conversations).some((c) => c.archived) || groups.some((g) => g.archived)) && (
                     <button
                       type="button"
                       onClick={() => setShowArchived((v) => !v)}
@@ -1791,32 +1819,59 @@ export const DirectMessages: React.FC = () => {
                       <span>{showArchived ? 'Voltar às conversas' : 'Arquivadas'}</span>
                     </button>
                   )}
-                  {visibleGroups
-                    .map((g) => (
-                      <Link key={`g-${g.id}`} to={`/grupos/${g.id}`} style={{ order: listOrder.get(`g-${g.id}`) }} className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container-low/60">
-                        <div className="w-11 h-11 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm flex-shrink-0">
-                          {g.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold truncate">{g.name}</span>
-                            {g.last_created_at && (
-                              <span className="text-[11px] text-on-surface-variant flex-shrink-0">{formatConversationTime(g.last_created_at)}</span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between gap-2 mt-0.5">
-                            <p className="text-xs text-on-surface-variant truncate">
-                              {g.last_content ? `${g.last_sender ? '@' + g.last_sender + ': ' : ''}${g.last_content}` : `${g.members_count} membros`}
-                            </p>
-                            {g.unread_count > 0 && (
-                              <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold flex items-center justify-center">
-                                {g.unread_count > 99 ? '99+' : g.unread_count}
+                  {visibleGroups.map((g) => (
+                    <div
+                      key={`g-${g.id}`}
+                      style={{ order: listOrder.get(`g-${g.id}`) }}
+                      onClick={() => navigate(`/grupos/${g.id}`)}
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                        activeGroupId === g.id ? 'bg-surface-container-low border border-outline-variant shadow-xs' : 'hover:bg-surface-container-low/60'
+                      }`}
+                    >
+                      <div className="w-11 h-11 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {g.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-xs truncate ${g.unread_count > 0 && activeGroupId !== g.id ? 'font-bold text-on-surface' : 'font-semibold text-on-surface'}`}>
+                            {g.pinned && (
+                              <span className="material-symbols-outlined text-[13px] text-on-surface-variant align-middle mr-1" title="Fixado">
+                                push_pin
                               </span>
                             )}
-                          </div>
+                            {g.name}
+                          </span>
+                          {g.last_created_at && (
+                            <span className="text-[11px] text-on-surface-variant flex-shrink-0">{formatConversationTime(g.last_created_at)}</span>
+                          )}
                         </div>
-                      </Link>
-                    ))}
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className={`text-xs truncate ${g.unread_count > 0 && activeGroupId !== g.id ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>
+                            {g.last_content ? `${g.last_sender ? '@' + g.last_sender + ': ' : ''}${g.last_content}` : `${g.members_count} membros`}
+                          </p>
+                          {g.unread_count > 0 && activeGroupId !== g.id && (
+                            <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary-container text-on-primary text-[10px] font-bold flex items-center justify-center">
+                              {g.unread_count > 99 ? '99+' : g.unread_count}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 -mr-1" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                        <ChatMenu
+                          title="Opções do grupo"
+                          buttonClassName="w-7 h-7 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container cursor-pointer"
+                          items={[
+                            { key: 'pin', label: g.pinned ? 'Desafixar' : 'Fixar', icon: 'push_pin', onSelect: () => void toggleGroupPref(g, 'pinned') },
+                            { key: 'info', label: 'Dados do grupo', icon: 'info', onSelect: () => navigate(`/grupos/${g.id}?dados=1`) },
+                            { key: 'share', label: 'Compartilhar grupo', icon: 'share', onSelect: () => setShareGroup(g) },
+                            { key: 'library', label: 'Mídias, links e docs', icon: 'perm_media', onSelect: () => setLibraryGroup(g) },
+                            { key: 'archive', label: g.archived ? 'Desarquivar' : 'Arquivar', icon: 'archive', onSelect: () => void toggleGroupPref(g, 'archived') },
+                            { key: 'leave', label: 'Sair do grupo', icon: 'logout', danger: true, onSelect: () => void leaveGroupFromList(g) },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  ))}
                   {filteredConversations.length === 0 && visibleGroups.length === 0 ? (
                     <div className="text-center py-8 px-4 text-xs text-on-surface-variant">
                       <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40 mb-1">

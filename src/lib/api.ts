@@ -798,6 +798,8 @@ export interface GroupSummary {
   description: string | null;
   role: "admin" | "member";
   only_admins_send: number;
+  pinned?: boolean;
+  archived?: boolean;
   members_count: number;
   unread_count: number;
   last_content: string | null;
@@ -919,6 +921,8 @@ export const groupsApi = {
       method: 'PATCH',
       body: JSON.stringify({ content }),
     }),
+  setPrefs: (id: number, prefs: { pinned?: boolean; archived?: boolean }) =>
+    apiRequest<{ pinned?: boolean; archived?: boolean }>(`/api/groups/${id}/prefs`, { method: 'PUT', body: JSON.stringify(prefs) }),
   react: (id: number, messageId: number, emoji: string | null) =>
     apiRequest<{ emoji: string | null }>(`/api/groups/${id}/reactions`, {
       method: 'PUT',

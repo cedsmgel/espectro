@@ -6,7 +6,7 @@ import { useSidebar } from '../context/SidebarContext';
 import { authStorage, profileApi, uploadApi, UserProfile } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 import { ProfileDetailsEditor } from '../components/ProfileDetailsEditor';
-import { PrivacySettings } from '../components/PrivacySettings';
+import { SettingsTabs } from '../components/SettingsTabs';
 
 export const ProfileSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -206,14 +206,7 @@ export const ProfileSettings: React.FC = () => {
               </Link>
             </div>
 
-            <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start w-fit">
-              <span aria-current="page" className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary shadow-xs">
-                Perfil
-              </span>
-              <Link to="/settings/account" className="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
-                Segurança
-              </Link>
-            </div>
+            <SettingsTabs active="profile" />
 
             {/* Card Principal do Formulário */}
             <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant shadow-xs">
@@ -436,7 +429,6 @@ export const ProfileSettings: React.FC = () => {
             </div>
 
             {!loading && <ProfileDetailsEditor />}
-            {!loading && <PrivacySettings />}
           </div>
         </main>
       </div>

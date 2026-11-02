@@ -35,6 +35,7 @@ const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
+const PrivacySettingsPage = lazyNamed(() => import('./pages/PrivacySettingsPage'), 'PrivacySettingsPage');
 const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
 
 // Endereços antigos de comunidade (/c/nome, /comunidade/nome...) levam ao oficial: /e/nome
@@ -84,6 +85,8 @@ export const AppContent: React.FC = () => {
           <Route path="/settings/profile" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/configuracoes/perfil" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/settings/account" element={<RequireAuth><AccountSettings /></RequireAuth>} />
+          <Route path="/settings/privacy" element={<RequireAuth><PrivacySettingsPage /></RequireAuth>} />
+          <Route path="/configuracoes/privacidade" element={<Navigate to="/settings/privacy" replace />} />
           <Route path="/configuracoes/dados" element={<Navigate to="/settings/account" replace />} />
           <Route path="/configuracoes/seguranca" element={<Navigate to="/settings/account" replace />} />
           <Route path="/configuracoes/excluir-conta" element={<RequireAuth><DeleteAccount /></RequireAuth>} />

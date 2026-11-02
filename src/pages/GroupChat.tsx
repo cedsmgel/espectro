@@ -93,6 +93,14 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // Vindo do submenu da lista (?dados=1): abre os dados do grupo
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dados') === '1') {
+      setShowManage(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [groupId]);
   const [searchTerm, setSearchTerm] = useState('');
   const [modal, setModal] = useState<null | 'library' | 'starred' | 'disappear' | 'share' | 'permissions'>(null);
   const [starredIds, setStarredIds] = useState<Set<number>>(new Set());
