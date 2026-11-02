@@ -154,9 +154,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       },
     });
 
-    // Miniatura opcional (JPEG pequeno gerado no navegador), guardada ao lado da foto
+    // Miniatura (foto) ou capa (vídeo) opcional: JPEG pequeno gerado no navegador, guardado ao lado do arquivo
     const thumb = formData.get("thumbnail");
-    if (allowed.kind === "image" && ["jpg", "jpeg", "png", "webp"].includes(extFromName) && thumb && typeof thumb !== "string") {
+    if ((allowed.kind === "video" || (allowed.kind === "image" && ["jpg", "jpeg", "png", "webp"].includes(extFromName))) && thumb && typeof thumb !== "string") {
       const thumbFile = thumb as File;
       if (thumbFile.size > 0 && thumbFile.size <= 300 * 1024) {
         const thumbHead = new Uint8Array(await thumbFile.slice(0, 3).arrayBuffer());

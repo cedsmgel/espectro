@@ -1,3 +1,4 @@
+import { usePoster } from '../hooks/usePoster';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post, postsApi, authStorage, adminApi, savedApi } from '../lib/api';
@@ -195,6 +196,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
+  const videoPoster = usePoster(post.media_url);
   const score = upvotes - downvotes;
   const hasMedia = Boolean(post.media_url);
   // Legenda embaixo (como no Instagram): o texto da publicação; sem texto, o título vira legenda. Mídia nunca mostra título.
@@ -418,6 +420,7 @@ export const PostCard: React.FC<PostCardProps> = ({
             <div className="w-full bg-black flex justify-center">
               <LazyVideoPlayer
                 src={post.media_url}
+                poster={videoPoster}
                 title={title || undefined}
                 caption={(title.trim() || parseScrap(content || '').body.trim()).slice(0, 140) || undefined}
               />

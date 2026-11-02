@@ -1,5 +1,5 @@
 import { optimizeImage } from './optimizeImage';
-import { makeThumbnail } from './mediaThumb';
+import { makeThumbnail, makeVideoPoster } from './mediaThumb';
 import axios from 'axios';
 
 export interface User {
@@ -1016,7 +1016,7 @@ export const uploadApi = {
     const token = authStorage.getToken();
     const formData = new FormData();
     formData.append('file', file);
-    const thumbnail = await makeThumbnail(file);
+    const thumbnail = file.type.startsWith('video/') ? await makeVideoPoster(file) : await makeThumbnail(file);
     if (thumbnail) formData.append('thumbnail', thumbnail);
     if (options?.context) {
       formData.append('context', options.context);

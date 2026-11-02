@@ -33,7 +33,7 @@ async function collectMediaKeys(db: D1Database, userId: number): Promise<string[
         if (key) {
           keys.add(key);
           // Fotos têm uma miniatura ao lado (apagar chave que não existe é inofensivo)
-          if (key.startsWith("images/")) keys.add(key.replace(/\.[^./]+$/, "_t.jpg"));
+          if (key.startsWith("images/") || key.startsWith("videos/")) keys.add(key.replace(/\.[^./]+$/, "_t.jpg"));
         }
       }
     } catch {
