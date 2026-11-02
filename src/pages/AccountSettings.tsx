@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { SidebarNav } from '../components/SidebarNav';
 import { SecurityCenter } from '../components/SecurityCenter';
+import { SettingsTabs } from '../components/SettingsTabs';
 import { useSidebar } from '../context/SidebarContext';
 import { useIsAdmin } from '../hooks/useIsAdmin';
 import { authStorage } from '../lib/api';
 import { EmptyState } from '../components/EmptyState';
 
 // Central de segurança: senha, sessões, meus dados e exclusão da conta.
-// A privacidade do perfil (perfil privado, scraps) fica na edição do perfil.
+// A privacidade do perfil (perfil privado, scraps) fica na aba Privacidade.
 export const AccountSettings: React.FC = () => {
   const { isExpanded } = useSidebar();
   const isAdmin = useIsAdmin();
@@ -57,14 +58,7 @@ export const AccountSettings: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-full border border-outline-variant self-start sm:self-auto">
-                <Link to="/settings/profile" className="px-4 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-on-surface transition-colors">
-                  Perfil
-                </Link>
-                <span aria-current="page" className="px-4 py-1.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary shadow-xs">
-                  Segurança
-                </span>
-              </div>
+              <SettingsTabs active="security" className="sm:self-auto" />
             </div>
 
             <SecurityCenter />
