@@ -1,7 +1,7 @@
 ---
-titulo: Como criar uma publicação?
+titulo: "Como criar uma publicação?"
 categoria: publicar-e-interagir
-resumo: Texto, foto ou vídeo, em formato de discussão ou scrap.
+resumo: "Texto, foto ou vídeo, em formato de discussão ou scrap."
 atualizado: 2026-11-02
 ordem: 1
 ---

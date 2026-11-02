@@ -1,7 +1,7 @@
 ---
-titulo: O que é Momentum e como compartilhar?
+titulo: "O que é Momentum e como compartilhar?"
 categoria: publicar-e-interagir
-resumo: Fotos, vídeos ou texto que ficam disponíveis por 24 horas.
+resumo: "Fotos, vídeos ou texto que ficam disponíveis por 24 horas."
 atualizado: 2026-11-02
 ordem: 3
 ---

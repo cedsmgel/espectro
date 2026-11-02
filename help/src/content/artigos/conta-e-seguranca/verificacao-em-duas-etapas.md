@@ -1,7 +1,7 @@
 ---
-titulo: Como ativar a verificação em duas etapas?
+titulo: "Como ativar a verificação em duas etapas?"
 categoria: conta-e-seguranca
-resumo: Proteja a conta com um código de 6 dígitos de um aplicativo autenticador.
+resumo: "Proteja a conta com um código de 6 dígitos de um aplicativo autenticador."
 atualizado: 2026-11-02
 ordem: 2
 ---

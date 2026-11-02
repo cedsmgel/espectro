@@ -1,7 +1,7 @@
 ---
-titulo: Como baixar ou apagar meus dados?
+titulo: "Como baixar ou apagar meus dados?"
 categoria: seus-dados
-resumo: Baixe uma cópia ou exclua a conta pela Central de contas.
+resumo: "Baixe uma cópia ou exclua a conta pela Central de contas."
 atualizado: 2026-11-02
 ordem: 1
 ---

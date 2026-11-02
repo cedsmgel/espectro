@@ -1,7 +1,7 @@
 ---
-titulo: Esqueci minha senha. E agora?
+titulo: "Esqueci minha senha. E agora?"
 categoria: conta-e-seguranca
-resumo: Receba por e-mail um link para criar uma nova senha.
+resumo: "Receba por e-mail um link para criar uma nova senha."
 atualizado: 2026-11-02
 ordem: 1
 ---

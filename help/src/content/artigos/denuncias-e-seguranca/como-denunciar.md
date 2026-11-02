@@ -1,7 +1,7 @@
 ---
-titulo: Como denunciar uma publicação, mensagem ou perfil?
+titulo: "Como denunciar uma publicação, mensagem ou perfil?"
 categoria: denuncias-e-seguranca
-resumo: Use o menu do próprio item para avisar a moderação.
+resumo: "Use o menu do próprio item para avisar a moderação."
 atualizado: 2026-11-02
 ordem: 1
 ---

@@ -1,7 +1,7 @@
 ---
-titulo: Qual a diferença entre seguir e ser amigo?
+titulo: "Qual a diferença entre seguir e ser amigo?"
 categoria: publicar-e-interagir
-resumo: Seguir é de mão única; amizade precisa ser aceita pelos dois lados.
+resumo: "Seguir é de mão única; amizade precisa ser aceita pelos dois lados."
 atualizado: 2026-11-02
 ordem: 5
 ---

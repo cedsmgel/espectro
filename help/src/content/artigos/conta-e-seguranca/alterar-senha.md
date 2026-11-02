@@ -1,7 +1,7 @@
 ---
-titulo: Como alterar minha senha?
+titulo: "Como alterar minha senha?"
 categoria: conta-e-seguranca
-resumo: Trocar a senha desconecta os outros aparelhos.
+resumo: "Trocar a senha desconecta os outros aparelhos."
 atualizado: 2026-11-02
 ordem: 3
 ---

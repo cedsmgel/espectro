@@ -1,7 +1,7 @@
 ---
-titulo: Como criar uma conta?
+titulo: "Como criar uma conta?"
 categoria: primeiros-passos
-resumo: Cadastro com e-mail e senha, ou com a conta Google.
+resumo: "Cadastro com e-mail e senha, ou com a conta Google."
 atualizado: 2026-11-02
 ordem: 2
 ---
