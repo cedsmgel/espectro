@@ -1,7 +1,7 @@
 ---
-titulo: Como funcionam as mensagens temporárias e as mídias de visualização única?
+titulo: "Como funcionam as mensagens temporárias e as mídias de visualização única?"
 categoria: mensagens-e-grupos
-resumo: Elas somem no prazo escolhido, mas não impedem captura de tela.
+resumo: "Elas somem no prazo escolhido, mas não impedem captura de tela."
 atualizado: 2026-11-02
 ordem: 1
 ---

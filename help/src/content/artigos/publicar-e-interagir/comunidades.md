@@ -1,7 +1,7 @@
 ---
-titulo: Como participar ou criar uma comunidade?
+titulo: "Como participar ou criar uma comunidade?"
 categoria: publicar-e-interagir
-resumo: Entre, publique e crie espaços sobre um tema.
+resumo: "Entre, publique e crie espaços sobre um tema."
 atualizado: 2026-11-02
 ordem: 6
 ---

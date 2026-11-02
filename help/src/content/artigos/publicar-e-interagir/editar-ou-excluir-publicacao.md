@@ -1,7 +1,7 @@
 ---
-titulo: Como editar ou excluir uma publicação?
+titulo: "Como editar ou excluir uma publicação?"
 categoria: publicar-e-interagir
-resumo: Use o menu da própria publicação.
+resumo: "Use o menu da própria publicação."
 atualizado: 2026-11-02
 ordem: 2
 ---

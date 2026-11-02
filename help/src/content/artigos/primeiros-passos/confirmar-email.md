@@ -1,7 +1,7 @@
 ---
-titulo: Como confirmar meu e-mail?
+titulo: "Como confirmar meu e-mail?"
 categoria: primeiros-passos
-resumo: O e-mail confirmado permite recuperar a senha.
+resumo: "O e-mail confirmado permite recuperar a senha."
 atualizado: 2026-11-02
 ordem: 4
 ---

@@ -1,7 +1,7 @@
 ---
-titulo: O que é o Espectro e o que posso fazer nele?
+titulo: "O que é o Espectro e o que posso fazer nele?"
 categoria: primeiros-passos
-resumo: Uma visão geral de feed, Momentum, comunidades, mensagens e vídeos.
+resumo: "Uma visão geral de feed, Momentum, comunidades, mensagens e vídeos."
 atualizado: 2026-11-02
 ordem: 1
 ---

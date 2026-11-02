@@ -1,7 +1,7 @@
 ---
-titulo: Como ligar ou desligar a conta Google?
+titulo: "Como ligar ou desligar a conta Google?"
 categoria: conta-e-seguranca
-resumo: Entre com um toque sem perder a senha ou a verificação em duas etapas.
+resumo: "Entre com um toque sem perder a senha ou a verificação em duas etapas."
 atualizado: 2026-11-02
 ordem: 5
 ---

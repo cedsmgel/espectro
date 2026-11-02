@@ -1,7 +1,7 @@
 ---
-titulo: Como deixar minha conta privada?
+titulo: "Como deixar minha conta privada?"
 categoria: privacidade
-resumo: Só amigos confirmados passam a ver suas publicações.
+resumo: "Só amigos confirmados passam a ver suas publicações."
 atualizado: 2026-11-02
 ordem: 1
 ---

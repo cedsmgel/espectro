@@ -389,3 +389,27 @@ main {
     animation: none !important;
   }
 }
+
+/* Tabelas dentro de artigos (ex.: Política de Privacidade) */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.5;
+  display: block;
+  overflow-x: auto;
+}
+.prose th,
+.prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgb(var(--outline));
+}
+.prose th {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.prose em {
+  font-style: italic;
+}

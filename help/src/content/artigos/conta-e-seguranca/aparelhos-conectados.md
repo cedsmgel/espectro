@@ -1,7 +1,7 @@
 ---
-titulo: Como ver e encerrar os aparelhos conectados à minha conta?
+titulo: "Como ver e encerrar os aparelhos conectados à minha conta?"
 categoria: conta-e-seguranca
-resumo: Veja onde sua conta foi usada e encerre acessos que você não reconhece.
+resumo: "Veja onde sua conta foi usada e encerre acessos que você não reconhece."
 atualizado: 2026-11-02
 ordem: 4
 ---

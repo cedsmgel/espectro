@@ -12,6 +12,8 @@ import { lazyNamed } from './lib/lazy';
 import { PushPrompt } from './components/PushPrompt';
 import { InstallPrompt } from './components/InstallPrompt';
 import { OfflineBanner } from './components/OfflineBanner';
+import { ExternalRedirect } from './components/ExternalRedirect';
+import { PRIVACY_URL, TERMS_URL } from './lib/helpCenter';
 import { LoadingBar, RouteLoading } from './components/LoadingBar';
 
 // Só o feed e o login entram no pacote inicial; as outras telas carregam ao abrir
@@ -37,8 +39,6 @@ const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'Prof
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
 const MenuPage = lazyNamed(() => import('./pages/MenuPage'), 'MenuPage');
 const MediaSettingsPage = lazyNamed(() => import('./pages/MediaSettingsPage'), 'MediaSettingsPage');
-const TermsPage = lazyNamed(() => import('./pages/LegalPages'), 'TermsPage');
-const PrivacyPage = lazyNamed(() => import('./pages/LegalPages'), 'PrivacyPage');
 const SupportContactPage = lazyNamed(() => import('./pages/SupportContactPage'), 'SupportContactPage');
 const SupportPage = lazyNamed(() => import('./pages/SupportPage'), 'SupportPage');
 const PrivacySettingsPage = lazyNamed(() => import('./pages/PrivacySettingsPage'), 'PrivacySettingsPage');
@@ -95,8 +95,8 @@ export const AppContent: React.FC = () => {
           <Route path="/settings/media" element={<RequireAuth><MediaSettingsPage /></RequireAuth>} />
           <Route path="/suporte" element={<SupportPage />} />
           <Route path="/suporte/contato" element={<SupportContactPage />} />
-          <Route path="/termos" element={<TermsPage />} />
-          <Route path="/privacidade" element={<PrivacyPage />} />
+          <Route path="/termos" element={<ExternalRedirect to={TERMS_URL} label="os Termos de Uso" />} />
+          <Route path="/privacidade" element={<ExternalRedirect to={PRIVACY_URL} label="a Política de Privacidade" />} />
           <Route path="/settings/privacy" element={<RequireAuth><PrivacySettingsPage /></RequireAuth>} />
           <Route path="/configuracoes/privacidade" element={<Navigate to="/settings/privacy" replace />} />
           <Route path="/configuracoes/dados" element={<Navigate to="/settings/account" replace />} />

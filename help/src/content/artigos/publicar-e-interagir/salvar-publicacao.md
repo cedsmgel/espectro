@@ -1,7 +1,7 @@
 ---
-titulo: Como salvar uma publicação?
+titulo: "Como salvar uma publicação?"
 categoria: publicar-e-interagir
-resumo: Guarde para ver depois e encontre em Salvos.
+resumo: "Guarde para ver depois e encontre em Salvos."
 atualizado: 2026-11-02
 ordem: 4
 ---

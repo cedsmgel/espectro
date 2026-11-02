@@ -1,7 +1,7 @@
 ---
-titulo: Como criar um grupo e convidar pessoas?
+titulo: "Como criar um grupo e convidar pessoas?"
 categoria: mensagens-e-grupos
-resumo: Crie com amigos e compartilhe um link de convite.
+resumo: "Crie com amigos e compartilhe um link de convite."
 atualizado: 2026-11-02
 ordem: 2
 ---

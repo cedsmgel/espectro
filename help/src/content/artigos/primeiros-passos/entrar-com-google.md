@@ -1,7 +1,7 @@
 ---
-titulo: Como entrar com a conta Google?
+titulo: "Como entrar com a conta Google?"
 categoria: primeiros-passos
-resumo: Entre com um toque; no primeiro acesso, você confirma a idade e aceita os termos.
+resumo: "Entre com um toque; no primeiro acesso, você confirma a idade e aceita os termos."
 atualizado: 2026-11-02
 ordem: 3
 ---

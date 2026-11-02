@@ -1,7 +1,7 @@
 ---
-titulo: Como funciona a personalização do feed e como desligar?
+titulo: "Como funciona a personalização do feed e como desligar?"
 categoria: privacidade
-resumo: O Espectro usa o que você viu para ordenar o Para você; você pode desligar e apagar.
+resumo: "O Espectro usa o que você viu para ordenar o Para você; você pode desligar e apagar."
 atualizado: 2026-11-02
 ordem: 3
 ---

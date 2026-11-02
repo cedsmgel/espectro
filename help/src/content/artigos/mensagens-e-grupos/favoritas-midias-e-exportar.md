@@ -1,7 +1,7 @@
 ---
-titulo: Como favoritar mensagens, ver mídias e exportar uma conversa?
+titulo: "Como favoritar mensagens, ver mídias e exportar uma conversa?"
 categoria: mensagens-e-grupos
-resumo: Encontre o que importa e leve uma cópia da conversa.
+resumo: "Encontre o que importa e leve uma cópia da conversa."
 atualizado: 2026-11-02
 ordem: 4
 ---

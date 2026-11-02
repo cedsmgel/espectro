@@ -1,7 +1,7 @@
 ---
-titulo: Quem pode escrever no meu mural?
+titulo: "Quem pode escrever no meu mural?"
 categoria: privacidade
-resumo: Escolha se pessoas que não são suas amigas podem deixar scraps.
+resumo: "Escolha se pessoas que não são suas amigas podem deixar scraps."
 atualizado: 2026-11-02
 ordem: 2
 ---

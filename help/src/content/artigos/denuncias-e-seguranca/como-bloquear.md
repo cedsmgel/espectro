@@ -1,7 +1,7 @@
 ---
-titulo: Como bloquear alguém?
+titulo: "Como bloquear alguém?"
 categoria: denuncias-e-seguranca
-resumo: Bloqueie pelo perfil e desfaça quando quiser.
+resumo: "Bloqueie pelo perfil e desfaça quando quiser."
 atualizado: 2026-11-02
 ordem: 2
 ---

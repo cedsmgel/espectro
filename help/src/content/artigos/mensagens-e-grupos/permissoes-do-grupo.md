@@ -1,7 +1,7 @@
 ---
-titulo: Como funcionam as permissões do grupo?
+titulo: "Como funcionam as permissões do grupo?"
 categoria: mensagens-e-grupos
-resumo: Administradores decidem quem envia, edita, adiciona e convida.
+resumo: "Administradores decidem quem envia, edita, adiciona e convida."
 atualizado: 2026-11-02
 ordem: 3
 ---

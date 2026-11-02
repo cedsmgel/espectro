@@ -1,7 +1,7 @@
 ---
-titulo: O que é "Sua atividade" e o que posso ver nela?
+titulo: "O que é \"Sua atividade\" e o que posso ver nela?"
 categoria: seus-dados
-resumo: Curtidas, comentários, Momentum arquivados, bloqueados e publicações vistas.
+resumo: "Curtidas, comentários, Momentum arquivados, bloqueados e publicações vistas."
 atualizado: 2026-11-02
 ordem: 2
 ---
