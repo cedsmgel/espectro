@@ -9,10 +9,12 @@ interface ShareButtonProps {
   bordered?: boolean;
   // Ícone grande (avião de papel) para a linha de ações das publicações
   large?: boolean;
+  // Pílula que ocupa metade da linha, com ícone e texto (perfil próprio)
+  half?: boolean;
 }
 
 // No celular abre a folha de compartilhar do sistema; no computador copia o link
-export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, variant = 'icon', bordered = false, large = false }) => {
+export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, variant = 'icon', bordered = false, large = false, half = false }) => {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<number>();
 
@@ -42,6 +44,19 @@ export const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, vari
     window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setCopied(false), 2000);
   };
+
+  if (half) {
+    return (
+      <button
+        type="button"
+        onClick={handleShare}
+        className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap"
+      >
+        <span className="material-symbols-outlined text-[18px]">{copied ? 'check' : 'share'}</span>
+        <span>{copied ? 'Link copiado' : 'Compartilhar'}</span>
+      </button>
+    );
+  }
 
   if (variant === 'pill') {
     return (

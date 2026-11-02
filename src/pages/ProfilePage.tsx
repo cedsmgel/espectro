@@ -422,8 +422,8 @@ export const ProfilePage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Biografia Real */}
-                  <div className="order-3">
+                  {/* Biografia Real (computador: ao lado da foto; no celular ela vem embaixo, a partir da borda esquerda) */}
+                  <div className="order-3 hidden sm:block">
                   {userProfile?.bio ? (
                     <p className="text-xs text-on-surface mt-2 max-w-xl whitespace-pre-line leading-relaxed">
                       {userProfile.bio}
@@ -471,6 +471,20 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Biografia no celular: abaixo da foto, alinhada à esquerda */}
+              <div className="sm:hidden -mt-2 text-left">
+                {userProfile?.bio ? (
+                  <p className="text-xs text-on-surface whitespace-pre-line leading-relaxed text-left">{userProfile.bio}</p>
+                ) : isSelf ? (
+                  <Link to="/settings/profile" className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">add_circle</span>
+                    <span>Adicionar uma biografia ao seu perfil</span>
+                  </Link>
+                ) : (
+                  <p className="text-xs text-on-surface-variant italic">Nenhuma biografia informada ainda.</p>
+                )}
+              </div>
+
               {/* Botões de Ação do Perfil: Amizade, Mensagem ou Edição */}
               <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-wrap">
                 {!isSelf && userProfile?.blocked_by_me ? (
@@ -492,13 +506,6 @@ export const ProfilePage: React.FC = () => {
                       <span>Editar Perfil</span>
                     </Link>
 
-                    <Link
-                      to="/settings/account"
-                      className="w-10 h-10 shrink-0 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center cursor-pointer"
-                      title="Configurações de Privacidade da Conta"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">shield</span>
-                    </Link>
                   </>
                 ) : userProfile?.is_friend ? (
                   /* Já são amigos: mensagem direta e opção de desfazer */
@@ -611,6 +618,7 @@ export const ProfilePage: React.FC = () => {
                 {userProfile && !isLockedPrivate && (
                   <ShareButton
                     variant="icon"
+                    half={isSelf}
                     bordered
                     url={`${window.location.origin}/u/${encodeURIComponent(userProfile.username)}`}
                     title={`@${userProfile.username} no Espectro`}
