@@ -304,7 +304,7 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
 }
 
 export const api = {
-  async register(params: { username: string; email: string; password: string; turnstile_token?: string }) {
+  async register(params: { username: string; email: string; password: string; turnstile_token?: string; age_confirmed?: boolean }) {
     return apiRequest<{ id: number; username: string; login_proof?: string }>('/api/register', {
       method: 'POST',
       body: JSON.stringify(params),

@@ -35,6 +35,7 @@ export const TermsPage: React.FC = () => (
       <h2>2. Sua conta</h2>
       <ul>
         <li>Você é responsável pelas informações que cadastra e por manter sua senha em segurança. Ative a verificação em duas etapas na Central de contas.</li>
+        <li><strong>Idade mínima: 13 anos.</strong> Ao criar a conta você declara ter 13 anos ou mais. Se você tem menos de 18, use o Espectro com o conhecimento de quem é responsável por você. Contas de pessoas abaixo da idade mínima serão excluídas.</li>
         <li>Cada pessoa deve ter uma conta própria e verdadeira. Contas falsas, que se passam por outra pessoa ou criadas para fraudar o serviço podem ser removidas.</li>
         <li>Você pode excluir sua conta a qualquer momento. Há 30 dias para desistir; depois disso a exclusão é definitiva.</li>
       </ul>
@@ -129,11 +130,15 @@ export const PrivacyPage: React.FC = () => (
       </ul>
     </section>
     <section>
-      <h2>6. Segurança</h2>
+      <h2>6. Crianças e adolescentes</h2>
+      <p>O Espectro não é destinado a menores de 13 anos e não coletamos dados deles de propósito. Se soubermos que uma conta pertence a alguém abaixo dessa idade, ela será excluída. Responsáveis podem pedir a exclusão pelo <Link to="/suporte/contato">suporte</Link>. No cadastro guardamos a data em que você declarou ter a idade mínima e aceitou os termos.</p>
+    </section>
+    <section>
+      <h2>7. Segurança</h2>
       <p>Usamos conexão criptografada, senhas com proteção irreversível, limite de tentativas, verificação em duas etapas opcional e sessões que você pode encerrar a qualquer momento. Nenhum sistema é totalmente imune a falhas; se houver um incidente relevante, avisaremos as pessoas afetadas.</p>
     </section>
     <section>
-      <h2>7. Mudanças nesta política</h2>
+      <h2>8. Mudanças nesta política</h2>
       <p>Podemos atualizar esta política. A data de atualização fica no topo da página.</p>
     </section>
   </Shell>
