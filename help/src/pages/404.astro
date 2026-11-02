@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import { categorias } from '../categorias';
+---
+
+<Base titulo="Página não encontrada">
+  <section class="hero">
+    <h1>Não encontramos esta página</h1>
+    <p>O endereço pode ter mudado. Escolha uma categoria ou volte ao início.</p>
+  </section>
+  <section class="grid" aria-label="Categorias">
+    {
+      categorias.map((c) => (
+        <a class="card" href={`/categoria/${c.slug}`}>
+          <h2>{c.nome}</h2>
+          <p>{c.resumo}</p>
+        </a>
+      ))
+    }
+  </section>
+</Base>

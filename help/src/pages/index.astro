@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+import { categorias } from '../categorias';
+---
+
+<Base>
+  <section class="hero">
+    <h1>Como podemos ajudar?</h1>
+    <p>Respostas rápidas sobre conta, privacidade, mensagens, segurança e seus dados no Espectro.</p>
+  </section>
+
+  <section class="grid" aria-label="Categorias">
+    {
+      categorias.map((c) => (
+        <a class="card" href={`/categoria/${c.slug}`}>
+          <span class="icon-wrap" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" set:html={c.icone} />
+          </span>
+          <h2>{c.nome}</h2>
+          <p>{c.resumo}</p>
+        </a>
+      ))
+    }
+  </section>
+</Base>

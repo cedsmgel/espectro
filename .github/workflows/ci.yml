@@ -24,6 +24,11 @@ jobs:
         run: npm run check:chat
       - name: Build
         run: npm run build
+      - name: Central de ajuda (typecheck e build)
+        run: |
+          npm ci --prefix help
+          npm run check --prefix help
+          npm run build --prefix help
       - name: Audit (somente dependências de produção)
         run: npm audit --omit=dev --audit-level=high
         continue-on-error: true
