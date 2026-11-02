@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
+import { useMyAvatar } from '../hooks/useMyAvatar';
 
 const ITEM_CLASS = 'flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors relative cursor-pointer';
 
@@ -11,6 +12,7 @@ export const BottomNav: React.FC = () => {
   const { openCreatePostModal, hideBottomNav } = useSidebar();
   const user = authStorage.getUser();
   const unreadDms = useUnreadDms(user?.id);
+  const myAvatar = useMyAvatar();
 
   if (hideBottomNav) {
     return null;
@@ -72,9 +74,25 @@ export const BottomNav: React.FC = () => {
 
         {/* 5. Perfil */}
         <Link to="/perfil" aria-label="Ir para Perfil" className={`${ITEM_CLASS} ${tone(isProfile)}`}>
-          <span className="material-symbols-outlined text-[30px]" style={fill(isProfile)}>
-            account_circle
-          </span>
+          {myAvatar ? (
+            <img
+              src={myAvatar}
+              alt=""
+              className={`w-8 h-8 rounded-full object-cover ${isProfile ? 'ring-2 ring-on-surface ring-offset-2 ring-offset-surface-container-lowest' : ''}`}
+            />
+          ) : user ? (
+            <span
+              className={`w-8 h-8 rounded-full bg-primary-container text-on-primary text-sm font-bold uppercase flex items-center justify-center ${
+                isProfile ? 'ring-2 ring-on-surface ring-offset-2 ring-offset-surface-container-lowest' : ''
+              }`}
+            >
+              {user.username.charAt(0)}
+            </span>
+          ) : (
+            <span className="material-symbols-outlined text-[30px]" style={fill(isProfile)}>
+              account_circle
+            </span>
+          )}
         </Link>
       </div>
     </nav>

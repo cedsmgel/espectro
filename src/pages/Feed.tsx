@@ -222,7 +222,7 @@ export const Feed: React.FC = () => {
 
           {/* Abas do Feed fixas no topo da lista (Tarefa 5: dentro de max-w-2xl mx-auto) */}
           <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-0 z-20 -mx-4 px-4 bg-surface/85 backdrop-blur-md border-b border-outline-variant/40 flex items-center justify-between">
-            <div className="flex-1 min-w-0 flex items-center gap-5 sm:gap-8 overflow-x-auto scrollbar-none">
+            <div className="flex-1 min-w-0 flex items-center gap-5 sm:gap-8 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x scrollbar-none">
               {(
                 [
                   { key: 'foryou', label: 'Para Você', params: {} },
@@ -242,7 +242,7 @@ export const Feed: React.FC = () => {
                   }`}
                 >
                   {tab.label}
-                  {activeTab === tab.key && <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-primary-container rounded-full" />}
+                  {activeTab === tab.key && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-container rounded-full" />}
                 </button>
               ))}
               {/* No celular não há menu lateral: Vídeos e Comunidades ficam ao lado das abas */}
