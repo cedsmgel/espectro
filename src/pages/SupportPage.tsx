@@ -69,6 +69,24 @@ export const SupportPage: React.FC = () => (
             </details>
           ))}
         </div>
+
+        <Link
+          to="/suporte/contato"
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-primary-container text-on-primary hover:bg-primary transition-colors"
+        >
+          <span className="material-symbols-outlined text-[22px]">mail</span>
+          <span className="flex-1">
+            <span className="block text-sm font-semibold">Falar com o suporte</span>
+            <span className="block text-xs opacity-80">Dúvidas, problemas, seus dados (LGPD) e direitos autorais</span>
+          </span>
+          <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+        </Link>
+
+        <p className="text-xs text-on-surface-variant text-center">
+          <Link to="/termos" className="underline hover:text-on-surface">Termos de uso</Link>
+          {' · '}
+          <Link to="/privacidade" className="underline hover:text-on-surface">Política de Privacidade</Link>
+        </p>
       </main>
     </div>
   </div>

@@ -108,6 +108,12 @@ export const Landing: React.FC = () => {
 
       <footer suppressHydrationWarning className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 text-xs text-on-surface-variant pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         Espectro © {new Date().getFullYear()}
+        {' · '}
+        <a href="/termos" className="underline hover:text-on-surface">Termos</a>
+        {' · '}
+        <a href="/privacidade" className="underline hover:text-on-surface">Privacidade</a>
+        {' · '}
+        <a href="/suporte" className="underline hover:text-on-surface">Ajuda</a>
       </footer>
     </div>
   );
