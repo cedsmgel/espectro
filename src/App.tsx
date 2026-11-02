@@ -35,6 +35,9 @@ const Friends = lazyNamed(() => import('./pages/Friends'), 'Friends');
 const ProfileSection = lazyNamed(() => import('./pages/ProfileSection'), 'ProfileSection');
 const ProfileSettings = lazyNamed(() => import('./pages/ProfileSettings'), 'ProfileSettings');
 const AccountSettings = lazyNamed(() => import('./pages/AccountSettings'), 'AccountSettings');
+const MenuPage = lazyNamed(() => import('./pages/MenuPage'), 'MenuPage');
+const MediaSettingsPage = lazyNamed(() => import('./pages/MediaSettingsPage'), 'MediaSettingsPage');
+const SupportPage = lazyNamed(() => import('./pages/SupportPage'), 'SupportPage');
 const PrivacySettingsPage = lazyNamed(() => import('./pages/PrivacySettingsPage'), 'PrivacySettingsPage');
 const PostDetail = lazyNamed(() => import('./pages/PostDetail'), 'PostDetail');
 
@@ -85,6 +88,9 @@ export const AppContent: React.FC = () => {
           <Route path="/settings/profile" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/configuracoes/perfil" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
           <Route path="/settings/account" element={<RequireAuth><AccountSettings /></RequireAuth>} />
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="/settings/media" element={<RequireAuth><MediaSettingsPage /></RequireAuth>} />
+          <Route path="/suporte" element={<SupportPage />} />
           <Route path="/settings/privacy" element={<RequireAuth><PrivacySettingsPage /></RequireAuth>} />
           <Route path="/configuracoes/privacidade" element={<Navigate to="/settings/privacy" replace />} />
           <Route path="/configuracoes/dados" element={<Navigate to="/settings/account" replace />} />

@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useSidebar } from '../context/SidebarContext';
 import { authStorage } from '../lib/api';
 import { useUnreadDms } from '../hooks/useUnreadDms';
+import { useNotificationCount } from '../hooks/useNotificationCount';
 import { useMyAvatar } from '../hooks/useMyAvatar';
 
 const ITEM_CLASS = 'flex-1 flex flex-col items-center justify-center py-1 min-w-[56px] min-h-[48px] transition-colors relative cursor-pointer';
@@ -13,6 +14,7 @@ export const BottomNav: React.FC = () => {
   const user = authStorage.getUser();
   const unreadDms = useUnreadDms(user?.id);
   const myAvatar = useMyAvatar();
+  const notificationCount = useNotificationCount(user?.id);
 
   if (hideBottomNav) {
     return null;
@@ -20,6 +22,7 @@ export const BottomNav: React.FC = () => {
 
   const { pathname, search } = location;
   const isMessages = pathname.startsWith('/mensagens') || pathname.startsWith('/grupos');
+  const isNotifications = pathname.startsWith('/notificacoes') || pathname.startsWith('/notifications');
   const isProfile = pathname.startsWith('/perfil') || pathname.startsWith('/profile') || pathname.startsWith('/u/');
   const tone = (active: boolean) => (active ? 'text-primary font-semibold' : 'text-on-surface-variant hover:text-on-surface');
   const fill = (active: boolean) => (active ? { fontVariationSettings: "'FILL' 1" } : undefined);
@@ -38,15 +41,17 @@ export const BottomNav: React.FC = () => {
           </span>
         </Link>
 
-        {/* 2. Pesquisa: abre a mesma busca do cabeçalho */}
-        <button
-          type="button"
-          aria-label="Pesquisar"
-          onClick={() => window.dispatchEvent(new Event('espectro:open-mobile-search'))}
-          className={`${ITEM_CLASS} ${tone(false)}`}
-        >
-          <span className="material-symbols-outlined text-[30px]">search</span>
-        </button>
+        {/* 2. Notificações (a pesquisa fica no cabeçalho) */}
+        <Link to="/notificacoes" aria-label="Ver notificações" className={`${ITEM_CLASS} ${tone(isNotifications)}`}>
+          <span className="material-symbols-outlined text-[30px]" style={fill(isNotifications)}>
+            notifications
+          </span>
+          {notificationCount > 0 && (
+            <span className="absolute top-1 right-2.5 px-1.5 py-0.2 rounded-full bg-error text-white text-[10px] leading-tight font-bold ring-2 ring-surface-container-lowest">
+              {notificationCount > 99 ? '99+' : notificationCount}
+            </span>
+          )}
+        </Link>
 
         {/* 3. Botão Central de Criar (+) */}
         <div className="flex-1 flex items-center justify-center min-w-[56px]">

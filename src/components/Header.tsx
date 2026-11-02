@@ -346,6 +346,17 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             >
               <span className="material-symbols-outlined text-[28px]">search</span>
             </button>
+            {/* Menu de configurações e atividade (celular) */}
+            {user && (
+              <Link
+                to="/menu"
+                aria-label="Abrir menu de configurações e atividade"
+                title="Menu"
+                className="md:hidden w-12 h-12 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[28px]">menu</span>
+              </Link>
+            )}
             {user ? (
               <>
 
@@ -369,7 +380,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 <Link
                   to="/notificacoes"
                   aria-label="Ver notificações"
-                  className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
+                  className="hidden md:flex md:p-2 items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[28px]">notifications</span>
