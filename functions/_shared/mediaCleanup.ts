@@ -53,7 +53,7 @@ export async function releaseMedia(env: CleanupEnv, urls: Array<string | null | 
     try {
       if (await stillReferenced(env.DB, key)) continue;
       await bucket.delete(key);
-      if (key.startsWith("images/")) await bucket.delete(key.replace(/\.[^./]+$/, "_t.jpg"));
+      if (key.startsWith("images/") || key.startsWith("videos/")) await bucket.delete(key.replace(/\.[^./]+$/, "_t.jpg"));
       removed += 1;
     } catch (err) {
       console.error("Falha ao limpar arquivo", key, err);

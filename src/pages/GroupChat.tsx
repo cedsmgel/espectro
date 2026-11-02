@@ -32,6 +32,8 @@ import { DisappearingModal, disappearLabel } from '../components/chat/Disappeari
 import { ShareGroupModal, GroupPermissionsModal } from '../components/chat/GroupModals';
 import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
 import { ThumbImg } from '../components/ThumbImg';
+import { PosterVideo } from '../components/PosterVideo';
+import { getVideoDuration } from '../lib/mediaThumb';
 import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 type Detail = {
@@ -315,6 +317,11 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
       setError('O arquivo passa de 10 MB.');
       return;
     }
+    // Vídeo no chat: no máximo 1 minuto (mesma regra do chat privado)
+    if (mediaTypeOf(file) === 'video' && (await getVideoDuration(file)) > 61) {
+      setError('No chat, vídeos podem ter no máximo 1 minuto.');
+      return;
+    }
     const replied = takeReply();
     setUploading(true);
     try {
@@ -501,7 +508,7 @@ export const GroupChatPanel: React.FC<{ groupId: number }> = ({ groupId }) => {
         ) : null;
       case 'video':
         return m.media_url ? (
-          <video src={m.media_url} controls playsInline preload="metadata" className="max-w-[240px] w-full rounded-xl bg-black" />
+          <PosterVideo src={m.media_url} controls playsInline className="max-w-[240px] w-full rounded-xl bg-black" />
         ) : null;
       case 'audio':
         return m.media_url ? <AudioMessage src={m.media_url} /> : null;

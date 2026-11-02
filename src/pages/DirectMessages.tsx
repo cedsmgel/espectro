@@ -54,6 +54,7 @@ import { DisappearingModal, disappearLabel } from '../components/chat/Disappeari
 import { InviteJoinModal } from '../components/chat/GroupModals';
 import { ViewOnceMedia } from '../components/chat/ViewOnceMedia';
 import { ThumbImg } from '../components/ThumbImg';
+import { PosterVideo } from '../components/PosterVideo';
 import { describeMessage, downloadConversation } from '../lib/exportChat';
 
 // Emojis populares pré-selecionados para o seletor rápido
@@ -1097,11 +1098,10 @@ export const DirectMessages: React.FC = () => {
       if (msgType === 'video') {
         return (
           <div className="flex flex-col gap-1.5">
-            <video
+            <PosterVideo
               src={m.media_url}
               controls
               playsInline
-              preload="metadata"
               className="max-w-[200px] w-full rounded-lg shadow-xs bg-black"
             />
             {m.content &&

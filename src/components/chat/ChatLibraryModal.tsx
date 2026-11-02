@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { chatExtrasApi, LibraryItem } from '../../lib/api';
 import { ModalShell } from './ModalShell';
 import { ThumbImg } from '../ThumbImg';
+import { PosterVideo } from '../PosterVideo';
 
 type Section = 'media' | 'links' | 'docs';
 
@@ -90,7 +91,7 @@ export const ChatLibraryModal: React.FC<Props> = ({ onClose, scope }) => {
               <a href={item.media_url || '#'} target="_blank" rel="noopener noreferrer" title={`${item.chat_name} · ${formatDate(item.created_at)}`}>
                 {item.message_type === 'video' ? (
                   <>
-                    <video src={item.media_url || undefined} preload="metadata" className="w-full h-full object-cover" />
+                    <PosterVideo src={item.media_url || ""} className="w-full h-full object-cover" />
                     <span className="material-symbols-outlined absolute inset-0 m-auto w-fit h-fit text-white text-[28px] drop-shadow">play_circle</span>
                   </>
                 ) : (
