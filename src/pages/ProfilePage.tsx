@@ -18,7 +18,7 @@ import { PostCard } from '../components/PostCard';
 import { PostSkeleton } from '../components/PostSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
-import { ChatMenu } from '../components/chat/ChatMenu';
+import { ChatMenu, type ChatMenuItem } from '../components/chat/ChatMenu';
 import { ReportModal } from '../components/chat/ReportModal';
 import { ShareButton } from '../components/ShareButton';
 import { MediaGrid } from '../components/MediaGrid';
@@ -285,6 +285,24 @@ export const ProfilePage: React.FC = () => {
   const friendshipPending = userProfile?.friendship_status === 'pending';
   const isLockedPrivate = Boolean(userProfile?.is_private && !isSelf && !userProfile?.is_friend);
 
+  const showFollowMenu = Boolean(!isSelf && userProfile && !userProfile.blocked_by_me && userProfile.i_follow);
+
+  // Menu do perfil: no perfil de outra pessoa que já é seguida, fica dentro do botão "Seguindo"
+  const profileMenuItems: ChatMenuItem[] = userProfile
+    ? [
+        { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
+        { key: 'amigos', label: 'Amigos', icon: 'group', onSelect: () => navigate(isSelf ? '/amigos' : `/perfil/${encodeURIComponent(userProfile.username)}/amigos`) },
+        { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
+        { key: 'melhores', label: 'Melhores amigos', icon: 'star', hidden: !isSelf, onSelect: () => navigate('/melhores-amigos') },
+        { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
+        { key: 'atividade', label: 'Sua atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate('/atividade') },
+        { key: 'report', label: 'Denunciar', icon: 'flag', danger: true, hidden: isSelf || !loggedUser, onSelect: () => setShowReport(true) },
+        userProfile.blocked_by_me
+          ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', hidden: isSelf || !loggedUser, onSelect: handleUnblock }
+          : { key: 'block', label: 'Bloquear', icon: 'block', danger: true, hidden: isSelf || !loggedUser, onSelect: handleBlock },
+      ]
+    : [];
+
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col">
       <Header />
@@ -429,12 +447,12 @@ export const ProfilePage: React.FC = () => {
               </div>
 
               {/* Botões de Ação do Perfil: Amizade, Mensagem ou Edição */}
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-wrap">
                 {!isSelf && userProfile?.blocked_by_me ? (
                   <button
                     type="button"
                     onClick={handleUnblock}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface font-semibold text-xs border border-outline-variant hover:bg-surface-container flex items-center justify-center gap-2 cursor-pointer"
+                    className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full whitespace-nowrap bg-surface-container-low text-on-surface font-semibold text-xs border border-outline-variant hover:bg-surface-container flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">lock_open</span>
                     <span>Desbloquear</span>
@@ -443,7 +461,7 @@ export const ProfilePage: React.FC = () => {
                   <>
                     <Link
                       to="/settings/profile"
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-none h-10 px-4 rounded-full whitespace-nowrap bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                       <span>Editar Perfil</span>
@@ -451,7 +469,7 @@ export const ProfilePage: React.FC = () => {
 
                     <Link
                       to="/settings/account"
-                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center cursor-pointer"
+                      className="w-10 h-10 shrink-0 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors border border-outline-variant flex items-center justify-center cursor-pointer"
                       title="Configurações de Privacidade da Conta"
                     >
                       <span className="material-symbols-outlined text-[18px]">shield</span>
@@ -462,7 +480,7 @@ export const ProfilePage: React.FC = () => {
                   <>
                     <Link
                       to={`/mensagens?u=${encodeURIComponent(usernameHandle)}`}
-                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                      className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full whitespace-nowrap bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
                       <span>Enviar Mensagem</span>
@@ -478,7 +496,7 @@ export const ProfilePage: React.FC = () => {
                       }
                       title="Desfazer amizade"
                       aria-label="Desfazer amizade"
-                      className="p-2.5 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer disabled:opacity-50"
+                      className="w-10 h-10 shrink-0 rounded-full bg-surface-container-low text-on-surface-variant hover:text-error hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">person_remove</span>
                     </button>
@@ -486,7 +504,7 @@ export const ProfilePage: React.FC = () => {
                 ) : friendshipPending && userProfile?.friendship_direction === 'outgoing' ? (
                   /* Pedido enviado: aguardando aceite */
                   <>
-                    <span className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-surface-container-low text-on-surface-variant font-semibold text-xs border border-outline-variant flex items-center justify-center gap-2">
+                    <span className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full whitespace-nowrap bg-surface-container-low text-on-surface-variant font-semibold text-xs border border-outline-variant flex items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-[18px]">schedule</span>
                       <span>Pedido enviado</span>
                     </span>
@@ -494,7 +512,7 @@ export const ProfilePage: React.FC = () => {
                       type="button"
                       disabled={addingFriend}
                       onClick={() => handleRemoveFriendship('Pedido de amizade cancelado.')}
-                      className="px-4 py-2.5 rounded-full bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
+                      className="h-10 px-4 rounded-full whitespace-nowrap bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
                     >
                       Cancelar
                     </button>
@@ -506,7 +524,7 @@ export const ProfilePage: React.FC = () => {
                       type="button"
                       onClick={handleAddFriend}
                       disabled={addingFriend}
-                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full whitespace-nowrap bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
                       <span>Aceitar pedido</span>
@@ -515,7 +533,7 @@ export const ProfilePage: React.FC = () => {
                       type="button"
                       disabled={addingFriend}
                       onClick={() => handleRemoveFriendship('Pedido recusado.')}
-                      className="px-4 py-2.5 rounded-full bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
+                      className="h-10 px-4 rounded-full whitespace-nowrap bg-surface-container text-on-surface font-semibold text-xs hover:bg-surface-container-high cursor-pointer disabled:opacity-50"
                     >
                       Recusar
                     </button>
@@ -526,7 +544,7 @@ export const ProfilePage: React.FC = () => {
                     type="button"
                     onClick={handleAddFriend}
                     disabled={addingFriend}
-                    className="flex-1 sm:flex-none px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full whitespace-nowrap bg-primary-container text-on-primary font-semibold text-xs hover:bg-primary transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {addingFriend ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -537,19 +555,32 @@ export const ProfilePage: React.FC = () => {
                   </button>
                 )}
 
-                {!isSelf && userProfile && !userProfile.blocked_by_me && (!userProfile.is_private || userProfile.i_follow) && (
-                  <button
-                    type="button"
-                    onClick={handleToggleFollow}
-                    disabled={followBusy}
-                    className={`px-5 py-2.5 rounded-full font-semibold text-xs border flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                      userProfile.i_follow
-                        ? 'bg-surface-container-low text-on-surface border-outline-variant hover:bg-surface-container'
-                        : 'bg-on-surface text-surface border-on-surface hover:opacity-90'
-                    }`}
-                  >
-                    {userProfile.i_follow ? 'Seguindo' : 'Seguir'}
-                  </button>
+                {showFollowMenu ? (
+                  <ChatMenu
+                    title="Opções de quem você segue"
+                    buttonClassName={`flex-1 sm:flex-none h-10 px-4 rounded-full font-semibold text-xs border flex items-center justify-center gap-1 cursor-pointer disabled:opacity-50 bg-surface-container-low text-on-surface border-outline-variant hover:bg-surface-container ${followBusy ? 'opacity-50 pointer-events-none' : ''}`}
+                    trigger={
+                      <>
+                        <span>Seguindo</span>
+                        <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                      </>
+                    }
+                    items={[
+                      { key: 'unfollow', label: 'Deixar de seguir', icon: 'person_remove', onSelect: handleToggleFollow },
+                      ...profileMenuItems,
+                    ]}
+                  />
+                ) : (
+                  !isSelf && userProfile && !userProfile.blocked_by_me && (!userProfile.is_private || userProfile.i_follow) && (
+                    <button
+                      type="button"
+                      onClick={handleToggleFollow}
+                      disabled={followBusy}
+                      className="flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-full font-semibold text-xs border flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 bg-on-surface text-surface border-on-surface hover:opacity-90"
+                    >
+                      Seguir
+                    </button>
+                  )
                 )}
 
                 {userProfile && !isLockedPrivate && (
@@ -562,22 +593,11 @@ export const ProfilePage: React.FC = () => {
                   />
                 )}
 
-                {userProfile && (
+                {userProfile && !showFollowMenu && (
                   <ChatMenu
                     title="Mais opções"
                     buttonClassName="h-10 w-10 rounded-full bg-surface-container-low text-on-surface hover:bg-surface-container border border-outline-variant flex items-center justify-center cursor-pointer"
-                    items={[
-                      { key: 'sobre', label: 'Sobre', icon: 'info', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/sobre`) },
-                      { key: 'amigos', label: 'Amigos', icon: 'group', onSelect: () => navigate(isSelf ? '/amigos' : `/perfil/${encodeURIComponent(userProfile.username)}/amigos`) },
-                      { key: 'comunidades', label: 'Comunidades', icon: 'forum', onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/comunidades`) },
-                      { key: 'melhores', label: 'Melhores amigos', icon: 'star', hidden: !isSelf, onSelect: () => navigate('/melhores-amigos') },
-                      { key: 'salvos', label: 'Salvos', icon: 'bookmark', hidden: !isSelf, onSelect: () => navigate(`/perfil/${encodeURIComponent(userProfile.username)}/salvos`) },
-                      { key: 'atividade', label: 'Sua atividade', icon: 'history', hidden: !isSelf, onSelect: () => navigate('/atividade') },
-                      { key: 'report', label: 'Denunciar', icon: 'flag', danger: true, hidden: isSelf || !loggedUser, onSelect: () => setShowReport(true) },
-                      userProfile.blocked_by_me
-                        ? { key: 'unblock', label: 'Desbloquear', icon: 'lock_open', hidden: isSelf || !loggedUser, onSelect: handleUnblock }
-                        : { key: 'block', label: 'Bloquear', icon: 'block', danger: true, hidden: isSelf || !loggedUser, onSelect: handleBlock },
-                    ]}
+                    items={profileMenuItems}
                   />
                 )}
               </div>

@@ -16,6 +16,8 @@ interface ChatMenuProps {
   items: ChatMenuItem[];
   title: string;
   buttonClassName?: string;
+  // Conteúdo do botão no lugar dos três pontinhos (ex.: "Seguindo ▾")
+  trigger?: React.ReactNode;
   align?: 'left' | 'right';
 }
 
@@ -24,7 +26,7 @@ const EDGE = 8;
 
 // Menu suspenso genérico (configurações da lista e da conversa).
 // Renderizado em um portal no <body>: assim nenhum balão, rolagem ou camada da tela fica por cima dele.
-export const ChatMenu: React.FC<ChatMenuProps> = ({ items, title, buttonClassName, align = 'right' }) => {
+export const ChatMenu: React.FC<ChatMenuProps> = ({ items, title, buttonClassName, trigger, align = 'right' }) => {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -80,7 +82,7 @@ export const ChatMenu: React.FC<ChatMenuProps> = ({ items, title, buttonClassNam
           'relative w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-low text-on-surface hover:bg-surface-container transition-colors cursor-pointer'
         }
       >
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+        {trigger ?? <span className="material-symbols-outlined text-[20px]">more_vert</span>}
         {totalBadge > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-error text-[9px] font-bold text-white flex items-center justify-center">
             {totalBadge > 9 ? '9+' : totalBadge}
