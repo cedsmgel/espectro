@@ -336,16 +336,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
           {/* Canto Direito: Ações (+ Criar, Mensagens, Notificações, Tema, Perfil) */}
           <div className="flex items-center gap-1 sm:gap-2.5 flex-shrink-0">
-            {/* Botão de Busca Mobile (abre o campo em tela cheia no mobile) */}
-            <button
-              type="button"
-              onClick={() => setMobileSearchOpen(true)}
-              aria-label="Abrir pesquisa"
-              className="md:hidden w-12 h-12 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer"
-              title="Pesquisar"
-            >
-              <span className="material-symbols-outlined text-[28px]">search</span>
-            </button>
             {/* Menu de configurações e atividade (celular) */}
             {user && (
               <Link
@@ -380,7 +370,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 <Link
                   to="/notificacoes"
                   aria-label="Ver notificações"
-                  className="hidden md:flex md:p-2 items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
+                  className="w-12 h-12 md:w-auto md:h-auto md:p-2 flex items-center justify-center shrink-0 rounded-full text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors relative cursor-pointer"
                   title="Notificações"
                 >
                   <span className="material-symbols-outlined text-[28px]">notifications</span>
