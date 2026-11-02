@@ -25,6 +25,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState(request.googleEmail || '');
   const [password, setPassword] = useState('');
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -198,6 +199,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
       if (!/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) return setError('O usuário deve ter de 3 a 30 caracteres: letras, números e underline.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setError('Informe um e-mail válido.');
       if (password.length < 8) return setError('A senha deve ter pelo menos 8 caracteres.');
+      if (!ageConfirmed) return setError('Confirme que você tem 13 anos ou mais e aceita os termos para criar a conta.');
     }
 
     setLoading(true);
@@ -214,7 +216,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
           return;
         }
       } else {
-        const created = await authApi.register({ username: username.trim(), email: email.trim(), password, turnstile_token: tsToken ?? undefined });
+        const created = await authApi.register({ username: username.trim(), email: email.trim(), password, turnstile_token: tsToken ?? undefined, age_confirmed: ageConfirmed });
         // A prova do cadastro evita um segundo desafio no login imediato
         await authApi.login({ username: username.trim(), password, login_proof: created.login_proof });
       }
@@ -506,11 +508,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ request, onClose, onSucces
             {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
           </button>
           {mode === 'register' && (
-            <p className="text-xs text-on-surface-variant text-center">
-              Ao criar a conta, você concorda com os{' '}
-              <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Termos de uso</a> e a{' '}
-              <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Política de Privacidade</a>.
-            </p>
+            <label className="flex items-start gap-2.5 text-xs text-on-surface-variant cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ageConfirmed}
+                onChange={(e) => setAgeConfirmed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--color-primary,#2563eb)]"
+              />
+              <span>
+                Tenho 13 anos ou mais e concordo com os{' '}
+                <a href="/termos" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Termos de uso</a> e a{' '}
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer" className="underline hover:text-on-surface">Política de Privacidade</a>.
+              </span>
+            </label>
           )}
         </form>
         </>

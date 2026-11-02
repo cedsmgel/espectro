@@ -15,7 +15,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const limited = await rateLimit(env.DB, request, "register", 10, 3600);
     if (limited) return limited;
 
-    let body: { username?: string; email?: string; password?: string; turnstile_token?: string };
+    let body: { username?: string; email?: string; password?: string; turnstile_token?: string; age_confirmed?: boolean };
     try {
       body = await request.json();
     } catch {
@@ -25,6 +25,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!(await verifyTurnstile(request, env, body.turnstile_token, "signup"))) return turnstileFailedResponse();
 
     const { username, email, password } = body;
+
+    // Idade mínima: 13 anos, declarada no cadastro junto com o aceite dos termos
+    if (body.age_confirmed !== true) {
+      return errorResponse("Para criar a conta, confirme que você tem 13 anos ou mais e aceita os termos.", 400);
+    }
 
     if (!username || typeof username !== "string" || !/^[a-zA-Z0-9_]{3,30}$/.test(username.trim())) {
       return errorResponse("Username deve ter de 3 a 30 caracteres, apenas letras, números e underline.", 400);
@@ -64,7 +69,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const passwordHash = await hashPassword(password);
 
     // Inserção no D1    const insertResult = await env.DB.prepare(
-      "INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)"
+      "INSERT INTO users (username, email, password_hash, terms_accepted_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)"
     )
       .bind(cleanUsername, cleanEmail, passwordHash)
       .run();
